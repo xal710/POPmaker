@@ -18,7 +18,7 @@ function isPackLikeToken(token: string): boolean {
   return false;
 }
 
-function shouldKeepLatinToken(token: string): boolean {
+export function shouldKeepLatinToken(token: string): boolean {
   if (!LATIN_TOKEN.test(token)) return false;
   if (RARITY_TOKENS.has(token)) return true;
   return isPackLikeToken(token);
@@ -130,7 +130,7 @@ function numberMatches(number: string, token: string): boolean {
   return normalizeToken(number).includes(normalizeToken(token));
 }
 
-function isRomajiQuery(token: string): boolean {
+export function isRomajiQuery(token: string): boolean {
   return LATIN_TOKEN.test(token) && wanakana.isRomaji(token) && !shouldKeepLatinToken(token);
 }
 

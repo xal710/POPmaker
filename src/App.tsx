@@ -1,4 +1,4 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ComparisonList } from "./components/ComparisonList";
 
@@ -14,6 +14,8 @@ import { useCardSearch } from "./hooks/useCardSearch";
 
 import { useComparisonData } from "./hooks/useComparisonData";
 
+import { useDebouncedValue } from "./hooks/useDebouncedValue";
+
 import type { ComparisonItem } from "./types";
 
 import { applyPriceFilter, isPriceFilterActive } from "./utils/priceFilter";
@@ -23,6 +25,7 @@ import { filterBySeries, type SeriesFilter as SeriesFilterValue } from "./utils/
 import "./App.css";
 
 const LIST_PAGE_SIZE = 150;
+const SEARCH_DEBOUNCE_MS = 300;
 
 
 
@@ -35,7 +38,7 @@ function App() {
   const [selectedItem, setSelectedItem] = useState<ComparisonItem | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const deferredSearchQuery = useDeferredValue(searchQuery);
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
   const [listVisibleCount, setListVisibleCount] = useState(LIST_PAGE_SIZE);
 
   const [filterOpen, setFilterOpen] = useState(false);
@@ -58,20 +61,20 @@ function App() {
 
 
 
-  const { results, suggestions, isSearching, resultCount } = useCardSearch(
+  const { results, suggestions, isSearching, resultCount, isSearchPending } = useCardSearch(
 
     filteredItems,
 
-    deferredSearchQuery,
+    debouncedSearchQuery,
 
   );
 
-  const isSearchPending = searchQuery !== deferredSearchQuery;
+  const isQueryPending = searchQuery.trim() !== debouncedSearchQuery.trim();
   const listSource = results;
 
   useEffect(() => {
     setListVisibleCount(LIST_PAGE_SIZE);
-  }, [deferredSearchQuery, seriesFilter, priceFilter]);
+  }, [debouncedSearchQuery, seriesFilter, priceFilter]);
 
   const listItems = useMemo(
     () => listSource.slice(0, listVisibleCount),
@@ -172,7 +175,8 @@ function App() {
 
               suggestions={suggestions}
 
-              isSearching={isSearching || isSearchPending}
+              isSearching={isSearching || isQueryPending || isSearchPending}
+              isSearchPending={isQueryPending || isSearchPending}
 
               resultCount={resultCount}
 

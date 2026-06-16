@@ -6,6 +6,7 @@ interface SearchBarProps {
   onQueryChange: (query: string) => void;
   suggestions: ComparisonItem[];
   isSearching: boolean;
+  isSearchPending?: boolean;
   resultCount: number;
   totalCount: number;
   onSelectItem: (item: ComparisonItem) => void;
@@ -16,6 +17,7 @@ export function SearchBar({
   onQueryChange,
   suggestions,
   isSearching,
+  isSearchPending = false,
   resultCount,
   totalCount,
   onSelectItem,
@@ -147,8 +149,14 @@ export function SearchBar({
 
       {isSearching && (
         <p className="search-bar__status" role="status">
-          検索結果: <strong>{resultCount.toLocaleString("ja-JP")}</strong> 件
-          <span className="search-bar__status-total"> / {totalCount.toLocaleString("ja-JP")} 件</span>
+          {isSearchPending ? (
+            <>検索中...</>
+          ) : (
+            <>
+              検索結果: <strong>{resultCount.toLocaleString("ja-JP")}</strong> 件
+              <span className="search-bar__status-total"> / {totalCount.toLocaleString("ja-JP")} 件</span>
+            </>
+          )}
         </p>
       )}
 
