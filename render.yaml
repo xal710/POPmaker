@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: pop-kaitori-tool
+    runtime: docker
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /app/data

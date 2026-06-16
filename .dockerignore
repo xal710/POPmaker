@@ -1,0 +1,9 @@
+node_modules
+dist
+data
+.git
+.env
+*.local
+excel-config.json
+tools
+terminals

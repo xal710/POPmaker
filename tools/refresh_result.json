@@ -1,0 +1,85 @@
+{
+  "count": 2882,
+  "top10": [
+    {
+      "id": 0,
+      "name": "ゼルネアスEX〈038/036〉[CP5]",
+      "cardrush": 60000,
+      "hareruya2": 70000,
+      "diff": 10000,
+      "series": "XY"
+    },
+    {
+      "id": 1,
+      "name": "バトルサーチャー〈091/078〉[XY6]",
+      "cardrush": 22000,
+      "hareruya2": 25000,
+      "diff": 3000,
+      "series": "XY"
+    },
+    {
+      "id": 2,
+      "name": "ミカルゲ (ミラー)〈071/093〉[EBB]",
+      "cardrush": 2000,
+      "hareruya2": 5000,
+      "diff": 3000,
+      "series": "BW"
+    },
+    {
+      "id": 3,
+      "name": "MリザードンEX〈013/087〉[CP6]",
+      "cardrush": 22000,
+      "hareruya2": 24000,
+      "diff": 2000,
+      "series": "XY"
+    },
+    {
+      "id": 4,
+      "name": "ボーマンダ〈195/BW-P〉[BW-P]",
+      "cardrush": 1200,
+      "hareruya2": 3000,
+      "diff": 1800,
+      "series": "BW"
+    },
+    {
+      "id": 5,
+      "name": "ゲンガー〈026/072〉[20th]",
+      "cardrush": 4500,
+      "hareruya2": 6000,
+      "diff": 1500,
+      "series": "SM"
+    },
+    {
+      "id": 6,
+      "name": "メガオーダイルex (ミラー)〈169/742〉[MC]",
+      "cardrush": 1200,
+      "hareruya2": 2500,
+      "diff": 1300,
+      "series": "M"
+    },
+    {
+      "id": 7,
+      "name": "ジラーチ〈015/032〉[CP3]",
+      "cardrush": 2700,
+      "hareruya2": 4000,
+      "diff": 1300,
+      "series": "XY"
+    },
+    {
+      "id": 8,
+      "name": "ソーナンス〈013/032〉[CP3]",
+      "cardrush": 600,
+      "hareruya2": 1800,
+      "diff": 1200,
+      "series": "XY"
+    },
+    {
+      "id": 9,
+      "name": "カメックスEX〈021/087〉[CP6]",
+      "cardrush": 2000,
+      "hareruya2": 3000,
+      "diff": 1000,
+      "series": "XY"
+    }
+  ]
+}

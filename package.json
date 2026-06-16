@@ -1,0 +1,35 @@
+{
+  "name": "pop-kaitori-tool",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc -b && vite build",
+    "start": "tsx server/production.ts",
+    "preview": "vite preview",
+    "refresh": "npx --yes tsx tools/refresh_and_compare.ts",
+    "test:match": "npx --yes tsx tools/test_variant_match.ts",
+    "test:tweet-count": "npx --yes tsx tools/test_tweet_count.ts"
+  },
+  "dependencies": {
+    "connect": "^3.7.0",
+    "fuse.js": "^7.4.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "serve-static": "^2.2.0",
+    "tsx": "^4.20.3",
+    "wanakana": "^5.3.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/connect": "^3.4.38",
+    "@types/node": "^25.9.3",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@types/serve-static": "^1.15.8",
+    "@vitejs/plugin-react": "^4.4.1",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  }
+}
