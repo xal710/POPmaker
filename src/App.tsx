@@ -24,7 +24,7 @@ import { filterBySeries, type SeriesFilter as SeriesFilterValue } from "./utils/
 
 import "./App.css";
 
-const LIST_PAGE_SIZE = 150;
+const LIST_PAGE_SIZE = 100;
 const SEARCH_DEBOUNCE_MS = 300;
 
 
@@ -39,7 +39,7 @@ function App() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearchQuery = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
-  const [listVisibleCount, setListVisibleCount] = useState(LIST_PAGE_SIZE);
+  const [listPage, setListPage] = useState(1);
 
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -73,20 +73,24 @@ function App() {
   const listSource = results;
 
   useEffect(() => {
-    setListVisibleCount(LIST_PAGE_SIZE);
+    setListPage(1);
   }, [debouncedSearchQuery, seriesFilter, priceFilter]);
 
-  const listItems = useMemo(
-    () => listSource.slice(0, listVisibleCount),
-    [listSource, listVisibleCount],
-  );
+  const totalPages = Math.max(1, Math.ceil(listSource.length / LIST_PAGE_SIZE));
+  const currentPage = Math.min(listPage, totalPages);
+
+  const listItems = useMemo(() => {
+    const start = (currentPage - 1) * LIST_PAGE_SIZE;
+    return listSource.slice(start, start + LIST_PAGE_SIZE);
+  }, [listSource, currentPage]);
 
   const handleSelectItem = useCallback((item: ComparisonItem) => {
     setSelectedItem(item);
   }, []);
 
-  const handleShowMore = useCallback(() => {
-    setListVisibleCount((count) => count + LIST_PAGE_SIZE);
+  const handlePageChange = useCallback((page: number) => {
+    setListPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
 
@@ -256,9 +260,11 @@ function App() {
 
           <ComparisonList
             items={listItems}
+            page={currentPage}
+            pageSize={LIST_PAGE_SIZE}
             totalCount={listSource.length}
             onSelect={handleSelectItem}
-            onShowMore={listItems.length < listSource.length ? handleShowMore : undefined}
+            onPageChange={handlePageChange}
           />
 
         )}
