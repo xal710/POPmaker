@@ -573,7 +573,8 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-family: inherit;
-  font-size: 13px;
+  /* iOS Safari: 16px未満だとフォーカス時に自動ズームする */
+  font-size: 16px;
   line-height: 1.6;
   color: var(--text);
   resize: vertical;
