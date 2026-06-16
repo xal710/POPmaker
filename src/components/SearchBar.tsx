@@ -57,24 +57,10 @@ export function SearchBar({
     inputRef.current?.blur();
   };
 
-  const submitSearch = () => {
-    if (showSuggestions && activeIndex >= 0) {
-      handleSelect(suggestions[activeIndex]);
-      return;
-    }
-
-    if (showSuggestions && suggestions.length === 1) {
-      handleSelect(suggestions[0]);
-      return;
-    }
-
-    commitSearch();
-  };
-
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
       event.preventDefault();
-      submitSearch();
+      commitSearch();
       return;
     }
 
@@ -115,7 +101,7 @@ export function SearchBar({
             className="search-bar__form"
             onSubmit={(event) => {
               event.preventDefault();
-              submitSearch();
+              commitSearch();
             }}
           >
             <input
