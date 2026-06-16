@@ -27,12 +27,39 @@ function packLabelFromCode(pack: string): string {
   return pack;
 }
 
-/** ツイート用: ゼルネアスEX(CP)[CP5] 形式 */
+const TWEET_PAREN_LABELS = [
+  "未開封",
+  "R団ミラー",
+  "エネルギーミラー",
+  "ボールミラー",
+  "マスターボールミラー",
+  "モンスターボールミラー",
+  "ミラー",
+] as const;
+
+function extractTweetParentheticalLabel(name: string): string | null {
+  const match = name.match(/\(([^)]*)\)/);
+  if (!match) return null;
+
+  const inner = match[1].trim();
+  if (!inner) return null;
+
+  for (const label of TWEET_PAREN_LABELS) {
+    if (inner === label || inner.includes(label)) {
+      return label;
+    }
+  }
+
+  return null;
+}
+
+/** ツイート用: ゼルネアスEX(CP)[CP5] / ロケット団のフリーザー(R団ミラー)[M2a] 形式 */
 export function formatTweetCardName(name: string): string {
   const packMatch = name.match(/\[([^\]]+)\]/);
   const pack = packMatch?.[1]?.trim() ?? "";
+  const parenLabel = extractTweetParentheticalLabel(name);
 
-  let base = name
+  const base = name
     .replace(/\{[^}]*\}/g, "")
     .replace(/〈[^〉]*〉/g, "")
     .replace(/\[[^\]]*\]/g, "")
@@ -42,7 +69,8 @@ export function formatTweetCardName(name: string): string {
 
   if (!pack) return base;
 
-  return `${base}(${packLabelFromCode(pack)})[${pack}]`;
+  const label = parenLabel ?? packLabelFromCode(pack);
+  return `${base}(${label})[${pack}]`;
 }
 
 export function buildPopText(name: string, hareruya2: number): string {
