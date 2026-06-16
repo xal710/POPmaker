@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { ComparisonItem } from "../types";
 import { formatDiff, formatYen } from "../utils/format";
 
@@ -7,7 +8,11 @@ interface ComparisonRowProps {
   onSelect: (item: ComparisonItem) => void;
 }
 
-export function ComparisonRow({ item, rank, onSelect }: ComparisonRowProps) {
+export const ComparisonRow = memo(function ComparisonRow({
+  item,
+  rank,
+  onSelect,
+}: ComparisonRowProps) {
   return (
     <article className="comparison-row">
       <div className="comparison-row__rank">{rank}</div>
@@ -36,4 +41,4 @@ export function ComparisonRow({ item, rank, onSelect }: ComparisonRowProps) {
       </div>
     </article>
   );
-}
+});

@@ -38,6 +38,8 @@ export interface SearchIndexEntry {
   tags: string[];
   romajiName: string;
   searchText: string;
+  normalizedCardName: string;
+  hiraganaCardName: string;
 }
 
 export function parseCardName(name: string): ParsedCardName | null {
@@ -147,8 +149,7 @@ function latinTokenMatches(entry: SearchIndexEntry, token: string): boolean {
   if (numberMatches(entry.number, token)) return true;
   if (entry.tags.includes(token)) return true;
 
-  const cardName = normalizeToken(entry.cardName);
-  return cardName.includes(token);
+  return entry.normalizedCardName.includes(token);
 }
 
 function japaneseTokenMatches(entry: SearchIndexEntry, token: string): boolean {
@@ -161,13 +162,12 @@ function japaneseTokenMatches(entry: SearchIndexEntry, token: string): boolean {
   }
 
   const cardName = normalizeToken(entry.cardName);
-  const fullName = normalizeSearchText(entry.item.name);
-  const hiraganaName = wanakana.toHiragana(cardName);
+  const hiraganaName = entry.hiraganaCardName;
   const hiraganaToken = wanakana.toHiragana(token);
 
   return (
     cardName.includes(token) ||
-    fullName.includes(token) ||
+    entry.searchText.includes(token) ||
     hiraganaName.includes(hiraganaToken) ||
     entry.tags.some((tag) => normalizeToken(tag).includes(token))
   );
@@ -198,13 +198,15 @@ export function buildSearchIndex(items: ComparisonItem[]): SearchIndexEntry[] {
     const romajiName = wanakana.isJapanese(cardName)
       ? wanakana.toRomaji(cardName).toLowerCase()
       : "";
+    const normalizedCardName = normalizeToken(cardName);
+    const hiraganaCardName = wanakana.toHiragana(cardName);
 
     const searchText = normalizeSearchText(
       [
         item.name,
         cardName,
         romajiName,
-        wanakana.toHiragana(cardName),
+        hiraganaCardName,
         number,
         pack,
         numberCompact,
@@ -222,6 +224,8 @@ export function buildSearchIndex(items: ComparisonItem[]): SearchIndexEntry[] {
       tags,
       romajiName,
       searchText,
+      normalizedCardName,
+      hiraganaCardName,
     };
   });
 }
@@ -242,7 +246,7 @@ export function scoreEntry(entry: SearchIndexEntry, tokens: string[]): number {
       if (packMatches(entry.pack, token)) score += 18;
       if (numberMatches(entry.number, token)) score += 16;
       if (entry.tags.includes(token)) score += 14;
-    } else if (normalizeToken(entry.cardName) === token) {
+    } else if (entry.normalizedCardName === token) {
       score += 15;
     }
   }
@@ -251,7 +255,7 @@ export function scoreEntry(entry: SearchIndexEntry, tokens: string[]): number {
     const token = tokens[0];
     if (packMatches(entry.pack, token)) score += 12;
     if (numberMatches(entry.number, token)) score += 10;
-    if (normalizeToken(entry.cardName) === token) score += 15;
+    if (entry.normalizedCardName === token) score += 15;
   }
 
   return score;

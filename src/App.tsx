@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 
 import { ComparisonList } from "./components/ComparisonList";
 
@@ -22,6 +22,8 @@ import { filterBySeries, type SeriesFilter as SeriesFilterValue } from "./utils/
 
 import "./App.css";
 
+const LIST_PAGE_SIZE = 150;
+
 
 
 function App() {
@@ -33,6 +35,8 @@ function App() {
   const [selectedItem, setSelectedItem] = useState<ComparisonItem | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+  const [listVisibleCount, setListVisibleCount] = useState(LIST_PAGE_SIZE);
 
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -58,9 +62,29 @@ function App() {
 
     filteredItems,
 
-    searchQuery,
+    deferredSearchQuery,
 
   );
+
+  const isSearchPending = searchQuery !== deferredSearchQuery;
+  const listSource = results;
+
+  useEffect(() => {
+    setListVisibleCount(LIST_PAGE_SIZE);
+  }, [deferredSearchQuery, seriesFilter, priceFilter]);
+
+  const listItems = useMemo(
+    () => listSource.slice(0, listVisibleCount),
+    [listSource, listVisibleCount],
+  );
+
+  const handleSelectItem = useCallback((item: ComparisonItem) => {
+    setSelectedItem(item);
+  }, []);
+
+  const handleShowMore = useCallback(() => {
+    setListVisibleCount((count) => count + LIST_PAGE_SIZE);
+  }, []);
 
 
 
@@ -148,13 +172,13 @@ function App() {
 
               suggestions={suggestions}
 
-              isSearching={isSearching}
+              isSearching={isSearching || isSearchPending}
 
               resultCount={resultCount}
 
               totalCount={filteredItems.length}
 
-              onSelectItem={setSelectedItem}
+              onSelectItem={handleSelectItem}
 
             />
 
@@ -226,7 +250,12 @@ function App() {
 
         ) : (
 
-          <ComparisonList items={results} onSelect={setSelectedItem} />
+          <ComparisonList
+            items={listItems}
+            totalCount={listSource.length}
+            onSelect={handleSelectItem}
+            onShowMore={listItems.length < listSource.length ? handleShowMore : undefined}
+          />
 
         )}
 

@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, useMemo } from "react";
 import type { ComparisonItem } from "../types";
 import {
   countActivePriceFilters,
@@ -96,7 +96,10 @@ export function FilterPanel({
   filteredCount,
 }: FilterPanelProps) {
   const panelId = useId();
-  const seriesCounts = countBySeries(items);
+  const seriesCounts = useMemo(
+    () => (open ? countBySeries(items) : null),
+    [open, items],
+  );
   const seriesActive = seriesFilter !== "all";
   const priceActive = isPriceFilterActive(priceFilter);
   const activeCount =
@@ -168,7 +171,7 @@ export function FilterPanel({
                 >
                   {SERIES_LABELS[series]}
                   <span className="series-filter__count">
-                    {seriesCounts[series].toLocaleString("ja-JP")}
+                    {(seriesCounts?.[series] ?? 0).toLocaleString("ja-JP")}
                   </span>
                 </button>
               ))}
