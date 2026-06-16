@@ -112,6 +112,14 @@ function entryMatches(entry: SearchIndexEntry, ctx: TokenContext): boolean {
     return entry.cardName.includes("ボールミラー");
   }
 
+  if (token === "マスターボールミラー") {
+    return entry.cardName.includes("マスターボールミラー");
+  }
+
+  if (token === "モンスターボールミラー") {
+    return entry.cardName.includes("モンスターボールミラー");
+  }
+
   if (token === "ミラー") {
     return entry.cardName.includes("ミラー") && !entry.cardName.includes("ドーミラー");
   }

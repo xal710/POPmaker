@@ -86,6 +86,8 @@ function extractSearchTags(cardName: string): string[] {
   const tags = new Set<string>();
 
   if (cardName.includes("ボールミラー")) tags.add("ボールミラー");
+  if (cardName.includes("マスターボールミラー")) tags.add("マスターボールミラー");
+  if (cardName.includes("モンスターボールミラー")) tags.add("モンスターボールミラー");
   if (cardName.includes("未開封")) tags.add("未開封");
   if (cardName.includes("ミラー") && !cardName.includes("ドーミラー")) tags.add("ミラー");
 
@@ -155,6 +157,14 @@ function latinTokenMatches(entry: SearchIndexEntry, token: string): boolean {
 function japaneseTokenMatches(entry: SearchIndexEntry, token: string): boolean {
   if (token === "ボールミラー") {
     return entry.cardName.includes("ボールミラー");
+  }
+
+  if (token === "マスターボールミラー") {
+    return entry.cardName.includes("マスターボールミラー");
+  }
+
+  if (token === "モンスターボールミラー") {
+    return entry.cardName.includes("モンスターボールミラー");
   }
 
   if (token === "ミラー") {

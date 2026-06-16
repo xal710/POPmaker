@@ -12,7 +12,8 @@ const CARD_RUSH_KEPT_PARENTHETICALS = new Set([
   "モンスターボールミラー",
 ]);
 
-const BALL_MIRROR_PATTERN = /ボールミラー|エネルギーミラー|R団ミラー/;
+const BALL_MIRROR_PATTERN =
+  /マスターボールミラー|モンスターボールミラー|エネルギーミラー|R団ミラー|ボールミラー/;
 
 const HARERUYA_COLON_VARIANTS: Array<{ pattern: RegExp; label: string }> = [
   { pattern: /:エネルギーミラー(?:\([^)]*\))*\{[^}]*\}/g, label: "エネルギーミラー" },
@@ -29,11 +30,8 @@ export interface CardRushPriceBucket {
 }
 
 function normalizeHareruyaPackCode(packCode: string): string {
-  if (packCode.endsWith("-Ma")) {
-    return `${packCode.slice(0, -3)}a`;
-  }
-  if (packCode.endsWith("-Mo")) {
-    return `${packCode.slice(0, -3)}o`;
+  if (packCode.endsWith("-Ma") || packCode.endsWith("-Mo")) {
+    return packCode.slice(0, -3);
   }
   if (packCode.endsWith("-M")) {
     return packCode.slice(0, -2);
