@@ -931,6 +931,11 @@
   position: relative;
 }
 
+.search-bar__form {
+  display: block;
+  width: 100%;
+}
+
 .search-bar__input {
   width: 100%;
   padding: 12px 40px 12px 14px;

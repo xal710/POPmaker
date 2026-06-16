@@ -23,6 +23,7 @@ export function SearchBar({
   const inputId = useId();
   const listboxId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
 
@@ -50,7 +51,33 @@ export function SearchBar({
     setActiveIndex(-1);
   };
 
+  const commitSearch = () => {
+    setIsOpen(false);
+    setActiveIndex(-1);
+    inputRef.current?.blur();
+  };
+
+  const submitSearch = () => {
+    if (showSuggestions && activeIndex >= 0) {
+      handleSelect(suggestions[activeIndex]);
+      return;
+    }
+
+    if (showSuggestions && suggestions.length === 1) {
+      handleSelect(suggestions[0]);
+      return;
+    }
+
+    commitSearch();
+  };
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      submitSearch();
+      return;
+    }
+
     if (!showSuggestions) {
       if (event.key === "Escape") {
         onQueryChange("");
@@ -70,12 +97,6 @@ export function SearchBar({
       return;
     }
 
-    if (event.key === "Enter" && activeIndex >= 0) {
-      event.preventDefault();
-      handleSelect(suggestions[activeIndex]);
-      return;
-    }
-
     if (event.key === "Escape") {
       event.preventDefault();
       setIsOpen(false);
@@ -90,28 +111,38 @@ export function SearchBar({
           検索
         </label>
         <div className="search-bar__input-wrap">
-          <input
-            id={inputId}
-            className="search-bar__input"
-            type="search"
-            value={query}
-            placeholder="カード名・型番・エキスパンション（例: リザードン, 003/032, M5, pikachu）"
-            autoComplete="off"
-            role="combobox"
-            aria-expanded={showSuggestions}
-            aria-controls={showSuggestions ? listboxId : undefined}
-            aria-activedescendant={
-              showSuggestions && activeIndex >= 0
-                ? `${listboxId}-option-${activeIndex}`
-                : undefined
-            }
-            onChange={(event) => {
-              onQueryChange(event.target.value);
-              setIsOpen(true);
+          <form
+            className="search-bar__form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              submitSearch();
             }}
-            onFocus={() => setIsOpen(true)}
-            onKeyDown={handleKeyDown}
-          />
+          >
+            <input
+              ref={inputRef}
+              id={inputId}
+              className="search-bar__input"
+              type="search"
+              enterKeyHint="search"
+              value={query}
+              placeholder="カード名・型番・エキスパンション（例: リザードン, 003/032, M5, pikachu）"
+              autoComplete="off"
+              role="combobox"
+              aria-expanded={showSuggestions}
+              aria-controls={showSuggestions ? listboxId : undefined}
+              aria-activedescendant={
+                showSuggestions && activeIndex >= 0
+                  ? `${listboxId}-option-${activeIndex}`
+                  : undefined
+              }
+              onChange={(event) => {
+                onQueryChange(event.target.value);
+                setIsOpen(true);
+              }}
+              onFocus={() => setIsOpen(true)}
+              onKeyDown={handleKeyDown}
+            />
+          </form>
           {query && (
             <button
               type="button"
