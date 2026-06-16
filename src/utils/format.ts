@@ -17,60 +17,47 @@ export function formatDiff(diff: number): string {
   return `${sign}${formatYen(diff)}`;
 }
 
-export function formatPopCopyName(name: string): string {
-  return name.replace(/\{[^}]*\}/g, "").replace(/〈[^〉]*〉/g, "");
-}
-
 function packLabelFromCode(pack: string): string {
   const alphaPrefix = pack.match(/^[A-Za-z]+/)?.[0];
   if (alphaPrefix) return alphaPrefix;
   return pack;
 }
 
-const TWEET_PAREN_LABELS = [
-  "未開封",
-  "R団ミラー",
-  "エネルギーミラー",
-  "ボールミラー",
-  "マスターボールミラー",
-  "モンスターボールミラー",
-  "ミラー",
-] as const;
-
-function extractTweetParentheticalLabel(name: string): string | null {
-  const match = name.match(/\(([^)]*)\)/);
-  if (!match) return null;
-
-  const inner = match[1].trim();
-  if (!inner) return null;
-
-  for (const label of TWEET_PAREN_LABELS) {
-    if (inner === label || inner.includes(label)) {
-      return label;
-    }
-  }
-
-  return null;
-}
-
-/** ツイート用: ゼルネアスEX(CP)[CP5] / ロケット団のフリーザー(R団ミラー)[M2a] 形式 */
-export function formatTweetCardName(name: string): string {
-  const packMatch = name.match(/\[([^\]]+)\]/);
-  const pack = packMatch?.[1]?.trim() ?? "";
-  const parenLabel = extractTweetParentheticalLabel(name);
-
-  const base = name
+/**
+ * 晴れる屋2表記を整形する。
+ * 例: ゼルネアスEX(CP){フェアリー}〈038/036〉[CP5] → ゼルネアスEX(CP)[CP5]
+ */
+export function formatHareruyaCardName(name: string): string {
+  const stripped = name
     .replace(/\{[^}]*\}/g, "")
     .replace(/〈[^〉]*〉/g, "")
-    .replace(/\[[^\]]*\]/g, "")
-    .replace(/\s*\([^)]*\)/g, "")
     .replace(/\s+/g, " ")
     .trim();
 
-  if (!pack) return base;
+  const packMatch = stripped.match(/\[([^\]]+)\]/);
+  const pack = packMatch?.[1]?.trim() ?? "";
+  if (!pack) return stripped;
 
-  const label = parenLabel ?? packLabelFromCode(pack);
-  return `${base}(${label})[${pack}]`;
+  const packSuffix = `[${pack}]`;
+  const packIndex = stripped.lastIndexOf(packSuffix);
+  const beforePack = stripped.slice(0, packIndex).trim();
+
+  if (/\([^)]+\)\s*$/.test(beforePack)) {
+    return `${beforePack.replace(/\s+\(/g, "(")}${packSuffix}`;
+  }
+
+  const base = beforePack.trim();
+  return `${base}(${packLabelFromCode(pack)})${packSuffix}`;
+}
+
+/** POP用・ツイート用のカード名（晴れる屋2表記ベース） */
+export function formatPopCopyName(name: string): string {
+  return formatHareruyaCardName(name);
+}
+
+/** ツイート用カード名（POP用と同じ整形） */
+export function formatTweetCardName(name: string): string {
+  return formatHareruyaCardName(name);
 }
 
 export function buildPopText(name: string, hareruya2: number): string {

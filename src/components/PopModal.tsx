@@ -104,7 +104,9 @@ export function PopModal({ item, onClose }: PopModalProps) {
 
     if (!item) return;
 
-    setTweetDraft(buildTweetText(item.name, item.hareruya2));
+    const sourceName = productTitle ?? item.name;
+
+    setTweetDraft(buildTweetText(sourceName, item.hareruya2));
 
   }, [item, productTitle]);
 
