@@ -199,6 +199,32 @@ export function normalizeHareruyaName(name: string): string {
   return result.replace(/\s+/g, " ").trim();
 }
 
+const IMAGE_LOOKUP_KEPT_PARENTHETICALS = new Set([
+  "未開封",
+  "R団ミラー",
+  "エネルギーミラー",
+  "ボールミラー",
+  "マスターボールミラー",
+  "モンスターボールミラー",
+  "ミラー",
+]);
+
+function stripRarityParentheticalsBeforeCode(name: string): string {
+  return name.replace(/\(([^)]*)\)(?=\s*〈)/g, (match, inner: string) => {
+    const trimmed = inner.trim();
+    if (IMAGE_LOOKUP_KEPT_PARENTHETICALS.has(trimmed)) return match;
+    if (trimmed.includes("ミラー")) return match;
+    if (trimmed.includes("未開封")) return match;
+    return "";
+  });
+}
+
+/** 画像照合用キー（晴れる屋表記・比較表表記を同一形式に揃える） */
+export function normalizeImageLookupKey(name: string): string {
+  const normalized = normalizeHareruyaName(name);
+  return stripRarityParentheticalsBeforeCode(normalized).replace(/\s+/g, " ").trim();
+}
+
 export function normalizeCardRushName(
   sourceName: string,
   pack: string | null,
