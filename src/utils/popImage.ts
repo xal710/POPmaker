@@ -51,6 +51,36 @@ export const POP_DISCLAIMER_TEXT =
 const BACKGROUND_URL = "/pop-template/background.jpg";
 const PLACEHOLDER_URL = "/pop-template/card-placeholder.png";
 const OUTPUT_WIDTH = 1080;
+const MAX_POP_IMAGE_CACHE = 32;
+
+const imageElementCache = new Map<string, Promise<HTMLImageElement>>();
+const popImageBlobCache = new Map<string, Promise<Blob>>();
+
+let backgroundImagePromise: Promise<HTMLImageElement> | null = null;
+let placeholderImagePromise: Promise<HTMLImageElement> | null = null;
+
+function buildPopCacheKey(input: GeneratePopImageInput): string {
+  return `${input.cardName}\0${input.priceLabel}\0${input.cardImageUrl ?? ""}`;
+}
+
+function trimPopImageCache(): void {
+  if (popImageBlobCache.size <= MAX_POP_IMAGE_CACHE) return;
+
+  const overflow = popImageBlobCache.size - MAX_POP_IMAGE_CACHE;
+  const keys = popImageBlobCache.keys();
+  for (let i = 0; i < overflow; i += 1) {
+    const next = keys.next();
+    if (next.done) break;
+    popImageBlobCache.delete(next.value);
+  }
+}
+
+function loadBackgroundImage(): Promise<HTMLImageElement> {
+  if (!backgroundImagePromise) {
+    backgroundImagePromise = loadImage(BACKGROUND_URL);
+  }
+  return backgroundImagePromise;
+}
 
 function resolveCardImageUrl(cardImageUrl: string | null): string {
   if (!cardImageUrl) return PLACEHOLDER_URL;
@@ -59,10 +89,20 @@ function resolveCardImageUrl(cardImageUrl: string | null): string {
 
 async function loadCardImage(cardImageUrl: string | null): Promise<HTMLImageElement> {
   if (!cardImageUrl) {
-    return loadImage(PLACEHOLDER_URL);
+    if (!placeholderImagePromise) {
+      placeholderImagePromise = loadImage(PLACEHOLDER_URL);
+    }
+    return placeholderImagePromise;
   }
 
-  return loadImage(resolveCardImageUrl(cardImageUrl));
+  const url = resolveCardImageUrl(cardImageUrl);
+  let cached = imageElementCache.get(url);
+  if (!cached) {
+    cached = loadImage(url);
+    imageElementCache.set(url, cached);
+    cached.catch(() => imageElementCache.delete(url));
+  }
+  return cached;
 }
 
 function emu(value: number, slideSize: number, outputSize: number): number {
@@ -135,7 +175,19 @@ export interface GeneratePopImageInput {
   cardImageUrl: string | null;
 }
 
-export async function generatePopImage({
+export async function generatePopImage(input: GeneratePopImageInput): Promise<Blob> {
+  const cacheKey = buildPopCacheKey(input);
+  const cached = popImageBlobCache.get(cacheKey);
+  if (cached) return cached;
+
+  const promise = renderPopImage(input);
+  popImageBlobCache.set(cacheKey, promise);
+  promise.catch(() => popImageBlobCache.delete(cacheKey));
+  trimPopImageCache();
+  return promise;
+}
+
+async function renderPopImage({
   cardName,
   priceLabel,
   cardImageUrl,
@@ -151,7 +203,7 @@ export async function generatePopImage({
   }
 
   const [background, cardImage, corporateLogoFont, impactFont] = await Promise.all([
-    loadImage(BACKGROUND_URL),
+    loadBackgroundImage(),
     loadCardImage(cardImageUrl),
     loadCorporateLogoFont(),
     loadImpactFont(),

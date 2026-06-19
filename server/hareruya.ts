@@ -1,3 +1,5 @@
+import { prefetchImage } from "./imageCache";
+
 const CARD_CODE_PATTERN = /〈([^〉]+)〉\[([^\]]+)\]/;
 
 const HEADERS = {
@@ -156,27 +158,25 @@ export async function fetchCardImage(cardName: string): Promise<CardImageResult>
   }
 
   const productIds = await searchProductIds(searchQuery);
-  let best:
-    | {
-        productId: string;
-        title: string;
-        imageUrl: string | null;
-        score: number;
-      }
-    | null = null;
+  const candidates = await Promise.all(
+    productIds.map(async (productId) => {
+      const product = await fetchProduct(productId);
+      if (!product) return null;
 
-  for (const productId of productIds) {
-    const product = await fetchProduct(productId);
-    if (!product) continue;
-
-    const score = scoreProductTitle(cardName, product.title);
-    if (!best || score > best.score) {
-      best = {
+      return {
         productId,
         title: product.title,
         imageUrl: product.imageUrl,
-        score,
+        score: scoreProductTitle(cardName, product.title),
       };
+    }),
+  );
+
+  let best: (typeof candidates)[number] = null;
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    if (!best || candidate.score > best.score) {
+      best = candidate;
     }
   }
 
@@ -187,6 +187,10 @@ export async function fetchCardImage(cardName: string): Promise<CardImageResult>
     productId: best?.productId ?? null,
     cached: false,
   };
+
+  if (result.imageUrl) {
+    void prefetchImage(result.imageUrl).catch(() => undefined);
+  }
 
   cache.set(cardName, {
     result,

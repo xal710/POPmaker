@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Connect } from "vite";
 import { fetchCardImage } from "./hareruya";
+import { fetchImageBuffer, prefetchImage } from "./imageCache";
 import { sendJson } from "./http";
 
 const PROXY_HEADERS = {
@@ -31,6 +32,29 @@ async function handleProxyImage(req: IncomingMessage, res: ServerResponse): Prom
   if (!imageUrl || !isAllowedProxyImageUrl(imageUrl)) {
     sendJson(res, 400, { error: "許可されていない画像URLです" });
     return;
+  }
+
+  const cached = await fetchImageBuffer(imageUrl);
+  if (cached) {
+    res.statusCode = 200;
+    res.setHeader("Content-Type", cached.contentType);
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.end(cached.buffer);
+    return;
+  }
+
+  try {
+    await prefetchImage(imageUrl);
+    const retried = await fetchImageBuffer(imageUrl);
+    if (retried) {
+      res.statusCode = 200;
+      res.setHeader("Content-Type", retried.contentType);
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      res.end(retried.buffer);
+      return;
+    }
+  } catch {
+    // fall through
   }
 
   const response = await fetch(imageUrl, { headers: PROXY_HEADERS });

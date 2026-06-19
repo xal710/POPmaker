@@ -63,16 +63,17 @@ export function drawCenteredOpentypeText(
   minFontSize = 12,
 ): void {
   let fontSize = maxFontSize;
+  let layout = measureOpentypeText(font, text, fontSize);
 
   while (fontSize > minFontSize) {
-    const { width, height } = measureOpentypeText(font, text, fontSize);
-    if (width <= rect.w * 0.95 && height <= rect.h * 0.92) {
+    if (layout.width <= rect.w * 0.95 && layout.height <= rect.h * 0.92) {
       break;
     }
     fontSize -= 1;
+    layout = measureOpentypeText(font, text, fontSize);
   }
 
-  const { bounds } = measureOpentypeText(font, text, fontSize);
+  const { bounds } = layout;
   const textWidth = bounds.x2 - bounds.x1;
   const textHeight = bounds.y2 - bounds.y1;
   const x = rect.x + (rect.w - textWidth) / 2 - bounds.x1;
