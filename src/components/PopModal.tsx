@@ -29,8 +29,7 @@ export function PopModal({ item, onClose }: PopModalProps) {
     refreshing: cardImageRefreshing,
   } = useCardImage(item?.name ?? null, { priority: "high" });
 
-  const cardImageReady =
-    cardImageState.status === "success" || cardImageState.status === "error";
+  const cardImageReady = cardImageState.status === "success";
   const cardImageUrl =
     cardImageState.status === "success" ? cardImageState.data.imageUrl : null;
   const productTitle =
@@ -146,18 +145,36 @@ export function PopModal({ item, onClose }: PopModalProps) {
         <div className="modal__content">
           <div className="pop-preview">
             <div className="pop-preview__pop-area">
-              {(popImageState.status === "idle" || popImageState.status === "loading") && (
+              {(cardImageState.status === "loading" ||
+                cardImageState.status === "idle" ||
+                popImageState.status === "idle" ||
+                popImageState.status === "loading") && (
                 <div className="pop-preview__pop-placeholder pop-preview__pop-placeholder--loading">
                   <div className="loading-spinner" aria-hidden="true" />
                   <span>
-                    {!cardImageReady
-                      ? "晴れる屋2からカード画像を取得中..."
+                    {cardImageState.status !== "success"
+                      ? "晴れる屋2からカード画像を取得中...（完了までお待ちください）"
                       : "POP画像を生成中..."}
                   </span>
                 </div>
               )}
 
-              {popImageState.status === "success" && (
+              {cardImageState.status === "error" && (
+                <div className="pop-preview__pop-placeholder pop-preview__pop-placeholder--error">
+                  <span>カード画像の取得に失敗しました</span>
+                  <small>{cardImageState.message}</small>
+                  <button
+                    type="button"
+                    className="btn btn--secondary btn--compact pop-preview__retry"
+                    onClick={() => void refreshCardImage()}
+                    disabled={cardImageRefreshing}
+                  >
+                    {cardImageRefreshing ? "再試行中..." : "再試行"}
+                  </button>
+                </div>
+              )}
+
+              {cardImageState.status === "success" && popImageState.status === "success" && (
                 <div className="pop-preview__pop-wrap">
                   <img
                     ref={popImageRef}
@@ -192,11 +209,6 @@ export function PopModal({ item, onClose }: PopModalProps) {
                       晴れる屋2に該当カード画像が見つからないため、「画像準備中」を表示しています。
                     </p>
                   )}
-                  {cardImageState.status === "error" && (
-                    <p className="pop-preview__image-error" role="status">
-                      晴れる屋2の画像取得に失敗したため、「画像準備中」を表示しています。
-                    </p>
-                  )}
                   {popCopyError && (
                     <p className="pop-preview__image-error" role="alert">
                       {popCopyError}
@@ -205,7 +217,7 @@ export function PopModal({ item, onClose }: PopModalProps) {
                 </div>
               )}
 
-              {popImageState.status === "error" && (
+              {cardImageState.status === "success" && popImageState.status === "error" && (
                 <div className="pop-preview__pop-placeholder pop-preview__pop-placeholder--error">
                   <span>POP画像の生成に失敗</span>
                   <small>{popImageState.message}</small>

@@ -16,7 +16,7 @@ const HEADERS = {
 
 const MAX_FETCH_RETRIES = 3;
 const RETRY_DELAY_MS = 400;
-const MAX_PRODUCT_LOOKUPS = 6;
+const MAX_PRODUCT_LOOKUPS = 10;
 
 async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));

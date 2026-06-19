@@ -525,6 +525,10 @@
   color: var(--danger);
 }
 
+.pop-preview__retry {
+  margin-top: 12px;
+}
+
 .pop-preview__image-area {
   display: flex;
   justify-content: center;

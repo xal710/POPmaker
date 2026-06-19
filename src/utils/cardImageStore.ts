@@ -10,8 +10,7 @@ export type CardImagePriority = "high" | "normal";
 
 type CacheEntry =
   | { status: "loading"; promise: Promise<CardImageData> }
-  | { status: "success"; data: CardImageData }
-  | { status: "error"; message: string };
+  | { status: "success"; data: CardImageData };
 
 const cache = new Map<string, CacheEntry>();
 const MAX_CONCURRENT = 6;
@@ -86,15 +85,23 @@ async function requestCardImage(cardName: string, refresh = false): Promise<Card
   return (await response.json()) as CardImageData;
 }
 
+function shouldReuseCachedData(data: CardImageData): boolean {
+  return Boolean(data.imageUrl);
+}
+
 export function getCardImageCacheEntry(cardName: string): CacheEntry | undefined {
-  return cache.get(cardName);
+  const entry = cache.get(cardName);
+  if (entry?.status === "success" && !shouldReuseCachedData(entry.data)) {
+    return undefined;
+  }
+  return entry;
 }
 
 export function loadCardImageData(
   cardName: string,
   priority: CardImagePriority = "normal",
 ): Promise<CardImageData> {
-  const existing = cache.get(cardName);
+  const existing = getCardImageCacheEntry(cardName);
   if (existing?.status === "success") {
     return Promise.resolve(existing.data);
   }
@@ -104,7 +111,11 @@ export function loadCardImageData(
 
   const promise = schedule(() => requestCardImage(cardName), priority)
     .then((data) => {
-      cache.set(cardName, { status: "success", data });
+      if (shouldReuseCachedData(data)) {
+        cache.set(cardName, { status: "success", data });
+      } else {
+        cache.delete(cardName);
+      }
       return data;
     })
     .catch((error) => {
@@ -124,7 +135,11 @@ export function refreshCardImageData(
 
   const promise = schedule(() => requestCardImage(cardName, true), priority)
     .then((data) => {
-      cache.set(cardName, { status: "success", data });
+      if (shouldReuseCachedData(data)) {
+        cache.set(cardName, { status: "success", data });
+      } else {
+        cache.delete(cardName);
+      }
       return data;
     })
     .catch((error) => {

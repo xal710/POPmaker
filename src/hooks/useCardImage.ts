@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   getCardImageCacheEntry,
@@ -26,6 +26,13 @@ interface UseCardImageResult {
   refreshing: boolean;
 }
 
+const MAX_LOAD_ATTEMPTS = 2;
+const RETRY_DELAY_MS = 1500;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
 function readState(cardName: string | null): CardImageState {
   if (!cardName) return { status: "idle" };
 
@@ -47,6 +54,7 @@ export function useCardImage(
   const priority = options.priority ?? "normal";
   const [state, setState] = useState<CardImageState>(() => readState(cardName));
   const [refreshing, setRefreshing] = useState(false);
+  const generationRef = useRef(0);
 
   useEffect(() => {
     if (!cardName) {
@@ -60,38 +68,56 @@ export function useCardImage(
       return;
     }
 
+    const generation = ++generationRef.current;
     setState({ status: "loading" });
 
-    const controller = new AbortController();
-
-    loadCardImageData(cardName, priority)
-      .then((data) => {
-        if (controller.signal.aborted) return;
+    const targetName = cardName;
+    async function load(attempt: number): Promise<void> {
+      try {
+        const data = await loadCardImageData(targetName, priority);
+        if (generation !== generationRef.current) return;
         setState({ status: "success", data });
-      })
-      .catch((error) => {
-        if (controller.signal.aborted) return;
+      } catch (error) {
+        if (generation !== generationRef.current) return;
+
+        if (attempt < MAX_LOAD_ATTEMPTS) {
+          await sleep(RETRY_DELAY_MS);
+          if (generation !== generationRef.current) return;
+          await load(attempt + 1);
+          return;
+        }
+
         const message = error instanceof Error ? error.message : "画像の取得に失敗しました";
         setState({ status: "error", message });
-      });
+      }
+    }
 
-    return () => controller.abort();
+    void load(1);
+
+    return () => {
+      generationRef.current += 1;
+    };
   }, [cardName, priority]);
 
   const refresh = useCallback(async () => {
     if (!cardName) return;
 
+    const generation = ++generationRef.current;
     setRefreshing(true);
     setState({ status: "loading" });
 
     try {
       const data = await refreshCardImageData(cardName, priority);
+      if (generation !== generationRef.current) return;
       setState({ status: "success", data });
     } catch (error) {
+      if (generation !== generationRef.current) return;
       const message = error instanceof Error ? error.message : "画像の取得に失敗しました";
       setState({ status: "error", message });
     } finally {
-      setRefreshing(false);
+      if (generation === generationRef.current) {
+        setRefreshing(false);
+      }
     }
   }, [cardName, priority]);
 
