@@ -30,9 +30,9 @@ function dataDateHint(source: HeaderProps["dataSource"]): string {
     return "Excelの価格シート名に含まれる日付（例: 20260616_晴れる屋）";
   }
   if (source === "web") {
-    return "Web更新で比較データを生成した日付";
+    return "「最新価格を取得」で比較データを更新した日付（サーバー共通）";
   }
-  return "比較データの基準日";
+  return "比較データの更新日";
 }
 
 export function Header({
@@ -77,9 +77,9 @@ export function Header({
           {isFiltered ? "検索結果" : "件数"}: <strong>{itemCount.toLocaleString("ja-JP")}</strong> 件
         </span>
         <span className="meta-pill" title={dataDateHint(dataSource)}>
-          データ日: <strong>{formatDataDate(dataDate)}</strong>
+          更新日: <strong>{formatDataDate(dataDate)}</strong>
         </span>
-        <span className="meta-pill">
+        <span className="meta-pill" title="この端末が比較データを読み込んだ日時">
           読込: <strong>{lastFetchedAt ? formatDateTime(lastFetchedAt) : "—"}</strong>
         </span>
       </div>
