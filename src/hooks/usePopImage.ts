@@ -14,6 +14,7 @@ export function usePopImage(
   item: ComparisonItem | null,
   productTitle: string | null,
   cardImageUrl: string | null,
+  cardImageReady: boolean,
 ): PopImageState {
   const [state, setState] = useState<PopImageState>({ status: "idle" });
   const imageUrlRef = useRef<string | null>(null);
@@ -32,6 +33,11 @@ export function usePopImage(
     if (lastItemIdRef.current !== item.id) {
       lastItemIdRef.current = item.id;
       hasDisplayedRef.current = false;
+    }
+
+    if (!cardImageReady) {
+      setState({ status: "loading" });
+      return;
     }
 
     const generation = ++generationRef.current;
@@ -71,7 +77,7 @@ export function usePopImage(
     return () => {
       generationRef.current += 1;
     };
-  }, [item, productTitle, cardImageUrl]);
+  }, [item, productTitle, cardImageUrl, cardImageReady]);
 
   useEffect(() => {
     return () => {

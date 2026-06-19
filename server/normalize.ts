@@ -15,7 +15,24 @@ const CARD_RUSH_KEPT_PARENTHETICALS = new Set([
 const BALL_MIRROR_PATTERN =
   /マスターボールミラー|モンスターボールミラー|エネルギーミラー|R団ミラー|ボールミラー/;
 
-const HARERUYA_COLON_VARIANTS: Array<{ pattern: RegExp; label: string }> = [
+export type MirrorVariantLabel =
+  | "マスターボールミラー"
+  | "モンスターボールミラー"
+  | "エネルギーミラー"
+  | "R団ミラー"
+  | "ボールミラー"
+  | "ミラー";
+
+const MIRROR_VARIANT_PACK_SUFFIX: Record<MirrorVariantLabel, string> = {
+  マスターボールミラー: "-Ma",
+  モンスターボールミラー: "-Mo",
+  エネルギーミラー: "-EM",
+  R団ミラー: "-RM",
+  ボールミラー: "-BM",
+  ミラー: "-M",
+};
+
+const HARERUYA_COLON_VARIANTS: Array<{ pattern: RegExp; label: MirrorVariantLabel }> = [
   { pattern: /:エネルギーミラー(?:\([^)]*\))*\{[^}]*\}/g, label: "エネルギーミラー" },
   { pattern: /:モンスターボールミラー(?:\([^)]*\))*\{[^}]*\}/g, label: "モンスターボールミラー" },
   { pattern: /:マスターボールミラー(?:\([^)]*\))*\{[^}]*\}/g, label: "マスターボールミラー" },
@@ -41,6 +58,28 @@ function normalizeHareruyaPackCode(packCode: string): string {
   }
 
   return packCode;
+}
+
+/** 比較表のカード名からミラー種別を検出（マスターボール / モンスターボール等） */
+export function detectMirrorVariantLabel(cardName: string): MirrorVariantLabel | null {
+  const prefix = cardName.split("〈")[0] ?? cardName;
+
+  if (prefix.includes("マスターボールミラー")) return "マスターボールミラー";
+  if (prefix.includes("モンスターボールミラー")) return "モンスターボールミラー";
+  if (prefix.includes("エネルギーミラー")) return "エネルギーミラー";
+  if (prefix.includes("R団ミラー")) return "R団ミラー";
+  if (prefix.includes("ボールミラー")) return "ボールミラー";
+  if (/\(ミラー\)/.test(prefix)) return "ミラー";
+
+  return null;
+}
+
+/** 晴れる屋2のパック表記（例: SV2a-Ma）を比較表のパック + ミラー種別から組み立て */
+export function buildHareruyaVariantPackCode(
+  basePack: string,
+  variant: MirrorVariantLabel,
+): string {
+  return `${basePack}${MIRROR_VARIANT_PACK_SUFFIX[variant]}`;
 }
 
 function shouldKeepCardRushParenthetical(inner: string): boolean {

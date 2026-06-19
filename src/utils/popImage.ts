@@ -1,7 +1,7 @@
 import {
   drawCenteredOpentypeText,
   loadCorporateLogoFont,
-  loadImpactFont,
+  loadPopPriceFont,
 } from "./popFonts";
 
 /** PowerPoint template slide size (EMU) */
@@ -82,20 +82,19 @@ function loadBackgroundImage(): Promise<HTMLImageElement> {
   return backgroundImagePromise;
 }
 
-function resolveCardImageUrl(cardImageUrl: string | null): string {
-  if (!cardImageUrl) return PLACEHOLDER_URL;
+function resolveCardImageProxyUrl(cardImageUrl: string): string {
   return `/api/proxy-image?url=${encodeURIComponent(cardImageUrl)}`;
 }
 
-async function loadCardImage(cardImageUrl: string | null): Promise<HTMLImageElement> {
-  if (!cardImageUrl) {
-    if (!placeholderImagePromise) {
-      placeholderImagePromise = loadImage(PLACEHOLDER_URL);
-    }
-    return placeholderImagePromise;
+function loadPlaceholderImage(): Promise<HTMLImageElement> {
+  if (!placeholderImagePromise) {
+    placeholderImagePromise = loadImage(PLACEHOLDER_URL);
   }
+  return placeholderImagePromise;
+}
 
-  const url = resolveCardImageUrl(cardImageUrl);
+async function loadCardImage(cardImageUrl: string): Promise<HTMLImageElement> {
+  const url = resolveCardImageProxyUrl(cardImageUrl);
   let cached = imageElementCache.get(url);
   if (!cached) {
     cached = loadImage(url);
@@ -202,15 +201,6 @@ async function renderPopImage({
     throw new Error("POP画像の生成に失敗しました");
   }
 
-  const [background, cardImage, corporateLogoFont, impactFont] = await Promise.all([
-    loadBackgroundImage(),
-    loadCardImage(cardImageUrl),
-    loadCorporateLogoFont(),
-    loadImpactFont(),
-  ]);
-
-  context.drawImage(background, 0, 0, OUTPUT_WIDTH, outputHeight);
-
   const cardRect = {
     x: emu(CARD_IMAGE_RECT.x, SLIDE_WIDTH_EMU, OUTPUT_WIDTH),
     y: emu(CARD_IMAGE_RECT.y, SLIDE_HEIGHT_EMU, outputHeight),
@@ -218,6 +208,14 @@ async function renderPopImage({
     h: emu(CARD_IMAGE_RECT.h, SLIDE_HEIGHT_EMU, outputHeight),
   };
 
+  const [background, cardImage, corporateLogoFont, priceFont] = await Promise.all([
+    loadBackgroundImage(),
+    cardImageUrl ? loadCardImage(cardImageUrl) : loadPlaceholderImage(),
+    loadCorporateLogoFont(),
+    loadPopPriceFont(),
+  ]);
+
+  context.drawImage(background, 0, 0, OUTPUT_WIDTH, outputHeight);
   drawCoverImage(context, cardImage, cardRect.x, cardRect.y, cardRect.w, cardRect.h);
 
   const nameRect = {
@@ -252,7 +250,7 @@ async function renderPopImage({
 
   drawCenteredOpentypeText(
     context,
-    impactFont,
+    priceFont,
     priceLabel,
     priceRect,
     priceFontPx,

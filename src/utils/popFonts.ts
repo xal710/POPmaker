@@ -1,20 +1,33 @@
 import * as opentype from "opentype.js";
 
+/** カード名: コーポレート・ロゴＢ */
 const CORPORATE_LOGO_FONT_URL = "/fonts/Corporate-Logo-Bold.otf";
-const IMPACT_FONT_URL = "/fonts/Impact.ttf";
+
+/**
+ * 金額用フォント（POPテンプレ指定フォント）
+ * 差し替え: public/fonts/Pop-Price.ttf を上書き
+ * 読み込み失敗時: POP_PRICE_FONT.fallbackUrl（Impact）を使用
+ */
+export const POP_PRICE_FONT = {
+  url: "/fonts/Pop-Price.ttf",
+  fallbackUrl: "/fonts/Impact.ttf",
+  label: "金額フォント",
+} as const;
+
+type FontKind = "corporate" | "price";
 
 let corporateLogoFontPromise: Promise<opentype.Font> | null = null;
-let impactFontPromise: Promise<opentype.Font> | null = null;
+let popPriceFontPromise: Promise<opentype.Font> | null = null;
 
-function resetFontPromise(kind: "corporate" | "impact"): void {
+function resetFontPromise(kind: FontKind): void {
   if (kind === "corporate") {
     corporateLogoFontPromise = null;
     return;
   }
-  impactFontPromise = null;
+  popPriceFontPromise = null;
 }
 
-function loadFont(url: string, errorLabel: string, kind: "corporate" | "impact"): Promise<opentype.Font> {
+function loadFontFile(url: string, errorLabel: string, kind: FontKind): Promise<opentype.Font> {
   return fetch(url)
     .then((response) => {
       if (!response.ok) {
@@ -31,16 +44,24 @@ function loadFont(url: string, errorLabel: string, kind: "corporate" | "impact")
 
 export function loadCorporateLogoFont(): Promise<opentype.Font> {
   if (!corporateLogoFontPromise) {
-    corporateLogoFontPromise = loadFont(CORPORATE_LOGO_FONT_URL, "名称フォント", "corporate");
+    corporateLogoFontPromise = loadFontFile(CORPORATE_LOGO_FONT_URL, "名称フォント", "corporate");
   }
   return corporateLogoFontPromise;
 }
 
-export function loadImpactFont(): Promise<opentype.Font> {
-  if (!impactFontPromise) {
-    impactFontPromise = loadFont(IMPACT_FONT_URL, "金額フォント", "impact");
+/** POP金額描画用フォント（Pop-Price.ttf → 失敗時 Impact） */
+export function loadPopPriceFont(): Promise<opentype.Font> {
+  if (!popPriceFontPromise) {
+    popPriceFontPromise = loadFontFile(POP_PRICE_FONT.url, POP_PRICE_FONT.label, "price").catch(
+      () => loadFontFile(POP_PRICE_FONT.fallbackUrl, POP_PRICE_FONT.label, "price"),
+    );
   }
-  return impactFontPromise;
+  return popPriceFontPromise;
+}
+
+/** @deprecated loadPopPriceFont を使用 */
+export function loadImpactFont(): Promise<opentype.Font> {
+  return loadPopPriceFont();
 }
 
 function measureOpentypeText(font: opentype.Font, text: string, fontSize: number) {

@@ -1,7 +1,7 @@
 import { memo } from "react";
 
 import type { ComparisonItem } from "../types";
-import { formatDiff, formatYen } from "../utils/format";
+import { formatDiff, formatYen, getDiffTone } from "../utils/format";
 
 import { CardThumbnail } from "./CardThumbnail";
 
@@ -37,7 +37,9 @@ export const ComparisonRow = memo(function ComparisonRow({
             <span className="price-chip__label">晴れる屋2</span>
             <span className="price-chip__value">{formatYen(item.hareruya2)}</span>
           </div>
-          <div className="price-chip price-chip--diff">
+          <div
+            className={`price-chip price-chip--diff price-chip--diff-${getDiffTone(item.diff)}`}
+          >
             <span className="price-chip__label">差額</span>
             <span className="price-chip__value">{formatDiff(item.diff)}</span>
           </div>

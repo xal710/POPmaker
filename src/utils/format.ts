@@ -12,7 +12,16 @@ export function formatDateTime(date: Date): string {
   });
 }
 
+export type DiffTone = "positive" | "negative" | "zero";
+
+export function getDiffTone(diff: number): DiffTone {
+  if (diff > 0) return "positive";
+  if (diff < 0) return "negative";
+  return "zero";
+}
+
 export function formatDiff(diff: number): string {
+  if (diff === 0) return "±0";
   const sign = diff > 0 ? "+" : "";
   return `${sign}${formatYen(diff)}`;
 }

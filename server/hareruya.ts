@@ -1,4 +1,9 @@
 import { prefetchImage } from "./imageCache";
+import {
+  buildHareruyaVariantPackCode,
+  detectMirrorVariantLabel,
+  normalizeHareruyaName,
+} from "./normalize";
 
 const CARD_CODE_PATTERN = /〈([^〉]+)〉\[([^\]]+)\]/;
 
@@ -11,8 +16,7 @@ const HEADERS = {
 
 const MAX_FETCH_RETRIES = 2;
 const RETRY_DELAY_MS = 350;
-const PERFECT_MATCH_SCORE = 100;
-const MAX_PRODUCT_LOOKUPS = 5;
+const MAX_PRODUCT_LOOKUPS = 8;
 
 async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
@@ -71,31 +75,47 @@ interface CacheEntry {
 const CACHE_TTL_MS = 60 * 60 * 1000;
 const cache = new Map<string, CacheEntry>();
 
+function normalizeCardNameKey(cardName: string): string {
+  return cardName.replace(/\s+/g, " ").trim();
+}
+
+function normalizeProductTitleKey(title: string): string {
+  return normalizeHareruyaName(title).replace(/\s+/g, " ").trim();
+}
+
+/** 比較表カード名と晴れる屋2商品名が同一カードか（価格突合と同じ正規化） */
+export function isExactProductMatch(cardName: string, title: string): boolean {
+  return normalizeProductTitleKey(title) === normalizeCardNameKey(cardName);
+}
+
+function rankMatchedProduct(cardName: string, title: string): number {
+  let score = 0;
+
+  if (!cardName.includes("PSA") && /PSA\d*/i.test(title)) score -= 100;
+  if (!cardName.includes("未開封") && title.includes("未開封")) score -= 100;
+  if (title.includes("【")) score -= 10;
+
+  return score;
+}
+
 export function parseCardSearchQuery(cardName: string): string | null {
+  const match = CARD_CODE_PATTERN.exec(cardName);
+  if (!match) return null;
+
+  const [, number, pack] = match;
+  const variant = detectMirrorVariantLabel(cardName);
+  if (variant) {
+    return `${number} ${buildHareruyaVariantPackCode(pack, variant)}`;
+  }
+
+  return `${number} ${pack}`;
+}
+
+function parseFallbackSearchQuery(cardName: string): string | null {
   const match = CARD_CODE_PATTERN.exec(cardName);
   if (!match) return null;
   const [, number, pack] = match;
   return `${number} ${pack}`;
-}
-
-function scoreProductTitle(cardName: string, title: string): number {
-  const query = parseCardSearchQuery(cardName);
-  if (!query) return 0;
-
-  const [, number, pack] = CARD_CODE_PATTERN.exec(cardName) ?? [];
-  let score = 0;
-
-  if (number && title.includes(`〈${number}〉`)) score += 50;
-  if (pack && title.includes(`[${pack}]`)) score += 50;
-
-  const cardBaseName = cardName.split("〈")[0]?.trim() ?? "";
-  if (cardBaseName && title.startsWith(cardBaseName)) score += 20;
-
-  if (!cardName.includes("PSA") && /PSA\d*/i.test(title)) score -= 40;
-  if (!cardName.includes("未開封") && title.includes("未開封")) score -= 30;
-  if (title.includes("【")) score -= 10;
-
-  return score;
 }
 
 async function searchProductIds(query: string): Promise<string[]> {
@@ -106,7 +126,20 @@ async function searchProductIds(query: string): Promise<string[]> {
 
   const html = await fetchText(url);
   const ids = [...html.matchAll(/\/products\/(\d{10,})/g)].map((match) => match[1]);
-  return [...new Set(ids)].slice(0, MAX_PRODUCT_LOOKUPS);
+  return [...new Set(ids)];
+}
+
+async function resolveSearchQueries(cardName: string): Promise<string[]> {
+  const primaryQuery = parseCardSearchQuery(cardName);
+  if (!primaryQuery) return [];
+
+  const queries = [primaryQuery];
+  const fallbackQuery = parseFallbackSearchQuery(cardName);
+  if (fallbackQuery && fallbackQuery !== primaryQuery) {
+    queries.push(fallbackQuery);
+  }
+
+  return queries;
 }
 
 async function fetchProduct(
@@ -141,58 +174,79 @@ async function fetchProduct(
   }
 }
 
-export async function fetchCardImage(cardName: string): Promise<CardImageResult> {
-  const cached = cache.get(cardName);
-  if (cached && cached.expiresAt > Date.now()) {
-    return { ...cached.result, cached: true };
+async function findMatchingProduct(
+  cardName: string,
+): Promise<{ productId: string; title: string; imageUrl: string | null } | null> {
+  const queries = await resolveSearchQueries(cardName);
+  const seenIds = new Set<string>();
+  let best:
+    | {
+        productId: string;
+        title: string;
+        imageUrl: string | null;
+        rank: number;
+      }
+    | null = null;
+
+  for (const query of queries) {
+    const productIds = await searchProductIds(query);
+
+    for (const productId of productIds.slice(0, MAX_PRODUCT_LOOKUPS)) {
+      if (seenIds.has(productId)) continue;
+      seenIds.add(productId);
+
+      const product = await fetchProduct(productId);
+      if (!product) continue;
+      if (!isExactProductMatch(cardName, product.title)) continue;
+
+      const rank = rankMatchedProduct(cardName, product.title);
+      if (!best || rank > best.rank) {
+        best = {
+          productId,
+          title: product.title,
+          imageUrl: product.imageUrl,
+          rank,
+        };
+      }
+    }
+
+    if (best) break;
+  }
+
+  return best;
+}
+
+export async function fetchCardImage(
+  cardName: string,
+  options: { refresh?: boolean } = {},
+): Promise<CardImageResult> {
+  if (options.refresh) {
+    cache.delete(cardName);
+  } else {
+    const cached = cache.get(cardName);
+    if (cached && cached.expiresAt > Date.now()) {
+      return { ...cached.result, cached: true };
+    }
   }
 
   const searchQuery = parseCardSearchQuery(cardName);
   if (!searchQuery) {
-    const result: CardImageResult = {
+    return {
       imageUrl: null,
       productTitle: null,
       searchQuery: null,
       productId: null,
       cached: false,
     };
-    return result;
   }
 
-  const productIds = await searchProductIds(searchQuery);
-  let best:
-    | {
-        productId: string;
-        title: string;
-        imageUrl: string | null;
-        score: number;
-      }
-    | null = null;
-
-  for (const productId of productIds) {
-    const product = await fetchProduct(productId);
-    if (!product) continue;
-
-    const score = scoreProductTitle(cardName, product.title);
-    if (!best || score > best.score) {
-      best = {
-        productId,
-        title: product.title,
-        imageUrl: product.imageUrl,
-        score,
-      };
-    }
-
-    if (score >= PERFECT_MATCH_SCORE) {
-      break;
-    }
-  }
+  const matched = await findMatchingProduct(cardName);
 
   const result: CardImageResult = {
-    imageUrl: best?.imageUrl ?? null,
-    productTitle: best?.title ?? null,
+    imageUrl: matched?.imageUrl ?? null,
+    productTitle: matched?.title ?? null,
     searchQuery,
-    productId: best?.productId ?? null,
+    productId: matched?.productId ?? null,
     cached: false,
   };
 
@@ -206,4 +260,9 @@ export async function fetchCardImage(cardName: string): Promise<CardImageResult>
   });
 
   return result;
+}
+
+/** @deprecated 完全一致判定へ移行。後方互換のため残す */
+export function scoreProductTitle(cardName: string, title: string): number {
+  return isExactProductMatch(cardName, title) ? 1000 : 0;
 }

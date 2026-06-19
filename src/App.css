@@ -353,9 +353,19 @@
   color: var(--hareruya);
 }
 
-.price-chip--diff {
+.price-chip--diff-positive {
   background: var(--diff-soft);
   color: var(--diff);
+}
+
+.price-chip--diff-negative {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.price-chip--diff-zero {
+  background: #eef2f6;
+  color: var(--text-muted);
 }
 
 .modal-overlay {
@@ -413,6 +423,17 @@
 .modal__header h2 {
   font-size: 17px;
   font-weight: 700;
+}
+
+.modal__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.modal__refresh {
+  min-width: 72px;
 }
 
 .modal__close {
@@ -1226,8 +1247,19 @@
   flex-shrink: 0;
   font-size: 12px;
   font-weight: 700;
-  color: var(--diff);
   font-variant-numeric: tabular-nums;
+}
+
+.search-bar__suggestion-diff--positive {
+  color: var(--diff);
+}
+
+.search-bar__suggestion-diff--negative {
+  color: var(--danger);
+}
+
+.search-bar__suggestion-diff--zero {
+  color: var(--text-muted);
 }
 
 .empty-state__hint {

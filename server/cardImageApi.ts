@@ -98,7 +98,8 @@ export function createCardImageMiddleware(): Connect.NextHandleFunction {
         return;
       }
 
-      const result = await fetchCardImage(cardName);
+      const refresh = url.searchParams.get("refresh") === "1";
+      const result = await fetchCardImage(cardName, { refresh });
       sendJson(res, 200, result);
     } catch (error) {
       const message = error instanceof Error ? error.message : "画像の取得に失敗しました";

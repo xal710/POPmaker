@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { ComparisonItem } from "../types";
+import { formatDiff, getDiffTone } from "../utils/format";
 
 interface SearchBarProps {
   query: string;
@@ -176,8 +177,10 @@ export function SearchBar({
                 onClick={() => handleSelect(item)}
               >
                 <span className="search-bar__suggestion-name">{item.name}</span>
-                <span className="search-bar__suggestion-diff">
-                  差額 +¥{item.diff.toLocaleString("ja-JP")}
+                <span
+                  className={`search-bar__suggestion-diff search-bar__suggestion-diff--${getDiffTone(item.diff)}`}
+                >
+                  差額 {formatDiff(item.diff)}
                 </span>
               </button>
             </li>

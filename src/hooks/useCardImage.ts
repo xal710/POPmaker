@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   getCardImageCacheEntry,
   loadCardImageData,
+  refreshCardImageData,
   type CardImageData,
   type CardImagePriority,
 } from "../utils/cardImageStore";
@@ -17,6 +18,12 @@ export type CardImageState =
 
 interface UseCardImageOptions {
   priority?: CardImagePriority;
+}
+
+interface UseCardImageResult {
+  state: CardImageState;
+  refresh: () => Promise<void>;
+  refreshing: boolean;
 }
 
 function readState(cardName: string | null): CardImageState {
@@ -36,9 +43,10 @@ function readState(cardName: string | null): CardImageState {
 export function useCardImage(
   cardName: string | null,
   options: UseCardImageOptions = {},
-): CardImageState {
+): UseCardImageResult {
   const priority = options.priority ?? "normal";
   const [state, setState] = useState<CardImageState>(() => readState(cardName));
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (!cardName) {
@@ -70,5 +78,22 @@ export function useCardImage(
     return () => controller.abort();
   }, [cardName, priority]);
 
-  return state;
+  const refresh = useCallback(async () => {
+    if (!cardName) return;
+
+    setRefreshing(true);
+    setState({ status: "loading" });
+
+    try {
+      const data = await refreshCardImageData(cardName, priority);
+      setState({ status: "success", data });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "画像の取得に失敗しました";
+      setState({ status: "error", message });
+    } finally {
+      setRefreshing(false);
+    }
+  }, [cardName, priority]);
+
+  return { state, refresh, refreshing };
 }

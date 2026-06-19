@@ -28,7 +28,7 @@ export const CardThumbnail = memo(function CardThumbnail({ cardName }: CardThumb
     return () => observer.disconnect();
   }, []);
 
-  const imageState = useCardImage(isVisible ? cardName : null);
+  const { state: imageState } = useCardImage(isVisible ? cardName : null);
   const proxyUrl =
     imageState.status === "success"
       ? resolveCardImageProxyUrl(imageState.data.imageUrl)

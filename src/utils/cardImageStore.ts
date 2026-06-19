@@ -71,8 +71,11 @@ function schedule<T>(task: () => Promise<T>, priority: CardImagePriority): Promi
   });
 }
 
-async function requestCardImage(cardName: string): Promise<CardImageData> {
+async function requestCardImage(cardName: string, refresh = false): Promise<CardImageData> {
   const params = new URLSearchParams({ name: cardName });
+  if (refresh) {
+    params.set("refresh", "1");
+  }
   const response = await fetch(`/api/card-image?${params}`);
 
   if (!response.ok) {
@@ -100,6 +103,26 @@ export function loadCardImageData(
   }
 
   const promise = schedule(() => requestCardImage(cardName), priority)
+    .then((data) => {
+      cache.set(cardName, { status: "success", data });
+      return data;
+    })
+    .catch((error) => {
+      cache.delete(cardName);
+      throw error;
+    });
+
+  cache.set(cardName, { status: "loading", promise });
+  return promise;
+}
+
+export function refreshCardImageData(
+  cardName: string,
+  priority: CardImagePriority = "normal",
+): Promise<CardImageData> {
+  cache.delete(cardName);
+
+  const promise = schedule(() => requestCardImage(cardName, true), priority)
     .then((data) => {
       cache.set(cardName, { status: "success", data });
       return data;
