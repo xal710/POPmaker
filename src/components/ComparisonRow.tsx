@@ -3,6 +3,8 @@ import { memo } from "react";
 import type { ComparisonItem } from "../types";
 import { formatDiff, formatYen, getDiffTone } from "../utils/format";
 
+import { CardThumbnail } from "./CardThumbnail";
+
 interface ComparisonRowProps {
   item: ComparisonItem;
   rank: number;
@@ -17,6 +19,7 @@ export const ComparisonRow = memo(function ComparisonRow({
   return (
     <article className="comparison-row">
       <div className="comparison-row__rank">{rank}</div>
+      <CardThumbnail cardName={item.name} />
       <div className="comparison-row__body">
         <button
           type="button"

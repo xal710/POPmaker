@@ -37,6 +37,7 @@ export const ComparisonList = memo(function ComparisonList({
       <div className="comparison-list__header">
         <span className="comparison-list__header-rank">順位</span>
         <span className="comparison-list__header-body">カード名 / 買取価格</span>
+        <span className="comparison-list__header-thumb">画像</span>
       </div>
       <div className="comparison-list__body">
         {items.map((item, index) => (
