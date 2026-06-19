@@ -5,6 +5,7 @@ import {
   getComparisonJsonPath,
   getExcelPath,
 } from "./config";
+import { persistComparisonPayload } from "./comparisonBackup";
 import {
   isExcelFileLockedError,
   readComparisonFromExcelCom,
@@ -155,7 +156,7 @@ export function readComparisonFromJson(): ComparisonPayload {
 }
 
 export function saveComparisonJson(payload: ComparisonPayload): void {
-  writeFileSync(getComparisonJsonPath(), JSON.stringify(payload, null, 2), "utf-8");
+  persistComparisonPayload(payload);
 }
 
 export function loadComparisonData(): ComparisonPayload {

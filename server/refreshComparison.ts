@@ -1,6 +1,5 @@
-import { writeFileSync } from "node:fs";
 import { buildComparisonItems } from "./compare";
-import { getComparisonJsonPath } from "./config";
+import { persistComparisonPayload } from "./comparisonBackup";
 import type { ComparisonPayload } from "./excel";
 import { fetchCardRushBuyPrices } from "./fetch/cardrush";
 import { fetchHareruyaBuyPrices } from "./fetch/hareruya";
@@ -33,7 +32,7 @@ export function getRefreshProgress(): RefreshProgress {
 }
 
 export function saveComparisonPayload(payload: ComparisonPayload): void {
-  writeFileSync(getComparisonJsonPath(), JSON.stringify(payload, null, 2), "utf-8");
+  persistComparisonPayload(payload);
 }
 
 export async function refreshComparisonFromWeb(): Promise<ComparisonPayload> {

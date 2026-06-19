@@ -1,6 +1,7 @@
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readFileSync, existsSync, mkdirSync, copyFileSync } from "node:fs";
+import { restoreComparisonFromBackupIfNewer } from "./comparisonBackup";
 
 const PROJECT_ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const CONFIG_PATH = resolve(PROJECT_ROOT, "excel-config.json");
@@ -43,11 +44,15 @@ export function ensureComparisonDataFile(): void {
     ? resolve(process.env.COMPARISON_DATA_PATH)
     : resolve(getDataDir(), "comparison.json");
 
-  if (existsSync(target)) {
+  mkdirSync(dirname(target), { recursive: true });
+
+  if (restoreComparisonFromBackupIfNewer()) {
     return;
   }
 
-  mkdirSync(dirname(target), { recursive: true });
+  if (existsSync(target)) {
+    return;
+  }
 
   const seeds = [
     resolve(PROJECT_ROOT, "public/data/comparison.json"),
