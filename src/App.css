@@ -187,14 +187,13 @@
 .comparison-row {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr);
-  grid-template-rows: auto auto;
-  gap: 8px 12px;
+  gap: 12px;
   align-items: start;
   padding: 16px 18px;
   border-bottom: 1px solid var(--border);
   transition: background 0.12s;
   content-visibility: auto;
-  contain-intrinsic-size: auto 112px;
+  contain-intrinsic-size: auto 88px;
 }
 
 .comparison-list__pagination {
@@ -240,8 +239,6 @@
 }
 
 .comparison-row__rank {
-  grid-column: 1;
-  grid-row: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -260,50 +257,7 @@
   color: var(--primary);
 }
 
-.comparison-row__thumb {
-  grid-column: 1;
-  grid-row: 2;
-  width: 44px;
-  display: flex;
-  justify-content: center;
-}
-
-.comparison-row__thumb-image {
-  display: block;
-  width: 44px;
-  height: 62px;
-  object-fit: contain;
-  border-radius: 4px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-}
-
-.comparison-row__thumb-placeholder {
-  width: 44px;
-  height: 62px;
-  border-radius: 4px;
-  background: var(--bg);
-  border: 1px dashed var(--border);
-}
-
-.comparison-row__thumb-placeholder--loading {
-  animation: thumb-pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes thumb-pulse {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-
-  50% {
-    opacity: 1;
-  }
-}
-
 .comparison-row__body {
-  grid-column: 2;
-  grid-row: 1 / span 2;
   min-width: 0;
 }
 
@@ -811,7 +765,7 @@
 
   .comparison-list__header {
     display: grid;
-    grid-template-columns: 44px minmax(0, 1fr) 72px;
+    grid-template-columns: 44px minmax(0, 1fr);
     gap: 12px;
     padding: 12px 18px;
     background: var(--bg);
@@ -822,37 +776,8 @@
     align-items: center;
   }
 
-  .comparison-list__header-thumb {
-    text-align: right;
-  }
-
   .comparison-row {
-    grid-template-columns: 44px minmax(0, 1fr) 72px;
-    grid-template-rows: auto;
     align-items: center;
-  }
-
-  .comparison-row__rank {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .comparison-row__thumb {
-    grid-column: 3;
-    grid-row: 1;
-    width: 72px;
-    justify-content: flex-end;
-  }
-
-  .comparison-row__thumb-image,
-  .comparison-row__thumb-placeholder {
-    width: 56px;
-    height: 78px;
-  }
-
-  .comparison-row__body {
-    grid-column: 2;
-    grid-row: 1;
   }
 
   .pop-preview {
