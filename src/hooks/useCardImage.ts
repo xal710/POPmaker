@@ -1,21 +1,38 @@
 import { useEffect, useState } from "react";
 
-export interface CardImageData {
-  imageUrl: string | null;
-  productTitle: string | null;
-  searchQuery: string | null;
-  productId: string | null;
-  cached: boolean;
-}
+import {
+  getCardImageCacheEntry,
+  loadCardImageData,
+  type CardImageData,
+} from "../utils/cardImageStore";
 
-type CardImageState =
+export type { CardImageData };
+
+export type CardImageState =
   | { status: "idle" }
   | { status: "loading" }
   | { status: "success"; data: CardImageData }
   | { status: "error"; message: string };
 
-export function useCardImage(cardName: string | null) {
-  const [state, setState] = useState<CardImageState>({ status: "idle" });
+function readState(cardName: string | null): CardImageState {
+  if (!cardName) return { status: "idle" };
+
+  const entry = getCardImageCacheEntry(cardName);
+  if (entry?.status === "success") {
+    return { status: "success", data: entry.data };
+  }
+  if (entry?.status === "error") {
+    return { status: "error", message: entry.message };
+  }
+  if (entry?.status === "loading") {
+    return { status: "loading" };
+  }
+
+  return { status: "idle" };
+}
+
+export function useCardImage(cardName: string | null): CardImageState {
+  const [state, setState] = useState<CardImageState>(() => readState(cardName));
 
   useEffect(() => {
     if (!cardName) {
@@ -23,32 +40,26 @@ export function useCardImage(cardName: string | null) {
       return;
     }
 
+    const cached = readState(cardName);
+    if (cached.status === "success" || cached.status === "error") {
+      setState(cached);
+      return;
+    }
+
+    setState({ status: "loading" });
+
     const controller = new AbortController();
 
-    const load = async () => {
-      setState({ status: "loading" });
-
-      try {
-        const params = new URLSearchParams({ name: cardName });
-        const response = await fetch(`/api/card-image?${params}`, {
-          signal: controller.signal,
-        });
-
-        if (!response.ok) {
-          const body = (await response.json().catch(() => null)) as { error?: string } | null;
-          throw new Error(body?.error ?? `HTTP ${response.status}`);
-        }
-
-        const data = (await response.json()) as CardImageData;
+    loadCardImageData(cardName)
+      .then((data) => {
+        if (controller.signal.aborted) return;
         setState({ status: "success", data });
-      } catch (error) {
+      })
+      .catch((error) => {
         if (controller.signal.aborted) return;
         const message = error instanceof Error ? error.message : "画像の取得に失敗しました";
         setState({ status: "error", message });
-      }
-    };
-
-    void load();
+      });
 
     return () => controller.abort();
   }, [cardName]);

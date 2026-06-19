@@ -35,9 +35,9 @@ export const ComparisonList = memo(function ComparisonList({
   return (
     <section className="comparison-list" aria-label="買取価格比較リスト">
       <div className="comparison-list__header">
-        <span>順位</span>
-        <span>カード名</span>
-        <span>買取価格</span>
+        <span className="comparison-list__header-rank">順位</span>
+        <span className="comparison-list__header-body">カード名 / 買取価格</span>
+        <span className="comparison-list__header-thumb">画像</span>
       </div>
       <div className="comparison-list__body">
         {items.map((item, index) => (
