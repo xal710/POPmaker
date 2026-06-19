@@ -4,6 +4,7 @@ import {
   getCardImageCacheEntry,
   loadCardImageData,
   type CardImageData,
+  type CardImagePriority,
 } from "../utils/cardImageStore";
 
 export type { CardImageData };
@@ -14,15 +15,16 @@ export type CardImageState =
   | { status: "success"; data: CardImageData }
   | { status: "error"; message: string };
 
+interface UseCardImageOptions {
+  priority?: CardImagePriority;
+}
+
 function readState(cardName: string | null): CardImageState {
   if (!cardName) return { status: "idle" };
 
   const entry = getCardImageCacheEntry(cardName);
   if (entry?.status === "success") {
     return { status: "success", data: entry.data };
-  }
-  if (entry?.status === "error") {
-    return { status: "error", message: entry.message };
   }
   if (entry?.status === "loading") {
     return { status: "loading" };
@@ -31,7 +33,11 @@ function readState(cardName: string | null): CardImageState {
   return { status: "idle" };
 }
 
-export function useCardImage(cardName: string | null): CardImageState {
+export function useCardImage(
+  cardName: string | null,
+  options: UseCardImageOptions = {},
+): CardImageState {
+  const priority = options.priority ?? "normal";
   const [state, setState] = useState<CardImageState>(() => readState(cardName));
 
   useEffect(() => {
@@ -41,7 +47,7 @@ export function useCardImage(cardName: string | null): CardImageState {
     }
 
     const cached = readState(cardName);
-    if (cached.status === "success" || cached.status === "error") {
+    if (cached.status === "success") {
       setState(cached);
       return;
     }
@@ -50,7 +56,7 @@ export function useCardImage(cardName: string | null): CardImageState {
 
     const controller = new AbortController();
 
-    loadCardImageData(cardName)
+    loadCardImageData(cardName, priority)
       .then((data) => {
         if (controller.signal.aborted) return;
         setState({ status: "success", data });
@@ -62,7 +68,7 @@ export function useCardImage(cardName: string | null): CardImageState {
       });
 
     return () => controller.abort();
-  }, [cardName]);
+  }, [cardName, priority]);
 
   return state;
 }

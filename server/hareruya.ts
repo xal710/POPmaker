@@ -9,8 +9,10 @@ const HEADERS = {
   "Accept-Language": "ja,en;q=0.9",
 };
 
-const MAX_FETCH_RETRIES = 3;
-const RETRY_DELAY_MS = 800;
+const MAX_FETCH_RETRIES = 2;
+const RETRY_DELAY_MS = 350;
+const PERFECT_MATCH_SCORE = 100;
+const MAX_PRODUCT_LOOKUPS = 5;
 
 async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
@@ -104,7 +106,7 @@ async function searchProductIds(query: string): Promise<string[]> {
 
   const html = await fetchText(url);
   const ids = [...html.matchAll(/\/products\/(\d{10,})/g)].map((match) => match[1]);
-  return [...new Set(ids)].slice(0, 8);
+  return [...new Set(ids)].slice(0, MAX_PRODUCT_LOOKUPS);
 }
 
 async function fetchProduct(
@@ -158,25 +160,31 @@ export async function fetchCardImage(cardName: string): Promise<CardImageResult>
   }
 
   const productIds = await searchProductIds(searchQuery);
-  const candidates = await Promise.all(
-    productIds.map(async (productId) => {
-      const product = await fetchProduct(productId);
-      if (!product) return null;
+  let best:
+    | {
+        productId: string;
+        title: string;
+        imageUrl: string | null;
+        score: number;
+      }
+    | null = null;
 
-      return {
+  for (const productId of productIds) {
+    const product = await fetchProduct(productId);
+    if (!product) continue;
+
+    const score = scoreProductTitle(cardName, product.title);
+    if (!best || score > best.score) {
+      best = {
         productId,
         title: product.title,
         imageUrl: product.imageUrl,
-        score: scoreProductTitle(cardName, product.title),
+        score,
       };
-    }),
-  );
+    }
 
-  let best: (typeof candidates)[number] = null;
-  for (const candidate of candidates) {
-    if (!candidate) continue;
-    if (!best || candidate.score > best.score) {
-      best = candidate;
+    if (score >= PERFECT_MATCH_SCORE) {
+      break;
     }
   }
 

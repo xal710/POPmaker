@@ -23,16 +23,14 @@ export function PopModal({ item, onClose }: PopModalProps) {
   const [popCopyError, setPopCopyError] = useState<string | null>(null);
   const popImageRef = useRef<HTMLImageElement>(null);
 
-  const cardImageState = useCardImage(item?.name ?? null);
+  const cardImageState = useCardImage(item?.name ?? null, { priority: "high" });
 
   const cardImageUrl =
     cardImageState.status === "success" ? cardImageState.data.imageUrl : null;
   const productTitle =
     cardImageState.status === "success" ? cardImageState.data.productTitle : null;
-  const cardImageReady =
-    cardImageState.status === "success" || cardImageState.status === "error";
 
-  const popImageState = usePopImage(item, productTitle, cardImageUrl, cardImageReady);
+  const popImageState = usePopImage(item, productTitle, cardImageUrl);
 
   useEffect(() => {
     if (!item) return;
@@ -131,13 +129,11 @@ export function PopModal({ item, onClose }: PopModalProps) {
         <div className="modal__content">
           <div className="pop-preview">
             <div className="pop-preview__pop-area">
-              {(popImageState.status === "idle" ||
-                popImageState.status === "loading" ||
-                cardImageState.status === "loading") && (
+              {(popImageState.status === "idle" || popImageState.status === "loading") && (
                 <div className="pop-preview__pop-placeholder pop-preview__pop-placeholder--loading">
                   <div className="loading-spinner" aria-hidden="true" />
                   <span>
-                    {cardImageState.status === "loading"
+                    {cardImageState.status === "loading" && !cardImageUrl
                       ? "晴れる屋2からカード画像を取得中..."
                       : "POP画像を生成中..."}
                   </span>

@@ -14,16 +14,24 @@ export function usePopImage(
   item: ComparisonItem | null,
   productTitle: string | null,
   cardImageUrl: string | null,
-  cardImageReady: boolean,
 ): PopImageState {
   const [state, setState] = useState<PopImageState>({ status: "idle" });
   const imageUrlRef = useRef<string | null>(null);
   const generationRef = useRef(0);
+  const lastItemIdRef = useRef<number | null>(null);
+  const hasDisplayedRef = useRef(false);
 
   useEffect(() => {
-    if (!item || !cardImageReady) {
+    if (!item) {
+      lastItemIdRef.current = null;
+      hasDisplayedRef.current = false;
       setState({ status: "idle" });
       return;
+    }
+
+    if (lastItemIdRef.current !== item.id) {
+      lastItemIdRef.current = item.id;
+      hasDisplayedRef.current = false;
     }
 
     const generation = ++generationRef.current;
@@ -32,7 +40,9 @@ export function usePopImage(
     const priceLabel = formatYen(item.hareruya2);
     const filename = formatPopImageFilename(sourceName);
 
-    setState({ status: "loading" });
+    if (!hasDisplayedRef.current) {
+      setState({ status: "loading" });
+    }
 
     generatePopImage({
       cardName,
@@ -48,6 +58,7 @@ export function usePopImage(
 
         const nextUrl = URL.createObjectURL(blob);
         imageUrlRef.current = nextUrl;
+        hasDisplayedRef.current = true;
         setState({ status: "success", blob, imageUrl: nextUrl, filename });
       })
       .catch((error) => {
@@ -60,7 +71,7 @@ export function usePopImage(
     return () => {
       generationRef.current += 1;
     };
-  }, [item, productTitle, cardImageUrl, cardImageReady]);
+  }, [item, productTitle, cardImageUrl]);
 
   useEffect(() => {
     return () => {

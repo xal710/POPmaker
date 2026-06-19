@@ -6,41 +6,68 @@ export interface CardImageData {
   cached: boolean;
 }
 
+export type CardImagePriority = "high" | "normal";
+
 type CacheEntry =
   | { status: "loading"; promise: Promise<CardImageData> }
   | { status: "success"; data: CardImageData }
   | { status: "error"; message: string };
 
 const cache = new Map<string, CacheEntry>();
-const MAX_CONCURRENT = 4;
+const MAX_CONCURRENT = 6;
+const MAX_HIGH_PRIORITY = 2;
 let activeCount = 0;
-const waitQueue: Array<() => void> = [];
+let activeHighCount = 0;
+const highQueue: Array<() => void> = [];
+const normalQueue: Array<() => void> = [];
 
 function runQueued(): void {
-  while (activeCount < MAX_CONCURRENT && waitQueue.length > 0) {
-    const next = waitQueue.shift();
+  while (activeCount < MAX_CONCURRENT) {
+    let next: (() => void) | undefined;
+
+    if (activeHighCount < MAX_HIGH_PRIORITY && highQueue.length > 0) {
+      next = highQueue.shift();
+    } else if (normalQueue.length > 0) {
+      next = normalQueue.shift();
+    } else if (highQueue.length > 0) {
+      next = highQueue.shift();
+    } else {
+      break;
+    }
+
     next?.();
   }
 }
 
-function schedule<T>(task: () => Promise<T>): Promise<T> {
+function schedule<T>(task: () => Promise<T>, priority: CardImagePriority): Promise<T> {
   return new Promise((resolve, reject) => {
     const run = () => {
       activeCount += 1;
+      if (priority === "high") activeHighCount += 1;
+
       task()
         .then(resolve, reject)
         .finally(() => {
           activeCount -= 1;
+          if (priority === "high") activeHighCount -= 1;
           runQueued();
         });
     };
 
-    if (activeCount < MAX_CONCURRENT) {
+    const canRunNow =
+      activeCount < MAX_CONCURRENT &&
+      (priority === "normal" || activeHighCount < MAX_HIGH_PRIORITY);
+
+    if (canRunNow) {
       run();
       return;
     }
 
-    waitQueue.push(run);
+    if (priority === "high") {
+      highQueue.push(run);
+    } else {
+      normalQueue.push(run);
+    }
   });
 }
 
@@ -60,7 +87,10 @@ export function getCardImageCacheEntry(cardName: string): CacheEntry | undefined
   return cache.get(cardName);
 }
 
-export function loadCardImageData(cardName: string): Promise<CardImageData> {
+export function loadCardImageData(
+  cardName: string,
+  priority: CardImagePriority = "normal",
+): Promise<CardImageData> {
   const existing = cache.get(cardName);
   if (existing?.status === "success") {
     return Promise.resolve(existing.data);
@@ -69,7 +99,7 @@ export function loadCardImageData(cardName: string): Promise<CardImageData> {
     return existing.promise;
   }
 
-  const promise = schedule(() => requestCardImage(cardName))
+  const promise = schedule(() => requestCardImage(cardName), priority)
     .then((data) => {
       cache.set(cardName, { status: "success", data });
       return data;
