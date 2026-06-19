@@ -29,7 +29,6 @@ export function useComparisonData() {
   const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
   const intervalRef = useRef<number | null>(null);
   const pollRef = useRef<number | null>(null);
-  const startupRefreshRef = useRef(false);
 
   const loadCachedData = useCallback(async () => {
     setError(null);
@@ -127,10 +126,6 @@ export function useComparisonData() {
       setLoading(true);
       await loadCachedData();
       setLoading(false);
-
-      if (startupRefreshRef.current) return;
-      startupRefreshRef.current = true;
-      void refresh();
     })();
 
     intervalRef.current = window.setInterval(() => {
@@ -145,7 +140,7 @@ export function useComparisonData() {
         window.clearInterval(pollRef.current);
       }
     };
-  }, [loadCachedData, refresh]);
+  }, [loadCachedData]);
 
   return {
     data,

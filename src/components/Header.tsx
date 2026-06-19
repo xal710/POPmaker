@@ -47,7 +47,7 @@ function updatedDateHint(source: HeaderProps["dataSource"]): string {
   if (source === "excel") {
     return "Excelの価格シート名に含まれる日付（例: 20260616_晴れる屋）";
   }
-  return "サーバー上の比較データが最後に更新された日（起動時の自動更新または「最新価格を取得」成功時）";
+  return "サーバー上の比較データが最後に更新された日（「最新価格を取得」成功時）";
 }
 
 export function Header({
