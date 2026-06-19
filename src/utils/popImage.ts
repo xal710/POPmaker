@@ -62,11 +62,7 @@ async function loadCardImage(cardImageUrl: string | null): Promise<HTMLImageElem
     return loadImage(PLACEHOLDER_URL);
   }
 
-  try {
-    return await loadImage(resolveCardImageUrl(cardImageUrl));
-  } catch {
-    return loadImage(PLACEHOLDER_URL);
-  }
+  return loadImage(resolveCardImageUrl(cardImageUrl));
 }
 
 function emu(value: number, slideSize: number, outputSize: number): number {

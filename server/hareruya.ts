@@ -3,9 +3,53 @@ const CARD_CODE_PATTERN = /〈([^〉]+)〉\[([^\]]+)\]/;
 const HEADERS = {
   "User-Agent":
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  Accept: "text/html,application/json",
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   "Accept-Language": "ja,en;q=0.9",
 };
+
+const MAX_FETCH_RETRIES = 3;
+const RETRY_DELAY_MS = 800;
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchWithRetry(url: string, init?: RequestInit): Promise<Response> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < MAX_FETCH_RETRIES; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        ...init,
+        headers: {
+          ...HEADERS,
+          ...(init?.headers ?? {}),
+        },
+      });
+
+      if (response.status === 503 || response.status === 429) {
+        lastError = new Error(`HTTP ${response.status}: ${url}`);
+        await sleep(RETRY_DELAY_MS * (attempt + 1));
+        continue;
+      }
+
+      return response;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      await sleep(RETRY_DELAY_MS * (attempt + 1));
+    }
+  }
+
+  throw lastError ?? new Error(`HTTP request failed: ${url}`);
+}
+
+async function fetchText(url: string): Promise<string> {
+  const response = await fetchWithRetry(url);
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${url}`);
+  }
+  return response.text();
+}
 
 export interface CardImageResult {
   imageUrl: string | null;
@@ -50,14 +94,6 @@ function scoreProductTitle(cardName: string, title: string): number {
   return score;
 }
 
-async function fetchText(url: string): Promise<string> {
-  const response = await fetch(url, { headers: HEADERS });
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${url}`);
-  }
-  return response.text();
-}
-
 async function searchProductIds(query: string): Promise<string[]> {
   const url = `https://www.hareruya2.com/search?${new URLSearchParams({
     q: query,
@@ -73,23 +109,32 @@ async function fetchProduct(
   productId: string,
 ): Promise<{ title: string; imageUrl: string | null } | null> {
   const url = `https://www.hareruya2.com/products/${productId}.json`;
-  const response = await fetch(url, { headers: HEADERS });
-  if (!response.ok) return null;
 
-  const data = (await response.json()) as {
-    product?: {
-      title?: string;
-      images?: Array<{ src?: string }>;
+  try {
+    const response = await fetchWithRetry(url, {
+      headers: {
+        Accept: "application/json",
+      },
+    });
+    if (!response.ok) return null;
+
+    const data = (await response.json()) as {
+      product?: {
+        title?: string;
+        images?: Array<{ src?: string }>;
+      };
     };
-  };
 
-  const product = data.product;
-  if (!product?.title) return null;
+    const product = data.product;
+    if (!product?.title) return null;
 
-  return {
-    title: product.title,
-    imageUrl: product.images?.[0]?.src ?? null,
-  };
+    return {
+      title: product.title,
+      imageUrl: product.images?.[0]?.src ?? null,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchCardImage(cardName: string): Promise<CardImageResult> {
@@ -145,7 +190,7 @@ export async function fetchCardImage(cardName: string): Promise<CardImageResult>
 
   cache.set(cardName, {
     result,
-    expiresAt: Date.now() + CACHE_TTL_MS,
+    expiresAt: Date.now() + (result.imageUrl ? CACHE_TTL_MS : 60_000),
   });
 
   return result;

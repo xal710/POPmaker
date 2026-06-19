@@ -29,8 +29,10 @@ export function PopModal({ item, onClose }: PopModalProps) {
     cardImageState.status === "success" ? cardImageState.data.imageUrl : null;
   const productTitle =
     cardImageState.status === "success" ? cardImageState.data.productTitle : null;
+  const cardImageReady =
+    cardImageState.status === "success" || cardImageState.status === "error";
 
-  const popImageState = usePopImage(item, productTitle, cardImageUrl);
+  const popImageState = usePopImage(item, productTitle, cardImageUrl, cardImageReady);
 
   useEffect(() => {
     if (!item) return;
@@ -129,17 +131,16 @@ export function PopModal({ item, onClose }: PopModalProps) {
         <div className="modal__content">
           <div className="pop-preview">
             <div className="pop-preview__pop-area">
-              {popImageState.status === "loading" && (
+              {(popImageState.status === "idle" ||
+                popImageState.status === "loading" ||
+                cardImageState.status === "loading") && (
                 <div className="pop-preview__pop-placeholder pop-preview__pop-placeholder--loading">
                   <div className="loading-spinner" aria-hidden="true" />
-                  <span>POP画像を生成中...</span>
-                </div>
-              )}
-
-              {popImageState.status === "idle" && (
-                <div className="pop-preview__pop-placeholder pop-preview__pop-placeholder--loading">
-                  <div className="loading-spinner" aria-hidden="true" />
-                  <span>POP画像を準備中...</span>
+                  <span>
+                    {cardImageState.status === "loading"
+                      ? "晴れる屋2からカード画像を取得中..."
+                      : "POP画像を生成中..."}
+                  </span>
                 </div>
               )}
 
@@ -173,6 +174,16 @@ export function PopModal({ item, onClose }: PopModalProps) {
                     </button>
                   </div>
                   <p className="pop-preview__pop-filename">{popImageState.filename}</p>
+                  {cardImageState.status === "success" && !cardImageUrl && (
+                    <p className="pop-preview__image-error" role="status">
+                      晴れる屋2に該当カード画像が見つからないため、テンプレ画像を使用しています。
+                    </p>
+                  )}
+                  {cardImageState.status === "error" && (
+                    <p className="pop-preview__image-error" role="status">
+                      晴れる屋2の画像取得に失敗したため、テンプレ画像を使用しています。
+                    </p>
+                  )}
                   {popCopyError && (
                     <p className="pop-preview__image-error" role="alert">
                       {popCopyError}

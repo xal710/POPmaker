@@ -14,13 +14,14 @@ export function usePopImage(
   item: ComparisonItem | null,
   productTitle: string | null,
   cardImageUrl: string | null,
+  cardImageReady: boolean,
 ): PopImageState {
   const [state, setState] = useState<PopImageState>({ status: "idle" });
   const imageUrlRef = useRef<string | null>(null);
   const generationRef = useRef(0);
 
   useEffect(() => {
-    if (!item) {
+    if (!item || !cardImageReady) {
       setState({ status: "idle" });
       return;
     }
@@ -59,7 +60,7 @@ export function usePopImage(
     return () => {
       generationRef.current += 1;
     };
-  }, [item, productTitle, cardImageUrl]);
+  }, [item, productTitle, cardImageUrl, cardImageReady]);
 
   useEffect(() => {
     return () => {
