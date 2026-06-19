@@ -56,17 +56,28 @@ export function parseHareruyaBuyListHtml(html: string): RawPriceRow[] {
 export async function fetchHareruyaBuyPrices(
   onProgress?: (message: string) => void,
 ): Promise<HareruyaBuyListFetchResult> {
-  const allRows: RawPriceRow[] = [];
-  const pageUpdatedAt: Partial<Record<string, string>> = {};
+  onProgress?.("晴れる屋2: 買取表を取得中...");
 
-  for (const url of HARERUYA_BUY_LIST_URLS) {
-    const slug = url.split("/").pop() ?? url;
-    const series = HARERUYA_URL_SERIES[slug] ?? null;
-    onProgress?.(`晴れる屋2: ${slug} を取得中...`);
-    const html = await fetchText(url);
-    pageUpdatedAt[slug] = parseBuyListUpdatedAt(html) ?? undefined;
-    const rows = parseHareruyaBuyListHtml(html).map((row) => ({ ...row, series }));
-    allRows.push(...rows);
+  const pageResults = await Promise.all(
+    HARERUYA_BUY_LIST_URLS.map(async (url) => {
+      const slug = url.split("/").pop() ?? url;
+      const series = HARERUYA_URL_SERIES[slug] ?? null;
+      const html = await fetchText(url);
+      const updatedAt = parseBuyListUpdatedAt(html);
+      const rows = parseHareruyaBuyListHtml(html).map((row) => ({ ...row, series }));
+
+      return { slug, updatedAt, rows };
+    }),
+  );
+
+  const pageUpdatedAt: Partial<Record<string, string>> = {};
+  const allRows: RawPriceRow[] = [];
+
+  for (const page of pageResults) {
+    if (page.updatedAt) {
+      pageUpdatedAt[page.slug] = page.updatedAt;
+    }
+    allRows.push(...page.rows);
   }
 
   return { rows: allRows, pageUpdatedAt };

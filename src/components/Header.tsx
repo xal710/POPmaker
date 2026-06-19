@@ -13,6 +13,7 @@ interface HeaderProps {
   onRefresh: () => void;
   isFiltered?: boolean;
   dataDate?: string | null;
+  updatedAt?: string | null;
   dataSource?: "excel" | "json" | "web";
   hareruyaBuyListUpdatedAt?: Partial<Record<string, string>>;
 }
@@ -25,14 +26,28 @@ function formatDataDate(value: string | null | undefined): string {
   return value;
 }
 
-function dataDateHint(source: HeaderProps["dataSource"]): string {
+function formatServerUpdatedDate(
+  updatedAt: string | null | undefined,
+  dataDate: string | null | undefined,
+): string {
+  if (updatedAt) {
+    const date = new Date(updatedAt);
+    if (!Number.isNaN(date.getTime())) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return `${y}/${m}/${d}`;
+    }
+  }
+
+  return formatDataDate(dataDate);
+}
+
+function updatedDateHint(source: HeaderProps["dataSource"]): string {
   if (source === "excel") {
     return "Excelの価格シート名に含まれる日付（例: 20260616_晴れる屋）";
   }
-  if (source === "web") {
-    return "「最新価格を取得」で比較データを更新した日付（サーバー共通）";
-  }
-  return "比較データの更新日";
+  return "サーバー上の比較データが最後に更新された日（起動時の自動更新または「最新価格を取得」成功時）";
 }
 
 export function Header({
@@ -44,6 +59,7 @@ export function Header({
   onRefresh,
   isFiltered = false,
   dataDate,
+  updatedAt,
   dataSource,
   hareruyaBuyListUpdatedAt,
 }: HeaderProps) {
@@ -76,8 +92,8 @@ export function Header({
         <span className="meta-pill">
           {isFiltered ? "検索結果" : "件数"}: <strong>{itemCount.toLocaleString("ja-JP")}</strong> 件
         </span>
-        <span className="meta-pill" title={dataDateHint(dataSource)}>
-          更新日: <strong>{formatDataDate(dataDate)}</strong>
+        <span className="meta-pill" title={updatedDateHint(dataSource)}>
+          更新日: <strong>{formatServerUpdatedDate(updatedAt, dataDate)}</strong>
         </span>
         <span className="meta-pill" title="この端末が比較データを読み込んだ日時">
           読込: <strong>{lastFetchedAt ? formatDateTime(lastFetchedAt) : "—"}</strong>

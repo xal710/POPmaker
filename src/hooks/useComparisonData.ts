@@ -4,7 +4,7 @@ import type { ComparisonData } from "../types";
 const DATA_URL = "/api/comparison";
 const REFRESH_URL = "/api/comparison/refresh";
 const STATUS_URL = "/api/comparison/status";
-const AUTO_REFRESH_MS = 60 * 60 * 1000;
+const AUTO_RELOAD_MS = 60 * 60 * 1000;
 const POLL_MS = 1500;
 
 function sleep(ms: number): Promise<void> {
@@ -29,6 +29,7 @@ export function useComparisonData() {
   const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
   const intervalRef = useRef<number | null>(null);
   const pollRef = useRef<number | null>(null);
+  const startupRefreshRef = useRef(false);
 
   const loadCachedData = useCallback(async () => {
     setError(null);
@@ -61,7 +62,7 @@ export function useComparisonData() {
   const refresh = useCallback(async () => {
     setRefreshing(true);
     setError(null);
-    setProgressMessage("更新を開始しています...");
+    setProgressMessage("最新価格を取得しています...");
 
     if (pollRef.current !== null) {
       window.clearInterval(pollRef.current);
@@ -126,11 +127,15 @@ export function useComparisonData() {
       setLoading(true);
       await loadCachedData();
       setLoading(false);
+
+      if (startupRefreshRef.current) return;
+      startupRefreshRef.current = true;
+      void refresh();
     })();
 
     intervalRef.current = window.setInterval(() => {
-      void refresh();
-    }, AUTO_REFRESH_MS);
+      void loadCachedData();
+    }, AUTO_RELOAD_MS);
 
     return () => {
       if (intervalRef.current !== null) {

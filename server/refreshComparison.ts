@@ -51,14 +51,16 @@ export async function refreshComparisonFromWeb(): Promise<ComparisonPayload> {
     });
 
     try {
-      const hareruyaResult = await fetchHareruyaBuyPrices((message) => {
-        updateProgress({ message });
-      });
+      updateProgress({ message: "晴れる屋2・カードラッシュの買取価格を取得しています..." });
 
-      updateProgress({ message: "カードラッシュの買取価格を取得しています..." });
-      const cardrushResult = await fetchCardRushBuyPrices((message) => {
-        updateProgress({ message });
-      });
+      const [hareruyaResult, cardrushResult] = await Promise.all([
+        fetchHareruyaBuyPrices((message) => {
+          updateProgress({ message });
+        }),
+        fetchCardRushBuyPrices((message) => {
+          updateProgress({ message });
+        }),
+      ]);
 
       updateProgress({ message: "価格を突合・比較しています..." });
 

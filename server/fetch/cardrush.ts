@@ -1,4 +1,4 @@
-import { fetchText, sleep } from "./http";
+import { fetchText } from "./http";
 
 export interface CardRushRawRow {
   name: string;
@@ -23,6 +23,55 @@ interface NextBuyingPage {
 }
 
 const BASE_URL = "https://cardrush.media/pokemon/buying_prices";
+const PAGE_FETCH_CONCURRENCY = 6;
+
+function appendPageRows(rows: CardRushRawRow[], pageData: NextBuyingPage): void {
+  for (const item of pageData.buyingPrices) {
+    rows.push({
+      name: item.name,
+      pack: item.pack_code,
+      rarity: item.rarity,
+      modelNumber: item.model_number,
+      price: item.amount,
+      extraDifference: item.extra_difference,
+    });
+  }
+}
+
+async function fetchCardRushPage(page: number): Promise<NextBuyingPage> {
+  const url = page === 1 ? BASE_URL : `${BASE_URL}?page=${page}`;
+  const html = await fetchText(url);
+  return extractNextData(html);
+}
+
+async function fetchCardRushPages(
+  lastPage: number,
+  onProgress?: (message: string) => void,
+): Promise<CardRushRawRow[]> {
+  const rows: CardRushRawRow[] = [];
+
+  if (lastPage <= 1) {
+    return rows;
+  }
+
+  for (let start = 2; start <= lastPage; start += PAGE_FETCH_CONCURRENCY) {
+    const pages = Array.from(
+      { length: Math.min(PAGE_FETCH_CONCURRENCY, lastPage - start + 1) },
+      (_, index) => start + index,
+    );
+
+    onProgress?.(
+      `カードラッシュ: ${pages[0]}-${pages[pages.length - 1]}/${lastPage} ページを取得中...`,
+    );
+
+    const pageResults = await Promise.all(pages.map((page) => fetchCardRushPage(page)));
+    for (const pageData of pageResults) {
+      appendPageRows(rows, pageData);
+    }
+  }
+
+  return rows;
+}
 
 function extractNextData(html: string): NextBuyingPage {
   const match = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
@@ -40,36 +89,16 @@ function extractNextData(html: string): NextBuyingPage {
 export async function fetchCardRushBuyPrices(
   onProgress?: (message: string) => void,
 ): Promise<{ rows: CardRushRawRow[]; updatedAt: string | null }> {
-  const firstHtml = await fetchText(BASE_URL);
-  const firstPage = extractNextData(firstHtml);
+  onProgress?.("カードラッシュ: 1 ページ目を取得中...");
+  const firstPage = await fetchCardRushPage(1);
   const lastPage = firstPage.lastPage;
   const updatedAt = firstPage.updatedAt ?? null;
 
   const rows: CardRushRawRow[] = [];
+  appendPageRows(rows, firstPage);
 
-  const appendPage = (pageData: NextBuyingPage) => {
-    for (const item of pageData.buyingPrices) {
-      rows.push({
-        name: item.name,
-        pack: item.pack_code,
-        rarity: item.rarity,
-        modelNumber: item.model_number,
-        price: item.amount,
-        extraDifference: item.extra_difference,
-      });
-    }
-  };
-
-  appendPage(firstPage);
-
-  for (let page = 2; page <= lastPage; page += 1) {
-    onProgress?.(`カードラッシュ: ${page}/${lastPage} ページを取得中...`);
-    const html = await fetchText(`${BASE_URL}?page=${page}`);
-    appendPage(extractNextData(html));
-    if (page % 5 === 0) {
-      await sleep(150);
-    }
-  }
+  const restRows = await fetchCardRushPages(lastPage, onProgress);
+  rows.push(...restRows);
 
   return { rows, updatedAt };
 }
