@@ -16,7 +16,8 @@ const HEADERS = {
 
 const MAX_FETCH_RETRIES = 3;
 const RETRY_DELAY_MS = 400;
-const MAX_PRODUCT_LOOKUPS = 10;
+const MAX_PRODUCT_LOOKUPS_PER_QUERY = 20;
+const MAX_TOTAL_PRODUCT_LOOKUPS = 35;
 
 async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
@@ -103,24 +104,63 @@ export function parseCardSearchQuery(cardName: string): string | null {
   return `${number} ${pack}`;
 }
 
-function parseFallbackSearchQuery(cardName: string): string | null {
+function extractCardNamePrefix(cardName: string): string | null {
   const match = CARD_CODE_PATTERN.exec(cardName);
   if (!match) return null;
-  const [, number, pack] = match;
-  return `${number} ${pack}`;
+
+  const prefix = cardName.slice(0, match.index).trim();
+  return prefix || null;
 }
 
-function resolveSearchQueries(cardName: string): string[] {
-  const primaryQuery = parseCardSearchQuery(cardName);
-  if (!primaryQuery) return [];
+/** 比較表のカード名 prefix を晴れる屋2検索向けの語句列に変換 */
+function formatNameForSearch(prefix: string): string {
+  return prefix
+    .replace(/\(([^)]+)\)/g, " $1 ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
-  const queries = [primaryQuery];
-  const fallbackQuery = parseFallbackSearchQuery(cardName);
-  if (fallbackQuery && fallbackQuery !== primaryQuery) {
-    queries.push(fallbackQuery);
+/** 買取表に近い「カード名:ミラー種別」形式（レアリティ等は除く） */
+function formatBuyListStyleNameForSearch(prefix: string): string {
+  return prefix
+    .replace(/\s+\(([^)]+)\)\s*$/, ":$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** 具体 → 広い順に検索クエリを並べる（完全一致商品を優先的にヒットさせる） */
+export function resolveSearchQueries(cardName: string): string[] {
+  const match = CARD_CODE_PATTERN.exec(cardName);
+  if (!match) return [];
+
+  const [, number, pack] = match;
+  const prefix = extractCardNamePrefix(cardName);
+  const variant = detectMirrorVariantLabel(cardName);
+  const variantPack = variant ? buildHareruyaVariantPackCode(pack, variant) : null;
+
+  const queries: string[] = [];
+
+  if (prefix) {
+    const nameQuery = formatNameForSearch(prefix);
+    const buyListName = formatBuyListStyleNameForSearch(prefix);
+
+    if (variantPack) {
+      if (buyListName !== nameQuery) {
+        queries.push(`${buyListName} ${number} ${variantPack}`);
+      }
+      queries.push(`${nameQuery} ${number} ${variantPack}`);
+    }
+
+    queries.push(`${nameQuery} ${number} ${pack}`);
   }
 
-  return queries;
+  if (variantPack) {
+    queries.push(`${number} ${variantPack}`);
+  }
+
+  queries.push(`${number} ${pack}`);
+
+  return [...new Set(queries)];
 }
 
 async function searchProductIds(query: string): Promise<string[]> {
@@ -132,27 +172,6 @@ async function searchProductIds(query: string): Promise<string[]> {
   const html = await fetchText(url);
   const ids = [...html.matchAll(/\/products\/(\d{10,})/g)].map((match) => match[1]);
   return [...new Set(ids)];
-}
-
-async function collectProductIds(cardName: string): Promise<string[]> {
-  const queries = resolveSearchQueries(cardName);
-  const lists = await Promise.all(queries.map((query) => searchProductIds(query)));
-
-  const seen = new Set<string>();
-  const ids: string[] = [];
-
-  for (const list of lists) {
-    for (const id of list) {
-      if (seen.has(id)) continue;
-      seen.add(id);
-      ids.push(id);
-      if (ids.length >= MAX_PRODUCT_LOOKUPS) {
-        return ids;
-      }
-    }
-  }
-
-  return ids;
 }
 
 async function fetchProduct(
@@ -189,41 +208,54 @@ async function fetchProduct(
 
 async function findMatchingProduct(
   cardName: string,
-): Promise<{ productId: string; title: string; imageUrl: string | null } | null> {
-  const productIds = await collectProductIds(cardName);
-  if (productIds.length === 0) return null;
+): Promise<{ productId: string; title: string; imageUrl: string | null; searchQuery: string } | null> {
+  const queries = resolveSearchQueries(cardName);
+  let totalLookups = 0;
 
-  const products = await Promise.all(
-    productIds.map(async (productId) => {
-      const product = await fetchProduct(productId);
-      if (!product) return null;
-      if (!isExactProductMatch(cardName, product.title)) return null;
+  for (const query of queries) {
+    const productIds = await searchProductIds(query);
+    const remaining = MAX_TOTAL_PRODUCT_LOOKUPS - totalLookups;
+    const idsToCheck = productIds.slice(0, Math.min(MAX_PRODUCT_LOOKUPS_PER_QUERY, remaining));
+    if (idsToCheck.length === 0) continue;
 
+    totalLookups += idsToCheck.length;
+
+    const products = await Promise.all(
+      idsToCheck.map(async (productId) => {
+        const product = await fetchProduct(productId);
+        if (!product) return null;
+        if (!isExactProductMatch(cardName, product.title)) return null;
+
+        return {
+          productId,
+          title: product.title,
+          imageUrl: product.imageUrl,
+          rank: rankMatchedProduct(cardName, product.title),
+          searchQuery: query,
+        };
+      }),
+    );
+
+    let best: (typeof products)[number] = null;
+
+    for (const product of products) {
+      if (!product) continue;
+      if (!best || product.rank > best.rank) {
+        best = product;
+      }
+    }
+
+    if (best) {
       return {
-        productId,
-        title: product.title,
-        imageUrl: product.imageUrl,
-        rank: rankMatchedProduct(cardName, product.title),
+        productId: best.productId,
+        title: best.title,
+        imageUrl: best.imageUrl,
+        searchQuery: best.searchQuery,
       };
-    }),
-  );
-
-  let best: (typeof products)[number] = null;
-
-  for (const product of products) {
-    if (!product) continue;
-    if (!best || product.rank > best.rank) {
-      best = product;
     }
   }
 
-  if (!best) return null;
-
-  return {
-    productId: best.productId,
-    title: best.title,
-    imageUrl: best.imageUrl,
-  };
+  return null;
 }
 
 export async function fetchCardImage(
@@ -261,7 +293,7 @@ export async function fetchCardImage(
   const result: CardImageResult = {
     imageUrl: matched?.imageUrl ?? null,
     productTitle: matched?.title ?? null,
-    searchQuery,
+    searchQuery: matched?.searchQuery ?? searchQuery,
     productId: matched?.productId ?? null,
     cached: false,
   };
