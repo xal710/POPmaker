@@ -1,6 +1,8 @@
 import { fetchText, htmlToLines, parsePrice } from "./http";
 import { HARERUYA_URL_SERIES, type CardSeries } from "../series";
 
+export const BUY_LIST_UPDATED_AT_PATTERN = /更新日時:\s*(\d{4})\/(\d{2})\/(\d{2})/;
+
 export const HARERUYA_BUY_LIST_URLS = [
   "https://www.hareruya2.com/pages/buying-list-kyouka",
   "https://www.hareruya2.com/pages/buying-list-mega",
@@ -15,6 +17,18 @@ export interface RawPriceRow {
   name: string;
   price: number;
   series: CardSeries | null;
+}
+
+export interface HareruyaBuyListFetchResult {
+  rows: RawPriceRow[];
+  pageUpdatedAt: Partial<Record<string, string>>;
+}
+
+/** 晴れる屋2 買取表HTMLから「更新日時: YYYY/MM/DD」を抽出 */
+export function parseBuyListUpdatedAt(html: string): string | null {
+  const match = BUY_LIST_UPDATED_AT_PATTERN.exec(html);
+  if (!match) return null;
+  return `${match[1]}-${match[2]}-${match[3]}`;
 }
 
 const CARD_LINE_PATTERN = /〈[^〉]+〉/;
@@ -41,17 +55,19 @@ export function parseHareruyaBuyListHtml(html: string): RawPriceRow[] {
 
 export async function fetchHareruyaBuyPrices(
   onProgress?: (message: string) => void,
-): Promise<RawPriceRow[]> {
+): Promise<HareruyaBuyListFetchResult> {
   const allRows: RawPriceRow[] = [];
+  const pageUpdatedAt: Partial<Record<string, string>> = {};
 
   for (const url of HARERUYA_BUY_LIST_URLS) {
     const slug = url.split("/").pop() ?? url;
     const series = HARERUYA_URL_SERIES[slug] ?? null;
     onProgress?.(`晴れる屋2: ${slug} を取得中...`);
     const html = await fetchText(url);
+    pageUpdatedAt[slug] = parseBuyListUpdatedAt(html) ?? undefined;
     const rows = parseHareruyaBuyListHtml(html).map((row) => ({ ...row, series }));
     allRows.push(...rows);
   }
 
-  return allRows;
+  return { rows: allRows, pageUpdatedAt };
 }

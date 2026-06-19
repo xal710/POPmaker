@@ -73,6 +73,36 @@
   background: transparent;
 }
 
+.app-header__buylist-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.buylist-date-pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.buylist-date-pill__label {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.buylist-date-pill__value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--primary);
+}
+
 .app-main {
   display: flex;
   flex-direction: column;

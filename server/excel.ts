@@ -25,6 +25,7 @@ export interface ComparisonPayload {
   excelPath: string | null;
   excelModifiedAt: string | null;
   dataDate: string | null;
+  hareruyaBuyListUpdatedAt?: Partial<Record<string, string>>;
   items: ComparisonItem[];
   warning?: string;
 }
@@ -149,6 +150,7 @@ export function readComparisonFromJson(): ComparisonPayload {
     excelPath: raw.excelPath ?? null,
     excelModifiedAt: raw.excelModifiedAt ?? null,
     dataDate: raw.dataDate ?? null,
+    hareruyaBuyListUpdatedAt: raw.hareruyaBuyListUpdatedAt,
   };
 }
 

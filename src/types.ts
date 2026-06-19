@@ -13,6 +13,7 @@ export interface ComparisonData {
   excelPath?: string | null;
   excelModifiedAt?: string | null;
   dataDate?: string | null;
+  hareruyaBuyListUpdatedAt?: Partial<Record<string, string>>;
   warning?: string;
   items: ComparisonItem[];
 }

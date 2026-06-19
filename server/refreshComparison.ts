@@ -51,7 +51,7 @@ export async function refreshComparisonFromWeb(): Promise<ComparisonPayload> {
     });
 
     try {
-      const hareruyaRows = await fetchHareruyaBuyPrices((message) => {
+      const hareruyaResult = await fetchHareruyaBuyPrices((message) => {
         updateProgress({ message });
       });
 
@@ -62,7 +62,7 @@ export async function refreshComparisonFromWeb(): Promise<ComparisonPayload> {
 
       updateProgress({ message: "価格を突合・比較しています..." });
 
-      const hareruyaMap = normalizeHareruyaRows(hareruyaRows);
+      const hareruyaMap = normalizeHareruyaRows(hareruyaResult.rows);
       const cardrushMap = normalizeCardRushRows(cardrushResult.rows);
       const items = buildComparisonItems(hareruyaMap, cardrushMap);
 
@@ -76,6 +76,7 @@ export async function refreshComparisonFromWeb(): Promise<ComparisonPayload> {
         excelPath: null,
         excelModifiedAt: null,
         dataDate: new Date().toISOString().slice(0, 10).replace(/-/g, ""),
+        hareruyaBuyListUpdatedAt: hareruyaResult.pageUpdatedAt,
         items,
         warning: undefined,
       };

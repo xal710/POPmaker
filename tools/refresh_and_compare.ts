@@ -6,10 +6,10 @@ import { normalizeCardRushRows, normalizeHareruyaRows } from "../server/normaliz
 import { saveComparisonPayload } from "../server/refreshComparison";
 
 console.log("Fetching web data...");
-const hareruyaRows = await fetchHareruyaBuyPrices();
+const hareruyaResult = await fetchHareruyaBuyPrices();
 const cardrushResult = await fetchCardRushBuyPrices();
 
-const hareruyaMap = normalizeHareruyaRows(hareruyaRows);
+const hareruyaMap = normalizeHareruyaRows(hareruyaResult.rows);
 const cardrushMap = normalizeCardRushRows(cardrushResult.rows);
 const items = buildComparisonItems(hareruyaMap, cardrushMap);
 
@@ -19,6 +19,7 @@ saveComparisonPayload({
   excelPath: null,
   excelModifiedAt: null,
   dataDate: new Date().toISOString().slice(0, 10).replace(/-/g, ""),
+  hareruyaBuyListUpdatedAt: hareruyaResult.pageUpdatedAt,
   items,
 });
 

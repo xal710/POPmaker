@@ -137,6 +137,10 @@ function App() {
 
         dataDate={data?.dataDate}
 
+        dataSource={data?.source}
+
+        hareruyaBuyListUpdatedAt={data?.hareruyaBuyListUpdatedAt}
+
       />
 
 

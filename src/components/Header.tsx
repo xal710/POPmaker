@@ -1,3 +1,7 @@
+import {
+  formatBuyListDateMmDd,
+  HARERUYA_BUY_LIST_PAGES,
+} from "../../shared/hareruyaBuyListPages";
 import { formatDateTime } from "../utils/format";
 
 interface HeaderProps {
@@ -9,6 +13,8 @@ interface HeaderProps {
   onRefresh: () => void;
   isFiltered?: boolean;
   dataDate?: string | null;
+  dataSource?: "excel" | "json" | "web";
+  hareruyaBuyListUpdatedAt?: Partial<Record<string, string>>;
 }
 
 function formatDataDate(value: string | null | undefined): string {
@@ -17,6 +23,16 @@ function formatDataDate(value: string | null | undefined): string {
     return `${value.slice(0, 4)}/${value.slice(4, 6)}/${value.slice(6, 8)}`;
   }
   return value;
+}
+
+function dataDateHint(source: HeaderProps["dataSource"]): string {
+  if (source === "excel") {
+    return "Excelの価格シート名に含まれる日付（例: 20260616_晴れる屋）";
+  }
+  if (source === "web") {
+    return "Web更新で比較データを生成した日付";
+  }
+  return "比較データの基準日";
 }
 
 export function Header({
@@ -28,6 +44,8 @@ export function Header({
   onRefresh,
   isFiltered = false,
   dataDate,
+  dataSource,
+  hareruyaBuyListUpdatedAt,
 }: HeaderProps) {
   const busy = loading || refreshing;
 
@@ -58,12 +76,27 @@ export function Header({
         <span className="meta-pill">
           {isFiltered ? "検索結果" : "件数"}: <strong>{itemCount.toLocaleString("ja-JP")}</strong> 件
         </span>
-        <span className="meta-pill">
+        <span className="meta-pill" title={dataDateHint(dataSource)}>
           データ日: <strong>{formatDataDate(dataDate)}</strong>
         </span>
         <span className="meta-pill">
           読込: <strong>{lastFetchedAt ? formatDateTime(lastFetchedAt) : "—"}</strong>
         </span>
+      </div>
+
+      <div className="app-header__buylist-dates" aria-label="晴れる屋2 買取表の更新日">
+        {HARERUYA_BUY_LIST_PAGES.map((page) => (
+          <span
+            key={page.slug}
+            className="buylist-date-pill"
+            title={`${page.title}（晴れる屋2 買取表）`}
+          >
+            <span className="buylist-date-pill__label">{page.label}</span>
+            <span className="buylist-date-pill__value">
+              {formatBuyListDateMmDd(hareruyaBuyListUpdatedAt?.[page.slug])}
+            </span>
+          </span>
+        ))}
       </div>
     </header>
   );
