@@ -23,12 +23,26 @@ function packLabelFromCode(pack: string): string {
   return pack;
 }
 
+/** POP表示用: 括弧類を半角に統一 */
+export function normalizeHalfWidthBrackets(text: string): string {
+  return text
+    .replace(/（/g, "(")
+    .replace(/）/g, ")")
+    .replace(/［/g, "[")
+    .replace(/］/g, "]")
+    .replace(/｛/g, "{")
+    .replace(/｝/g, "}");
+}
+
 /**
  * 晴れる屋2表記を整形する。
  * 例: ゼルネアスEX(CP){フェアリー}〈038/036〉[CP5] → ゼルネアスEX(CP)[CP5]
+ * 書式: カード名(レアリティor技名)[エキスパンション]（括弧は半角）
  */
 export function formatHareruyaCardName(name: string): string {
-  const stripped = name
+  const normalized = normalizeHalfWidthBrackets(name);
+
+  const stripped = normalized
     .replace(/\{[^}]*\}/g, "")
     .replace(/〈[^〉]*〉/g, "")
     .replace(/\s+/g, " ")
@@ -62,6 +76,12 @@ export function formatTweetCardName(name: string): string {
 
 export function buildPopText(name: string, hareruya2: number): string {
   return [formatPopCopyName(name), formatYen(hareruya2)].join("\n");
+}
+
+/** POP画像の保存ファイル名（例: ゼルネアスEX(CP)[CP5].png） */
+export function formatPopImageFilename(sourceName: string): string {
+  const base = formatPopCopyName(sourceName).replace(/[\\/:*?"<>|]/g, "");
+  return `${base}.png`;
 }
 
 const TWEET_FOOTER = `アネックス店、地下買取フロアでは複数のスタッフにて査定を実施しております👍

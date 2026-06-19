@@ -34,6 +34,14 @@ export async function copyImageElement(image: HTMLImageElement): Promise<void> {
   await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
 }
 
+export async function copyImageBlob(blob: Blob): Promise<void> {
+  if (!navigator.clipboard?.write) {
+    throw new Error("このブラウザでは画像のコピーに対応していません");
+  }
+
+  await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+}
+
 export async function copyImageFromUrl(imageUrl: string): Promise<void> {
   const response = await fetch(imageUrl);
   if (!response.ok) {
@@ -42,10 +50,14 @@ export async function copyImageFromUrl(imageUrl: string): Promise<void> {
 
   const blob = await response.blob();
   const type = blob.type.startsWith("image/") ? blob.type : "image/png";
+  await copyImageBlob(new Blob([blob], { type }));
+}
 
-  if (!navigator.clipboard?.write) {
-    throw new Error("このブラウザでは画像のコピーに対応していません");
-  }
-
-  await navigator.clipboard.write([new ClipboardItem({ [type]: blob })]);
+export function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }

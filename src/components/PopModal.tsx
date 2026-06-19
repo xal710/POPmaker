@@ -1,113 +1,64 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useCardImage } from "../hooks/useCardImage";
+import { usePopImage } from "../hooks/usePopImage";
 
 import type { ComparisonItem } from "../types";
 
-import { copyImageElement, copyImageFromUrl } from "../utils/clipboard";
-
-import { buildTweetText, formatDiff, formatPopCopyName, formatYen } from "../utils/format";
-
+import { copyImageBlob, copyImageElement, downloadBlob } from "../utils/clipboard";
+import { buildTweetText } from "../utils/format";
 import { countTweetCharacters, formatTweetCharCount, TWEET_MAX_LENGTH } from "../utils/tweetCount";
 
-
-
-type CopyField = "name" | "price" | "tweet";
-
-
+type CopyField = "pop" | "tweet";
 
 interface PopModalProps {
-
   item: ComparisonItem | null;
-
   onClose: () => void;
-
 }
 
-
-
 export function PopModal({ item, onClose }: PopModalProps) {
-
   const [copiedField, setCopiedField] = useState<CopyField | null>(null);
-
   const [tweetDraft, setTweetDraft] = useState("");
+  const [popCopying, setPopCopying] = useState(false);
+  const [popCopyError, setPopCopyError] = useState<string | null>(null);
+  const popImageRef = useRef<HTMLImageElement>(null);
 
-  const [imageCopied, setImageCopied] = useState(false);
+  const cardImageState = useCardImage(item?.name ?? null);
 
-  const [imageCopying, setImageCopying] = useState(false);
+  const cardImageUrl =
+    cardImageState.status === "success" ? cardImageState.data.imageUrl : null;
+  const productTitle =
+    cardImageState.status === "success" ? cardImageState.data.productTitle : null;
 
-  const [imageCopyError, setImageCopyError] = useState<string | null>(null);
-
-  const imageRef = useRef<HTMLImageElement>(null);
-
-  const imageState = useCardImage(item?.name ?? null);
+  const popImageState = usePopImage(item, productTitle, cardImageUrl);
 
   useEffect(() => {
-
     if (!item) return;
-
-
 
     const handleKeyDown = (event: KeyboardEvent) => {
-
       if (event.key === "Escape") onClose();
-
     };
-
-
 
     document.body.style.overflow = "hidden";
-
     window.addEventListener("keydown", handleKeyDown);
 
-
-
     return () => {
-
       document.body.style.overflow = "";
-
       window.removeEventListener("keydown", handleKeyDown);
-
     };
-
   }, [item, onClose]);
 
-
-
   useEffect(() => {
-
     setCopiedField(null);
-
     setTweetDraft("");
-
-    setImageCopied(false);
-
-    setImageCopying(false);
-
-    setImageCopyError(null);
-
+    setPopCopying(false);
+    setPopCopyError(null);
   }, [item]);
 
-
-
-  const imageUrl =
-
-    imageState.status === "success" ? imageState.data.imageUrl : null;
-
-  const productTitle =
-
-    imageState.status === "success" ? imageState.data.productTitle : null;
-
-
-
   useEffect(() => {
-
     if (!item) return;
-
     const sourceName = productTitle ?? item.name;
-
     setTweetDraft(buildTweetText(sourceName, item.hareruya2));
-
   }, [item, productTitle]);
 
   const tweetCharCount = useMemo(() => countTweetCharacters(tweetDraft), [tweetDraft]);
@@ -116,330 +67,138 @@ export function PopModal({ item, onClose }: PopModalProps) {
 
   if (!item) return null;
 
-  const copySourceName = productTitle ?? item.name;
-
-  const popCopyName = formatPopCopyName(copySourceName);
-
-  const popCopyPrice = formatYen(item.hareruya2);
-
-
-
   const handleCopyText = async (field: CopyField, text: string) => {
-
     try {
-
       await navigator.clipboard.writeText(text);
-
       setCopiedField(field);
-
       window.setTimeout(() => setCopiedField(null), 2000);
-
     } catch {
-
       setCopiedField(null);
-
     }
-
   };
 
+  const handleCopyPopImage = async () => {
+    if (popImageState.status !== "success") return;
 
-
-  const handleCopyImage = async () => {
-
-    if (!imageUrl) return;
-
-
-
-    setImageCopying(true);
-
-    setImageCopyError(null);
-
-
+    setPopCopying(true);
+    setPopCopyError(null);
 
     try {
-
-      const image = imageRef.current;
-
+      const image = popImageRef.current;
       if (image) {
-
         try {
-
           await copyImageElement(image);
-
         } catch {
-
-          await copyImageFromUrl(imageUrl);
-
+          await copyImageBlob(popImageState.blob);
         }
-
       } else {
-
-        await copyImageFromUrl(imageUrl);
-
+        await copyImageBlob(popImageState.blob);
       }
 
-
-
-      setImageCopied(true);
-
-      window.setTimeout(() => setImageCopied(false), 2000);
-
+      setCopiedField("pop");
+      window.setTimeout(() => setCopiedField(null), 2000);
     } catch (error) {
-
-      const message = error instanceof Error ? error.message : "画像のコピーに失敗しました";
-
-      setImageCopyError(message);
-
+      const message = error instanceof Error ? error.message : "POP画像のコピーに失敗しました";
+      setPopCopyError(message);
     } finally {
-
-      setImageCopying(false);
-
+      setPopCopying(false);
     }
+  };
 
+  const handleSavePopImage = () => {
+    if (popImageState.status !== "success") return;
+    downloadBlob(popImageState.blob, popImageState.filename);
   };
 
   return (
-
     <div className="modal-overlay" onClick={onClose} role="presentation">
-
       <div
-
         className="modal"
-
         onClick={(event) => event.stopPropagation()}
-
         role="dialog"
-
         aria-modal="true"
-
         aria-labelledby="pop-modal-title"
-
       >
-
         <header className="modal__header">
-
           <h2 id="pop-modal-title">POP作成プレビュー</h2>
-
           <button type="button" className="modal__close" onClick={onClose} aria-label="閉じる">
-
             ×
-
           </button>
-
         </header>
 
-
-
         <div className="modal__content">
-
           <div className="pop-preview">
-
-            <div className="pop-preview__image-area">
-
-              {imageState.status === "loading" && (
-
-                <div className="pop-preview__image-placeholder pop-preview__image-placeholder--loading">
-
+            <div className="pop-preview__pop-area">
+              {popImageState.status === "loading" && (
+                <div className="pop-preview__pop-placeholder pop-preview__pop-placeholder--loading">
                   <div className="loading-spinner" aria-hidden="true" />
-
-                  <span>画像を取得中...</span>
-
+                  <span>POP画像を生成中...</span>
                 </div>
-
               )}
 
+              {popImageState.status === "idle" && (
+                <div className="pop-preview__pop-placeholder pop-preview__pop-placeholder--loading">
+                  <div className="loading-spinner" aria-hidden="true" />
+                  <span>POP画像を準備中...</span>
+                </div>
+              )}
 
-
-              {imageState.status === "success" && imageUrl && (
-
-                <div className="pop-preview__image-wrap">
-
+              {popImageState.status === "success" && (
+                <div className="pop-preview__pop-wrap">
                   <img
-
-                    ref={imageRef}
-
-                    className="pop-preview__image"
-
-                    src={imageUrl}
-
-                    alt={item.name}
-
-                    crossOrigin="anonymous"
-
-                    loading="lazy"
-
+                    ref={popImageRef}
+                    className="pop-preview__pop-image"
+                    src={popImageState.imageUrl}
+                    alt={`${item.name}の買取POP`}
                   />
-
-                  <button
-
-                    type="button"
-
-                    className="btn btn--secondary btn--compact"
-
-                    onClick={handleCopyImage}
-
-                    disabled={imageCopying}
-
-                  >
-
-                    {imageCopying
-
-                      ? "コピー中..."
-
-                      : imageCopied
-
-                        ? "画像をコピーしました"
-
-                        : "画像をコピー"}
-
-                  </button>
-
-                  {imageCopyError && (
-
+                  <div className="pop-preview__pop-actions">
+                    <button
+                      type="button"
+                      className="btn btn--secondary btn--compact"
+                      onClick={handleCopyPopImage}
+                      disabled={popCopying}
+                    >
+                      {popCopying
+                        ? "コピー中..."
+                        : copiedField === "pop"
+                          ? "POP画像をコピーしました"
+                          : "POP画像をコピー"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn--primary btn--compact"
+                      onClick={handleSavePopImage}
+                    >
+                      画像を保存
+                    </button>
+                  </div>
+                  <p className="pop-preview__pop-filename">{popImageState.filename}</p>
+                  {popCopyError && (
                     <p className="pop-preview__image-error" role="alert">
-
-                      {imageCopyError}
-
+                      {popCopyError}
                     </p>
-
                   )}
-
                 </div>
-
               )}
 
-              {imageState.status === "success" && !imageUrl && (
-
-                <div className="pop-preview__image-placeholder">
-
-                  <span>画像が見つかりません</span>
-
-                  <small>晴れる屋2の商品DBに該当カードがありません</small>
-
+              {popImageState.status === "error" && (
+                <div className="pop-preview__pop-placeholder pop-preview__pop-placeholder--error">
+                  <span>POP画像の生成に失敗</span>
+                  <small>{popImageState.message}</small>
                 </div>
-
               )}
-
-
-
-              {imageState.status === "error" && (
-
-                <div className="pop-preview__image-placeholder pop-preview__image-placeholder--error">
-
-                  <span>画像の取得に失敗</span>
-
-                  <small>{imageState.message}</small>
-
-                </div>
-
-              )}
-
             </div>
-
-
-
-            <div className="pop-preview__card">
-
-              <p className="pop-preview__name">{item.name}</p>
-
-              {productTitle && productTitle !== item.name && (
-
-                <p className="pop-preview__product-title">参照: {productTitle}</p>
-
-              )}
-
-              <div className="pop-preview__price-block">
-
-                <div className="pop-preview__main-price">
-
-                  <span className="pop-preview__price-label">晴れる屋2 買取</span>
-
-                  <span className="pop-preview__price-value">{formatYen(item.hareruya2)}</span>
-
-                </div>
-
-                <div className="pop-preview__sub-prices">
-
-                  <span>カードラッシュ {formatYen(item.cardrush)}</span>
-
-                  <span className="pop-preview__diff">差額 {formatDiff(item.diff)}</span>
-
-                </div>
-
-              </div>
-
-            </div>
-
           </div>
 
-
-
           <div className="pop-text-block">
-
-            <h3>POP用テキスト</h3>
-
-            <div className="pop-copy-row">
-
-              <pre className="pop-text-block__text">{popCopyName}</pre>
-
-              <button
-
-                type="button"
-
-                className="btn btn--secondary btn--compact"
-
-                onClick={() => handleCopyText("name", popCopyName)}
-
-              >
-
-                {copiedField === "name" ? "コピーしました" : "カード名をコピー"}
-
-              </button>
-
-            </div>
-
-            <div className="pop-copy-row">
-
-              <pre className="pop-text-block__text">{popCopyPrice}</pre>
-
-              <button
-
-                type="button"
-
-                className="btn btn--secondary btn--compact"
-
-                onClick={() => handleCopyText("price", popCopyPrice)}
-
-              >
-
-                {copiedField === "price" ? "コピーしました" : "金額をコピー"}
-
-              </button>
-
-            </div>
-
-          </div>
-
-
-
-          <div className="pop-text-block">
-
             <h3>ツイート用テキスト</h3>
-
             <textarea
-
               className="pop-text-block__textarea"
-
               value={tweetDraft}
-
               onChange={(event) => setTweetDraft(event.target.value)}
-
               rows={12}
-
               aria-label="ツイート用テキスト"
-
             />
-
             <div className="pop-text-block__tweet-actions">
               <button
                 type="button"
@@ -455,29 +214,15 @@ export function PopModal({ item, onClose }: PopModalProps) {
                 {tweetCharCountLabel}
               </span>
             </div>
-
           </div>
-
         </div>
 
-
-
         <footer className="modal__footer">
-
           <button type="button" className="btn btn--primary" onClick={onClose}>
-
             閉じる
-
           </button>
-
         </footer>
-
       </div>
-
     </div>
-
   );
-
 }
-
-
