@@ -488,7 +488,6 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  max-width: 520px;
 }
 
 .pop-preview__buylist-name {
@@ -527,14 +526,17 @@
 
 .pop-preview__pop-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
   gap: 8px;
   width: 100%;
 }
 
 .pop-preview__pop-actions .btn--compact {
-  width: min(100%, 240px);
+  flex: 1 1 120px;
+  width: auto;
   max-width: none;
 }
 

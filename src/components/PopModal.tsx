@@ -148,18 +148,19 @@ export function PopModal({ item, onClose }: PopModalProps) {
 
         <div className="modal__content">
           <div className="pop-preview">
-            <div className="pop-preview__buylist-name-block">
-              <p className="pop-preview__buylist-name">{hareruyaBuyListName}</p>
-              <button
-                type="button"
-                className="btn btn--secondary btn--compact"
-                onClick={() => handleCopyText("cardName", hareruyaBuyListName)}
-              >
-                {copiedField === "cardName" ? "コピーしました" : "カード名をコピー"}
-              </button>
-            </div>
-
             <div className="pop-preview__pop-area">
+              <div className="pop-preview__pop-wrap">
+                <div className="pop-preview__buylist-name-block">
+                  <p className="pop-preview__buylist-name">{hareruyaBuyListName}</p>
+                  <button
+                    type="button"
+                    className="btn btn--secondary btn--compact"
+                    onClick={() => handleCopyText("cardName", hareruyaBuyListName)}
+                  >
+                    {copiedField === "cardName" ? "コピーしました" : "カード名をコピー"}
+                  </button>
+                </div>
+
               {(cardImageState.status === "loading" ||
                 cardImageState.status === "idle" ||
                 popImageState.status === "idle" ||
@@ -190,7 +191,7 @@ export function PopModal({ item, onClose }: PopModalProps) {
               )}
 
               {cardImageState.status === "success" && popImageState.status === "success" && (
-                <div className="pop-preview__pop-wrap">
+                <>
                   <img
                     ref={popImageRef}
                     className="pop-preview__pop-image"
@@ -207,8 +208,8 @@ export function PopModal({ item, onClose }: PopModalProps) {
                       {popCopying
                         ? "コピー中..."
                         : copiedField === "pop"
-                          ? "POP画像をコピーしました"
-                          : "POP画像をコピー"}
+                          ? "コピーしました"
+                          : "画像をコピー"}
                     </button>
                     <button
                       type="button"
@@ -229,7 +230,7 @@ export function PopModal({ item, onClose }: PopModalProps) {
                       {popCopyError}
                     </p>
                   )}
-                </div>
+                </>
               )}
 
               {cardImageState.status === "success" && popImageState.status === "error" && (
@@ -238,6 +239,7 @@ export function PopModal({ item, onClose }: PopModalProps) {
                   <small>{popImageState.message}</small>
                 </div>
               )}
+              </div>
             </div>
           </div>
 
