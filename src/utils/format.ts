@@ -26,6 +26,17 @@ export function formatDiff(diff: number): string {
   return `${sign}${formatYen(diff)}`;
 }
 
+/** 金額入力欄の文字列を円単位の数値に変換 */
+export function parsePriceInput(value: string): number | null {
+  const digits = value.replace(/[^\d]/g, "");
+  if (!digits) return null;
+
+  const parsed = Number(digits);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+
+  return parsed;
+}
+
 function packLabelFromCode(pack: string): string {
   const alphaPrefix = pack.match(/^[A-Za-z]+/)?.[0];
   if (alphaPrefix) return alphaPrefix;

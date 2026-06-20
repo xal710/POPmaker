@@ -6,7 +6,7 @@ import { usePopImage } from "../hooks/usePopImage";
 import type { ComparisonItem } from "../types";
 
 import { copyImageBlob, copyImageElement, downloadBlob } from "../utils/clipboard";
-import { buildTweetText, formatHareruyaBuyListName } from "../utils/format";
+import { buildTweetText, formatHareruyaBuyListName, parsePriceInput } from "../utils/format";
 import { countTweetCharacters, formatTweetCharCount, TWEET_MAX_LENGTH } from "../utils/tweetCount";
 
 type CopyField = "pop" | "tweet" | "cardName";
@@ -19,6 +19,9 @@ interface PopModalProps {
 export function PopModal({ item, onClose }: PopModalProps) {
   const [copiedField, setCopiedField] = useState<CopyField | null>(null);
   const [tweetDraft, setTweetDraft] = useState("");
+  const [priceInput, setPriceInput] = useState("");
+  const [appliedPriceYen, setAppliedPriceYen] = useState(0);
+  const [priceError, setPriceError] = useState<string | null>(null);
   const [popCopying, setPopCopying] = useState(false);
   const [popCopyError, setPopCopyError] = useState<string | null>(null);
   const popImageRef = useRef<HTMLImageElement>(null);
@@ -35,7 +38,13 @@ export function PopModal({ item, onClose }: PopModalProps) {
   const productTitle =
     cardImageState.status === "success" ? cardImageState.data.productTitle : null;
 
-  const popImageState = usePopImage(item, productTitle, cardImageUrl, cardImageReady);
+  const popImageState = usePopImage(
+    item,
+    productTitle,
+    cardImageUrl,
+    cardImageReady,
+    appliedPriceYen,
+  );
 
   useEffect(() => {
     if (!item) return;
@@ -56,6 +65,9 @@ export function PopModal({ item, onClose }: PopModalProps) {
   useEffect(() => {
     setCopiedField(null);
     setTweetDraft("");
+    setPriceInput("");
+    setAppliedPriceYen(0);
+    setPriceError(null);
     setPopCopying(false);
     setPopCopyError(null);
   }, [item]);
@@ -63,6 +75,9 @@ export function PopModal({ item, onClose }: PopModalProps) {
   useEffect(() => {
     if (!item) return;
     const sourceName = productTitle ?? item.name;
+    setPriceInput(String(item.hareruya2));
+    setAppliedPriceYen(item.hareruya2);
+    setPriceError(null);
     setTweetDraft(buildTweetText(sourceName, item.hareruya2));
   }, [item, productTitle]);
 
@@ -117,6 +132,23 @@ export function PopModal({ item, onClose }: PopModalProps) {
   const handleSavePopImage = () => {
     if (popImageState.status !== "success") return;
     downloadBlob(popImageState.blob, popImageState.filename);
+  };
+
+  const handleApplyPriceToPop = () => {
+    if (!item) return;
+
+    const parsed = parsePriceInput(priceInput);
+    if (parsed === null) {
+      setPriceError("有効な金額を入力してください");
+      return;
+    }
+
+    setPriceError(null);
+    setAppliedPriceYen(parsed);
+    setPriceInput(String(parsed));
+
+    const sourceName = productTitle ?? item.name;
+    setTweetDraft(buildTweetText(sourceName, parsed));
   };
 
   return (
@@ -245,6 +277,36 @@ export function PopModal({ item, onClose }: PopModalProps) {
 
           <div className="pop-text-block">
             <h3>ツイート用テキスト</h3>
+            <div className="pop-text-block__price-row">
+              <label className="pop-text-block__price-label" htmlFor="pop-price-input">
+                買取価格
+              </label>
+              <input
+                id="pop-price-input"
+                className="pop-text-block__price-input"
+                type="text"
+                inputMode="numeric"
+                value={priceInput}
+                onChange={(event) => {
+                  setPriceInput(event.target.value);
+                  setPriceError(null);
+                }}
+                aria-label="買取価格"
+              />
+              <button
+                type="button"
+                className="btn btn--primary btn--compact"
+                onClick={handleApplyPriceToPop}
+                disabled={!cardImageReady || popImageState.status === "loading"}
+              >
+                {popImageState.status === "loading" ? "反映中..." : "POPに反映"}
+              </button>
+            </div>
+            {priceError && (
+              <p className="pop-text-block__price-error" role="alert">
+                {priceError}
+              </p>
+            )}
             <textarea
               className="pop-text-block__textarea"
               value={tweetDraft}
