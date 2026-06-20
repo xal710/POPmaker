@@ -482,6 +482,31 @@
   width: 100%;
 }
 
+.pop-preview__buylist-name-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 520px;
+}
+
+.pop-preview__buylist-name {
+  margin: 0;
+  width: 100%;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  word-break: break-word;
+  text-align: center;
+  color: var(--text);
+}
+
+.pop-preview__buylist-name-block .btn--compact {
+  width: min(100%, 240px);
+  max-width: none;
+}
+
 .pop-preview__pop-wrap {
   display: flex;
   flex-direction: column;

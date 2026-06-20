@@ -6,10 +6,10 @@ import { usePopImage } from "../hooks/usePopImage";
 import type { ComparisonItem } from "../types";
 
 import { copyImageBlob, copyImageElement, downloadBlob } from "../utils/clipboard";
-import { buildTweetText } from "../utils/format";
+import { buildTweetText, formatHareruyaBuyListName } from "../utils/format";
 import { countTweetCharacters, formatTweetCharCount, TWEET_MAX_LENGTH } from "../utils/tweetCount";
 
-type CopyField = "pop" | "tweet";
+type CopyField = "pop" | "tweet" | "cardName";
 
 interface PopModalProps {
   item: ComparisonItem | null;
@@ -69,6 +69,10 @@ export function PopModal({ item, onClose }: PopModalProps) {
   const tweetCharCount = useMemo(() => countTweetCharacters(tweetDraft), [tweetDraft]);
   const tweetCharCountLabel = useMemo(() => formatTweetCharCount(tweetCharCount), [tweetCharCount]);
   const isTweetOverLimit = tweetCharCount > TWEET_MAX_LENGTH;
+  const hareruyaBuyListName = useMemo(() => {
+    if (!item) return "";
+    return formatHareruyaBuyListName(productTitle ?? item.name);
+  }, [item, productTitle]);
 
   if (!item) return null;
 
@@ -144,6 +148,17 @@ export function PopModal({ item, onClose }: PopModalProps) {
 
         <div className="modal__content">
           <div className="pop-preview">
+            <div className="pop-preview__buylist-name-block">
+              <p className="pop-preview__buylist-name">{hareruyaBuyListName}</p>
+              <button
+                type="button"
+                className="btn btn--secondary btn--compact"
+                onClick={() => handleCopyText("cardName", hareruyaBuyListName)}
+              >
+                {copiedField === "cardName" ? "コピーしました" : "カード名をコピー"}
+              </button>
+            </div>
+
             <div className="pop-preview__pop-area">
               {(cardImageState.status === "loading" ||
                 cardImageState.status === "idle" ||

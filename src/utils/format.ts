@@ -43,6 +43,10 @@ export function normalizeHalfWidthBrackets(text: string): string {
     .replace(/｝/g, "}");
 }
 
+/** 晴れる屋2買取表準拠の名称（型番・レアリティ等を含むフル表記） */
+export function formatHareruyaBuyListName(name: string): string {
+  return normalizeHalfWidthBrackets(name).replace(/\s+/g, " ").trim();
+}
 /**
  * 晴れる屋2表記を整形する。
  * 例: ゼルネアスEX(CP){フェアリー}〈038/036〉[CP5] → ゼルネアスEX(CP)[CP5]
