@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { createServer } from "node:http";
 import connect from "connect";
 import serveStatic from "serve-static";
+import { createAuthMiddleware } from "./auth";
 import { createCardImageMiddleware } from "./cardImageApi";
 import { createComparisonMiddleware } from "./comparisonApi";
 import { ensureComparisonDataFile } from "./config";
@@ -16,6 +17,7 @@ ensureComparisonDataFile();
 
 const app = connect();
 
+app.use(createAuthMiddleware());
 app.use(createComparisonMiddleware());
 app.use(createCardImageMiddleware());
 app.use((req, res, next) => {
