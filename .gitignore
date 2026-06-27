@@ -1,7 +1,12 @@
 node_modules
 dist
+electron-dist
+release-build
+release
+share
 .DS_Store
 *.local
 .env
 /data/
 excel-config.json
+tsconfig.tsbuildinfo

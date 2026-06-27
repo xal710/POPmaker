@@ -8,16 +8,27 @@ import { Header } from "./components/Header";
 
 import { PopModal } from "./components/PopModal";
 
+import { TweetHistoryList } from "./components/TweetHistoryList";
+
 import { SearchBar } from "./components/SearchBar";
 
 import { useCardSearch } from "./hooks/useCardSearch";
 
 import { useComparisonData } from "./hooks/useComparisonData";
 
+import { useTweetHistory } from "./hooks/useTweetHistory";
+
 import { useDebouncedValue } from "./hooks/useDebouncedValue";
 
 import type { ComparisonItem } from "./types";
 
+import {
+  DEFAULT_COMPARISON_SORT,
+  sortComparisonItems,
+  toggleComparisonSort,
+  type ComparisonSortKey,
+  type ComparisonSortState,
+} from "./utils/comparisonSort";
 import { applyPriceFilter, isPriceFilterActive } from "./utils/priceFilter";
 
 import { filterBySeries, type SeriesFilter as SeriesFilterValue } from "./utils/series";
@@ -27,6 +38,8 @@ import "./App.css";
 const LIST_PAGE_SIZE = 100;
 const SEARCH_DEBOUNCE_MS = 300;
 
+type AppView = "tool" | "tweetHistory";
+
 
 
 function App() {
@@ -34,6 +47,15 @@ function App() {
   const { data, loading, refreshing, error, warning, progressMessage, lastFetchedAt, refresh } =
 
     useComparisonData();
+
+  const {
+    entries: tweetHistoryEntries,
+    source: tweetHistorySource,
+    loading: tweetHistoryLoading,
+    error: tweetHistoryError,
+  } = useTweetHistory();
+
+  const [view, setView] = useState<AppView>("tool");
 
   const [selectedItem, setSelectedItem] = useState<ComparisonItem | null>(null);
 
@@ -46,8 +68,7 @@ function App() {
   const [seriesFilter, setSeriesFilter] = useState<SeriesFilterValue>("all");
 
   const [priceFilter, setPriceFilter] = useState(DEFAULT_PRICE_FILTER);
-
-
+  const [sort, setSort] = useState<ComparisonSortState>(DEFAULT_COMPARISON_SORT);
 
   const items = data?.items ?? [];
 
@@ -70,11 +91,15 @@ function App() {
   );
 
   const isQueryPending = searchQuery.trim() !== debouncedSearchQuery.trim();
-  const listSource = results;
+  const listSource = useMemo(() => sortComparisonItems(results, sort), [results, sort]);
 
   useEffect(() => {
     setListPage(1);
-  }, [debouncedSearchQuery, seriesFilter, priceFilter]);
+  }, [debouncedSearchQuery, seriesFilter, priceFilter, sort]);
+
+  const handleSortChange = useCallback((key: ComparisonSortKey) => {
+    setSort((current) => toggleComparisonSort(current, key));
+  }, []);
 
   const totalPages = Math.max(1, Math.ceil(listSource.length / LIST_PAGE_SIZE));
   const currentPage = Math.min(listPage, totalPages);
@@ -143,11 +168,28 @@ function App() {
 
         hareruyaBuyListUpdatedAt={data?.hareruyaBuyListUpdatedAt}
 
+        view={view}
+
+        onToggleView={() => setView((current) => (current === "tool" ? "tweetHistory" : "tool"))}
+
       />
 
 
 
       <main className="app-main">
+
+        {view === "tweetHistory" ? (
+
+          <TweetHistoryList
+            entries={tweetHistoryEntries}
+            source={tweetHistorySource}
+            loading={tweetHistoryLoading}
+            error={tweetHistoryError}
+          />
+
+        ) : (
+
+          <>
 
         {warning && (
 
@@ -269,9 +311,15 @@ function App() {
             page={currentPage}
             pageSize={LIST_PAGE_SIZE}
             totalCount={listSource.length}
+            sort={sort}
+            onSortChange={handleSortChange}
             onSelect={handleSelectItem}
             onPageChange={handlePageChange}
           />
+
+        )}
+
+          </>
 
         )}
 

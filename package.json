@@ -3,11 +3,15 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "main": "electron-dist/main.cjs",
   "scripts": {
     "dev": "vite --host",
     "build": "tsc -b && vite build",
     "start": "tsx server/production.ts",
     "preview": "vite preview",
+    "electron:dev": "npm run build && node scripts/build-electron.mjs && cross-env POP_LOCAL=1 electron .",
+    "electron:build": "npm run build && node scripts/build-electron.mjs && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win",
+    "electron:share": "npm run electron:build && node scripts/package-share.mjs",
     "refresh": "npx --yes tsx tools/refresh_and_compare.ts",
     "test:match": "npx --yes tsx tools/test_variant_match.ts",
     "test:tweet-count": "npx --yes tsx tools/test_tweet_count.ts"
@@ -30,7 +34,34 @@
     "@types/react-dom": "^19.1.2",
     "@types/serve-static": "^1.15.8",
     "@vitejs/plugin-react": "^4.4.1",
+    "cross-env": "^7.0.3",
+    "electron": "^35.1.5",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.25.5",
     "typescript": "^5.8.3",
     "vite": "^6.3.5"
+  },
+  "build": {
+    "appId": "jp.hareruyaannex.pop-tool",
+    "productName": "POP作成ツール",
+    "directories": {
+      "output": "release-build"
+    },
+    "files": [
+      "dist/**/*",
+      "electron-dist/**/*",
+      "package.json"
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    }
   }
 }

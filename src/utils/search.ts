@@ -12,6 +12,8 @@ const PACK_LIKE_PREFIX =
 
 const RARITY_TOKENS = new Set(["ex", "vmax", "vstar", "sar"]);
 
+const JAPANESE_CHAR = /[\u3040-\u30ff\u4e00-\u9fff]/;
+
 function isPackLikeToken(token: string): boolean {
   if (/\d/.test(token)) return true;
   if (token.length <= 4 && PACK_LIKE_PREFIX.test(token)) return true;
@@ -48,6 +50,21 @@ export function parseCardName(name: string): ParsedCardName | null {
 
   const [, cardName, number, pack] = match;
   return { cardName, number, pack };
+}
+
+/** POP/ツイート表記（例: ラプラス(ミラー)[SV2a-Ma]）向けの緩いパース */
+export function parseLooseCardName(name: string): ParsedCardName {
+  const parsed = parseCardName(name);
+  if (parsed) return parsed;
+
+  const packMatch = /\[([^\]]+)\]$/.exec(name);
+  if (packMatch) {
+    const pack = packMatch[1];
+    const cardName = name.slice(0, packMatch.index).trim();
+    return { cardName, number: "", pack };
+  }
+
+  return { cardName: name.trim(), number: "", pack: "" };
 }
 
 function tokenizeRaw(query: string): string[] {
@@ -110,7 +127,7 @@ function packMatches(pack: string, token: string): boolean {
 
   if (packCode.startsWith(query)) {
     const suffix = packCode.slice(query.length);
-    return suffix === "" || /^[a-z0-9]/i.test(suffix);
+    return suffix === "" || /^[-a-z0-9]/i.test(suffix);
   }
 
   return false;
@@ -199,13 +216,13 @@ export function shouldUseFuzzySearch(token: string): boolean {
 
 export function buildSearchIndex(items: ComparisonItem[]): SearchIndexEntry[] {
   return items.map((item) => {
-    const parsed = parseCardName(item.name);
-    const cardName = parsed?.cardName ?? item.name;
-    const number = parsed?.number ?? "";
-    const pack = parsed?.pack ?? "";
+    const parsed = parseLooseCardName(item.name);
+    const cardName = parsed.cardName;
+    const number = parsed.number;
+    const pack = parsed.pack;
     const numberCompact = number.replace(/\//g, "");
     const tags = extractSearchTags(cardName);
-    const romajiName = wanakana.isJapanese(cardName)
+    const romajiName = JAPANESE_CHAR.test(cardName)
       ? wanakana.toRomaji(cardName).toLowerCase()
       : "";
     const normalizedCardName = normalizeToken(cardName);
@@ -269,4 +286,10 @@ export function scoreEntry(entry: SearchIndexEntry, tokens: string[]): number {
   }
 
   return score;
+}
+
+export function entryMatchesQuery(entry: SearchIndexEntry, query: string): boolean {
+  const tokens = tokenizeQuery(query);
+  if (tokens.length === 0) return true;
+  return scoreEntry(entry, tokens) >= 0;
 }

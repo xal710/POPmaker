@@ -16,6 +16,8 @@ interface HeaderProps {
   updatedAt?: string | null;
   dataSource?: "excel" | "json" | "web";
   hareruyaBuyListUpdatedAt?: Partial<Record<string, string>>;
+  view?: "tool" | "tweetHistory";
+  onToggleView?: () => void;
 }
 
 function formatDataDate(value: string | null | undefined): string {
@@ -62,58 +64,81 @@ export function Header({
   updatedAt,
   dataSource,
   hareruyaBuyListUpdatedAt,
+  view = "tool",
+  onToggleView,
 }: HeaderProps) {
   const busy = loading || refreshing;
+  const isTweetHistoryView = view === "tweetHistory";
 
   return (
     <header className="app-header">
       <div className="app-header__top">
         <div>
           <p className="app-header__eyebrow">晴れる屋2 × カードラッシュ</p>
-          <h1 className="app-header__title">買取価格比較 POP作成ツール</h1>
+          <h1 className="app-header__title">
+            {isTweetHistoryView ? "POP投稿履歴" : "買取価格比較 POP作成ツール"}
+          </h1>
         </div>
-        <button
-          type="button"
-          className="btn btn--primary"
-          onClick={onRefresh}
-          disabled={busy}
-        >
-          {refreshing ? "更新中..." : "最新価格を取得"}
-        </button>
+        <div className="app-header__actions">
+          {onToggleView && (
+            <button
+              type="button"
+              className={`btn ${isTweetHistoryView ? "btn--primary" : "btn--secondary"}`}
+              onClick={onToggleView}
+              disabled={!isTweetHistoryView && busy}
+            >
+              {isTweetHistoryView ? "POP作成ツール" : "ツイート履歴"}
+            </button>
+          )}
+          {!isTweetHistoryView && (
+            <button
+              type="button"
+              className="btn btn--primary"
+              onClick={onRefresh}
+              disabled={busy}
+            >
+              {refreshing ? "更新中..." : "最新価格を取得"}
+            </button>
+          )}
+        </div>
       </div>
 
-      {progressMessage && (
-        <p className="app-header__progress" role="status">
-          {progressMessage}
-        </p>
-      )}
+      {!isTweetHistoryView && (
+        <>
+          {progressMessage && (
+            <p className="app-header__progress" role="status">
+              {progressMessage}
+            </p>
+          )}
 
-      <div className="app-header__meta">
-        <span className="meta-pill">
-          {isFiltered ? "検索結果" : "件数"}: <strong>{itemCount.toLocaleString("ja-JP")}</strong> 件
-        </span>
-        <span className="meta-pill" title={updatedDateHint(dataSource)}>
-          更新日: <strong>{formatServerUpdatedDate(updatedAt, dataDate)}</strong>
-        </span>
-        <span className="meta-pill" title="この端末が比較データを読み込んだ日時">
-          読込: <strong>{lastFetchedAt ? formatDateTime(lastFetchedAt) : "—"}</strong>
-        </span>
-      </div>
-
-      <div className="app-header__buylist-dates" aria-label="晴れる屋2 買取表の更新日">
-        {HARERUYA_BUY_LIST_PAGES.map((page) => (
-          <span
-            key={page.slug}
-            className="buylist-date-pill"
-            title={`${page.title}（晴れる屋2 買取表）`}
-          >
-            <span className="buylist-date-pill__label">{page.label}</span>
-            <span className="buylist-date-pill__value">
-              {formatBuyListDateMmDd(hareruyaBuyListUpdatedAt?.[page.slug])}
+          <div className="app-header__meta">
+            <span className="meta-pill">
+              {isFiltered ? "検索結果" : "件数"}: <strong>{itemCount.toLocaleString("ja-JP")}</strong> 件
             </span>
-          </span>
-        ))}
-      </div>
+            <span className="meta-pill" title={updatedDateHint(dataSource)}>
+              更新日: <strong>{formatServerUpdatedDate(updatedAt, dataDate)}</strong>
+            </span>
+            <span className="meta-pill" title="この端末が比較データを読み込んだ日時">
+              読込: <strong>{lastFetchedAt ? formatDateTime(lastFetchedAt) : "—"}</strong>
+            </span>
+          </div>
+
+          <div className="app-header__buylist-dates" aria-label="晴れる屋2 買取表の更新日">
+            {HARERUYA_BUY_LIST_PAGES.map((page) => (
+              <span
+                key={page.slug}
+                className="buylist-date-pill"
+                title={`${page.title}（晴れる屋2 買取表）`}
+              >
+                <span className="buylist-date-pill__label">{page.label}</span>
+                <span className="buylist-date-pill__value">
+                  {formatBuyListDateMmDd(hareruyaBuyListUpdatedAt?.[page.slug])}
+                </span>
+              </span>
+            ))}
+          </div>
+        </>
+      )}
     </header>
   );
 }

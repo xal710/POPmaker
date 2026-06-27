@@ -1,12 +1,22 @@
 import { memo } from "react";
 import type { ComparisonItem } from "../types";
+import {
+  COMPARISON_SORT_LABELS,
+  getComparisonSortArrow,
+  type ComparisonSortKey,
+  type ComparisonSortState,
+} from "../utils/comparisonSort";
 import { ComparisonRow } from "./ComparisonRow";
+
+const SORT_KEYS: ComparisonSortKey[] = ["cardrush", "hareruya2", "diff"];
 
 interface ComparisonListProps {
   items: ComparisonItem[];
   page: number;
   pageSize: number;
   totalCount: number;
+  sort: ComparisonSortState;
+  onSortChange: (key: ComparisonSortKey) => void;
   onSelect: (item: ComparisonItem) => void;
   onPageChange: (page: number) => void;
 }
@@ -16,6 +26,8 @@ export const ComparisonList = memo(function ComparisonList({
   page,
   pageSize,
   totalCount,
+  sort,
+  onSortChange,
   onSelect,
   onPageChange,
 }: ComparisonListProps) {
@@ -36,7 +48,35 @@ export const ComparisonList = memo(function ComparisonList({
     <section className="comparison-list" aria-label="買取価格比較リスト">
       <div className="comparison-list__header">
         <span className="comparison-list__header-rank">順位</span>
-        <span className="comparison-list__header-body">カード名 / 買取価格</span>
+        <div className="comparison-list__header-body">
+          <span className="comparison-list__header-label">カード名 / 買取価格</span>
+          <div className="comparison-list__sort" role="group" aria-label="並べ替え">
+            {SORT_KEYS.map((key) => {
+              const isActive = sort.key === key;
+              const label = COMPARISON_SORT_LABELS[key];
+              const arrow = getComparisonSortArrow(sort, key);
+              const directionLabel = sort.direction === "desc" ? "降順" : "昇順";
+
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  className={`comparison-list__sort-btn${
+                    isActive ? " comparison-list__sort-btn--active" : ""
+                  }`}
+                  onClick={() => onSortChange(key)}
+                  aria-pressed={isActive}
+                  aria-label={
+                    isActive ? `${label}で${directionLabel}に並べ替え中` : `${label}で降順に並べ替え`
+                  }
+                >
+                  {label}
+                  {arrow}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
       <div className="comparison-list__body">
         {items.map((item, index) => (

@@ -53,7 +53,7 @@ function packMatches(pack: string, token: string): boolean {
 
   if (packCode.startsWith(query)) {
     const suffix = packCode.slice(query.length);
-    return suffix === "" || /^[a-z0-9]/i.test(suffix);
+    return suffix === "" || /^[-a-z0-9]/i.test(suffix);
   }
 
   return false;

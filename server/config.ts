@@ -3,22 +3,27 @@ import { fileURLToPath } from "node:url";
 import { readFileSync, existsSync, mkdirSync, copyFileSync } from "node:fs";
 import { restoreComparisonFromBackupIfNewer } from "./comparisonBackup";
 
-const PROJECT_ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const CONFIG_PATH = resolve(PROJECT_ROOT, "excel-config.json");
 const DEFAULT_EXCEL_PATH =
   "c:\\Users\\youse\\Downloads\\買取価格比較\\買取価格比較_ver1.2.xlsm";
 
 const COMPARISON_SHEET_NAME = "買取価格比較表";
 
 export function getProjectRoot(): string {
-  return PROJECT_ROOT;
+  if (process.env.PROJECT_ROOT) {
+    return resolve(process.env.PROJECT_ROOT);
+  }
+  return resolve(fileURLToPath(new URL("..", import.meta.url)));
+}
+
+function getConfigPath(): string {
+  return resolve(getProjectRoot(), "excel-config.json");
 }
 
 export function getDataDir(): string {
   if (process.env.DATA_DIR) {
     return resolve(process.env.DATA_DIR);
   }
-  return resolve(PROJECT_ROOT, "data");
+  return resolve(getProjectRoot(), "data");
 }
 
 export function getComparisonJsonPath(): string {
@@ -31,12 +36,13 @@ export function getComparisonJsonPath(): string {
     return writablePath;
   }
 
-  const distPath = resolve(PROJECT_ROOT, "dist/data/comparison.json");
+  const root = getProjectRoot();
+  const distPath = resolve(root, "dist/data/comparison.json");
   if (existsSync(distPath)) {
     return distPath;
   }
 
-  return resolve(PROJECT_ROOT, "public/data/comparison.json");
+  return resolve(root, "public/data/comparison.json");
 }
 
 export function ensureComparisonDataFile(): void {
@@ -54,9 +60,10 @@ export function ensureComparisonDataFile(): void {
     return;
   }
 
+  const root = getProjectRoot();
   const seeds = [
-    resolve(PROJECT_ROOT, "public/data/comparison.json"),
-    resolve(PROJECT_ROOT, "dist/data/comparison.json"),
+    resolve(root, "public/data/comparison.json"),
+    resolve(root, "dist/data/comparison.json"),
   ];
 
   for (const seed of seeds) {
@@ -74,9 +81,10 @@ export function getExcelPath(): string {
     return process.env.POP_EXCEL_PATH;
   }
 
-  if (existsSync(CONFIG_PATH)) {
+  const configPath = getConfigPath();
+  if (existsSync(configPath)) {
     try {
-      const config = JSON.parse(readFileSync(CONFIG_PATH, "utf-8")) as {
+      const config = JSON.parse(readFileSync(configPath, "utf-8")) as {
         excelPath?: string;
       };
       if (config.excelPath) {
@@ -90,4 +98,4 @@ export function getExcelPath(): string {
   return DEFAULT_EXCEL_PATH;
 }
 
-export { COMPARISON_SHEET_NAME, CONFIG_PATH };
+export { COMPARISON_SHEET_NAME };

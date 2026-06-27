@@ -1,14 +1,12 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { COMPARISON_SHEET_NAME, getExcelPath } from "./config";
+import { resolve } from "node:path";
+import { COMPARISON_SHEET_NAME, getExcelPath, getProjectRoot } from "./config";
 import type { ComparisonItem, ComparisonPayload } from "./excel";
 
-const PS_SCRIPT = resolve(
-  dirname(fileURLToPath(import.meta.url)),
-  "../tools/read-excel-sheet.ps1",
-);
+function getPsScriptPath(): string {
+  return resolve(getProjectRoot(), "tools/read-excel-sheet.ps1");
+}
 
 interface ComReadResult {
   rows: unknown[][];
@@ -65,7 +63,7 @@ function parseComparisonRows(rows: unknown[][]): ComparisonItem[] {
 function readSheetViaExcelCom(excelPath: string): ComReadResult {
   const result = spawnSync(
     "powershell",
-    ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", PS_SCRIPT],
+    ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", getPsScriptPath()],
     {
       encoding: "utf-8",
       maxBuffer: 64 * 1024 * 1024,

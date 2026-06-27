@@ -1,5 +1,17 @@
 import type { CardRushRawRow } from "./fetch/cardrush";
 import type { RawPriceRow } from "./fetch/hareruya";
+import {
+  detectMirrorVariantLabel,
+  normalizeHareruyaPackCode,
+  type MirrorVariantLabel,
+} from "../shared/hareruyaPack";
+
+export {
+  buildHareruyaVariantPackCode,
+  detectMirrorVariantLabel,
+  normalizeHareruyaPackCode,
+  type MirrorVariantLabel,
+} from "../shared/hareruyaPack";
 
 const HARERUYA_SPEC_PATTERN = /\([^)]*\)\{[^}]*\}/g;
 
@@ -15,23 +27,6 @@ const CARD_RUSH_KEPT_PARENTHETICALS = new Set([
 const BALL_MIRROR_PATTERN =
   /マスターボールミラー|モンスターボールミラー|エネルギーミラー|R団ミラー|ボールミラー/;
 
-export type MirrorVariantLabel =
-  | "マスターボールミラー"
-  | "モンスターボールミラー"
-  | "エネルギーミラー"
-  | "R団ミラー"
-  | "ボールミラー"
-  | "ミラー";
-
-const MIRROR_VARIANT_PACK_SUFFIX: Record<MirrorVariantLabel, string> = {
-  マスターボールミラー: "-Ma",
-  モンスターボールミラー: "-Mo",
-  エネルギーミラー: "-EM",
-  R団ミラー: "-RM",
-  ボールミラー: "-BM",
-  ミラー: "-M",
-};
-
 const HARERUYA_COLON_VARIANTS: Array<{ pattern: RegExp; label: MirrorVariantLabel }> = [
   { pattern: /:エネルギーミラー(?:\([^)]*\))*\{[^}]*\}/g, label: "エネルギーミラー" },
   { pattern: /:モンスターボールミラー(?:\([^)]*\))*\{[^}]*\}/g, label: "モンスターボールミラー" },
@@ -44,42 +39,6 @@ export interface CardRushPriceBucket {
   normal: number | null;
   mirror: number | null;
   other: number | null;
-}
-
-function normalizeHareruyaPackCode(packCode: string): string {
-  if (packCode.endsWith("-Ma") || packCode.endsWith("-Mo")) {
-    return packCode.slice(0, -3);
-  }
-  if (packCode.endsWith("-M")) {
-    return packCode.slice(0, -2);
-  }
-  if (/(?:-EM|-BM|-RM)$/.test(packCode)) {
-    return packCode.slice(0, packCode.lastIndexOf("-"));
-  }
-
-  return packCode;
-}
-
-/** 比較表のカード名からミラー種別を検出（マスターボール / モンスターボール等） */
-export function detectMirrorVariantLabel(cardName: string): MirrorVariantLabel | null {
-  const prefix = cardName.split("〈")[0] ?? cardName;
-
-  if (prefix.includes("マスターボールミラー")) return "マスターボールミラー";
-  if (prefix.includes("モンスターボールミラー")) return "モンスターボールミラー";
-  if (prefix.includes("エネルギーミラー")) return "エネルギーミラー";
-  if (prefix.includes("R団ミラー")) return "R団ミラー";
-  if (prefix.includes("ボールミラー")) return "ボールミラー";
-  if (/\(ミラー\)/.test(prefix)) return "ミラー";
-
-  return null;
-}
-
-/** 晴れる屋2のパック表記（例: SV2a-Ma）を比較表のパック + ミラー種別から組み立て */
-export function buildHareruyaVariantPackCode(
-  basePack: string,
-  variant: MirrorVariantLabel,
-): string {
-  return `${basePack}${MIRROR_VARIANT_PACK_SUFFIX[variant]}`;
 }
 
 function shouldKeepCardRushParenthetical(inner: string): boolean {

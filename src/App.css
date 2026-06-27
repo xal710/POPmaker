@@ -22,6 +22,15 @@
   margin-bottom: 16px;
 }
 
+.app-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .app-header__eyebrow {
   font-size: 12px;
   font-weight: 600;
@@ -206,7 +215,63 @@
 }
 
 .comparison-list__header {
-  display: none;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px 18px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  align-items: center;
+}
+
+.comparison-list__header-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.comparison-list__header-label {
+  min-width: 0;
+}
+
+.comparison-list__sort {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.comparison-list__sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+}
+
+.comparison-list__sort-btn:hover {
+  border-color: var(--primary);
+  color: var(--text);
+}
+
+.comparison-list__sort-btn--active {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  color: var(--primary);
 }
 
 .comparison-list__body {
@@ -868,19 +933,6 @@
     padding: 28px 24px 48px;
   }
 
-  .comparison-list__header {
-    display: grid;
-    grid-template-columns: 44px minmax(0, 1fr);
-    gap: 12px;
-    padding: 12px 18px;
-    background: var(--bg);
-    border-bottom: 1px solid var(--border);
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-muted);
-    align-items: center;
-  }
-
   .comparison-row {
     align-items: center;
   }
@@ -906,6 +958,16 @@
 
   .comparison-row__prices {
     flex-direction: column;
+  }
+
+  .comparison-list__header-body {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .comparison-list__sort {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .price-chip {
@@ -1317,4 +1379,157 @@
   text-align: center;
   max-width: 360px;
   line-height: 1.5;
+}
+
+.tweet-history {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.tweet-history__intro {
+  margin-bottom: 16px;
+}
+
+.tweet-history__title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.tweet-history__note {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.tweet-history__error {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--danger);
+  line-height: 1.5;
+}
+
+.tweet-history__toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.tweet-history__search {
+  display: block;
+}
+
+.tweet-history__search-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.tweet-history__search-input {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  font-family: inherit;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.tweet-history__search-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.tweet-history__filters-label {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.tweet-history__table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.tweet-history__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.tweet-history__table th,
+.tweet-history__table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.tweet-history__table th {
+  background: var(--bg);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.tweet-history__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.tweet-history__table tbody tr:hover {
+  background: var(--primary-soft);
+}
+
+.tweet-history__date {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  width: 168px;
+}
+
+.tweet-history__daily {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--text);
+  width: 96px;
+  text-align: center;
+}
+
+.tweet-history__card {
+  font-weight: 600;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.tweet-history__link {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.tweet-history__link:hover {
+  text-decoration: underline;
+}
+
+.tweet-history__table tbody tr:hover .tweet-history__link {
+  color: var(--primary-hover);
+}
+
+.tweet-history__count {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: right;
 }

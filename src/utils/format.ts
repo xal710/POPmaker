@@ -1,3 +1,8 @@
+import {
+  normalizeHareruyaPackCode,
+  resolveHareruyaDisplayPackCode,
+} from "../../shared/hareruyaPack";
+
 export function formatYen(value: number): string {
   return `¥${value.toLocaleString("ja-JP")}`;
 }
@@ -56,12 +61,16 @@ export function normalizeHalfWidthBrackets(text: string): string {
 
 /** 晴れる屋2買取表準拠の名称（型番・レアリティ等を含むフル表記） */
 export function formatHareruyaBuyListName(name: string): string {
-  return normalizeHalfWidthBrackets(name).replace(/\s+/g, " ").trim();
+  const normalized = normalizeHalfWidthBrackets(name).replace(/\s+/g, " ").trim();
+  return normalized.replace(/\[([^\]]+)\]/g, (_match, packCode: string) => {
+    return `[${resolveHareruyaDisplayPackCode(normalized, packCode)}]`;
+  });
 }
+
 /**
- * 晴れる屋2表記を整形する。
+ * 晴れる屋2サイト表記を整形する。
+ * 例: ラプラス (マスターボールミラー)〈131/165〉[SV2a] → ラプラス(マスターボールミラー)[SV2a-Ma]
  * 例: ゼルネアスEX(CP){フェアリー}〈038/036〉[CP5] → ゼルネアスEX(CP)[CP5]
- * 書式: カード名(レアリティor技名)[エキスパンション]（括弧は半角）
  */
 export function formatHareruyaCardName(name: string): string {
   const normalized = normalizeHalfWidthBrackets(name);
@@ -76,8 +85,9 @@ export function formatHareruyaCardName(name: string): string {
   const pack = packMatch?.[1]?.trim() ?? "";
   if (!pack) return stripped;
 
-  const packSuffix = `[${pack}]`;
-  const packIndex = stripped.lastIndexOf(packSuffix);
+  const displayPack = resolveHareruyaDisplayPackCode(normalized, pack);
+  const packSuffix = `[${displayPack}]`;
+  const packIndex = stripped.lastIndexOf(`[${pack}]`);
   const beforePack = stripped.slice(0, packIndex).trim();
 
   if (/\([^)]+\)\s*$/.test(beforePack)) {
@@ -85,7 +95,7 @@ export function formatHareruyaCardName(name: string): string {
   }
 
   const base = beforePack.trim();
-  return `${base}(${packLabelFromCode(pack)})${packSuffix}`;
+  return `${base}(${packLabelFromCode(normalizeHareruyaPackCode(pack))})${packSuffix}`;
 }
 
 /** POP用・ツイート用のカード名（晴れる屋2表記ベース） */
