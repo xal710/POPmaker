@@ -122,10 +122,18 @@ const TWEET_FOOTER_TAKADANOBABA = `ハレツー高田馬場店では、旧裏や
 ▼その他の買取情報はこちら▼
 http://hareruya2.com/pages/buying`;
 
-export type TweetTemplateId = "default" | "takadanobaba";
+const TWEET_FOOTER_KORIYAMA = `是非、#ハレツー郡山店
+までお持ちこみ下さい🐲🐲
+
+#ハレツー #ポケカ
+▼その他の買取情報はこちら▼
+hareruya2.com/pages/buying`;
+
+export type TweetTemplateId = "default" | "takadanobaba" | "koriyama";
 
 export function getTweetTemplateId(username: string | null | undefined): TweetTemplateId {
   if (username === "k.ishigaki") return "takadanobaba";
+  if (username === "20260605") return "koriyama";
   return "default";
 }
 
@@ -144,6 +152,17 @@ ${cardName}
 ${price}✨
 
 ${TWEET_FOOTER_TAKADANOBABA}`;
+  }
+
+  if (templateId === "koriyama") {
+    return `【買取情報】
+
+「一言コメント！」
+
+${cardName}
+${price}
+
+${TWEET_FOOTER_KORIYAMA}`;
   }
 
   return `【買取情報】
