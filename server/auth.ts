@@ -3,10 +3,37 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Connect } from "vite";
 import { sendJson } from "./http";
 
-const SITE_PASSWORD = process.env.SITE_PASSWORD ?? "hareruya2annex";
 const AUTH_COOKIE = "pop_auth";
-const AUTH_TOKEN = createHash("sha256").update(`${SITE_PASSWORD}:pop-kaitori-tool`).digest("hex");
 const COOKIE_MAX_AGE_SEC = 60 * 60 * 24 * 30;
+const REGISTER_URL = "https://forms.gle/ZXUcXjMJgXqVH9uB8";
+
+/** 変更すると既存のログイン Cookie がすべて無効になります */
+const AUTH_VERSION = process.env.AUTH_VERSION ?? "2";
+
+interface SiteAccount {
+  username: string;
+  password: string;
+}
+
+function getSiteAccounts(): SiteAccount[] {
+  return [{ username: "Yousei710", password: process.env.ACCOUNT_YOUSEI710_PASSWORD ?? "as214117" }];
+}
+
+function safeEqual(left: string, right: string): boolean {
+  if (left.length !== right.length) return false;
+
+  try {
+    return timingSafeEqual(Buffer.from(left), Buffer.from(right));
+  } catch {
+    return false;
+  }
+}
+
+function createAuthToken(username: string): string {
+  return createHash("sha256")
+    .update(`${username}:${AUTH_VERSION}:pop-kaitori-tool`)
+    .digest("hex");
+}
 
 function parseCookies(req: IncomingMessage): Record<string, string> {
   const result: Record<string, string> = {};
@@ -26,33 +53,37 @@ function isSecureRequest(req: IncomingMessage): boolean {
   return req.headers["x-forwarded-proto"] === "https";
 }
 
-function setAuthCookie(res: ServerResponse, req: IncomingMessage): void {
+function setAuthCookie(res: ServerResponse, req: IncomingMessage, username: string): void {
   const secure = isSecureRequest(req) ? "; Secure" : "";
+  const token = createAuthToken(username);
   res.setHeader(
     "Set-Cookie",
-    `${AUTH_COOKIE}=${AUTH_TOKEN}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${COOKIE_MAX_AGE_SEC}${secure}`,
+    `${AUTH_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${COOKIE_MAX_AGE_SEC}${secure}`,
   );
 }
 
 function isAuthenticated(req: IncomingMessage): boolean {
   const token = parseCookies(req)[AUTH_COOKIE];
-  if (!token || token.length !== AUTH_TOKEN.length) return false;
+  if (!token) return false;
 
-  try {
-    return timingSafeEqual(Buffer.from(token), Buffer.from(AUTH_TOKEN));
-  } catch {
-    return false;
-  }
+  return getSiteAccounts().some((account) => {
+    const expected = createAuthToken(account.username);
+    if (token.length !== expected.length) return false;
+    return safeEqual(token, expected);
+  });
 }
 
-function verifyPassword(input: string): boolean {
-  if (input.length !== SITE_PASSWORD.length) return false;
+function verifyCredentials(username: string, password: string): string | null {
+  const trimmedUsername = username.trim();
+  if (!trimmedUsername || !password) return null;
 
-  try {
-    return timingSafeEqual(Buffer.from(input), Buffer.from(SITE_PASSWORD));
-  } catch {
-    return false;
+  for (const account of getSiteAccounts()) {
+    if (safeEqual(trimmedUsername, account.username) && safeEqual(password, account.password)) {
+      return account.username;
+    }
   }
+
+  return null;
 }
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
@@ -152,6 +183,10 @@ const LOGIN_PAGE_HTML = `<!DOCTYPE html>
       color: var(--text-muted);
     }
 
+    .field {
+      margin-bottom: 14px;
+    }
+
     input {
       width: 100%;
       padding: 12px 14px;
@@ -167,27 +202,46 @@ const LOGIN_PAGE_HTML = `<!DOCTYPE html>
       box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
     }
 
-    button {
+    button,
+    .register-link {
       width: 100%;
       margin-top: 16px;
       padding: 12px 16px;
-      border: none;
       border-radius: 8px;
-      background: var(--primary);
-      color: #fff;
       font-size: 15px;
       font-weight: 600;
       font-family: inherit;
       cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
     }
 
-    button:hover:not(:disabled) {
+    button[type="submit"] {
+      border: none;
+      background: var(--primary);
+      color: #fff;
+    }
+
+    button[type="submit"]:hover:not(:disabled) {
       background: var(--primary-hover);
     }
 
-    button:disabled {
+    button[type="submit"]:disabled {
       opacity: 0.7;
       cursor: wait;
+    }
+
+    .register-link {
+      margin-top: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .register-link:hover {
+      border-color: var(--primary);
+      color: var(--primary);
     }
 
     .error {
@@ -201,16 +255,26 @@ const LOGIN_PAGE_HTML = `<!DOCTYPE html>
 <body>
   <div class="login-card">
     <h1>POP作成ツール</h1>
-    <p>パスワードを入力してください。</p>
+    <p>アカウント名とパスワードを入力してください。</p>
     <form id="login-form">
-      <label for="password">パスワード</label>
-      <input id="password" name="password" type="password" autocomplete="current-password" required autofocus>
+      <div class="field">
+        <label for="username">アカウント名</label>
+        <input id="username" name="username" type="text" autocomplete="username" required autofocus>
+      </div>
+      <div class="field">
+        <label for="password">パスワード</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+      </div>
       <button type="submit" id="submit">ログイン</button>
       <p class="error" id="error" role="alert" aria-live="polite"></p>
     </form>
+    <a class="register-link" href="${REGISTER_URL}" target="_blank" rel="noopener noreferrer">
+      アカウント登録
+    </a>
   </div>
   <script>
     const form = document.getElementById("login-form");
+    const usernameInput = document.getElementById("username");
     const passwordInput = document.getElementById("password");
     const submitButton = document.getElementById("submit");
     const errorEl = document.getElementById("error");
@@ -225,7 +289,10 @@ const LOGIN_PAGE_HTML = `<!DOCTYPE html>
         const response = await fetch("/api/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ password: passwordInput.value }),
+          body: JSON.stringify({
+            username: usernameInput.value,
+            password: passwordInput.value,
+          }),
         });
 
         if (response.ok) {
@@ -253,15 +320,17 @@ export function createAuthMiddleware(): Connect.NextHandleFunction {
 
     if (pathname === "/api/auth/login" && req.method === "POST") {
       try {
-        const body = (await readJsonBody(req)) as { password?: string } | null;
+        const body = (await readJsonBody(req)) as { username?: string; password?: string } | null;
+        const username = typeof body?.username === "string" ? body.username : "";
         const password = typeof body?.password === "string" ? body.password : "";
+        const authenticatedUsername = verifyCredentials(username, password);
 
-        if (!verifyPassword(password)) {
-          sendJson(res, 401, { error: "パスワードが正しくありません" });
+        if (!authenticatedUsername) {
+          sendJson(res, 401, { error: "アカウント名またはパスワードが正しくありません" });
           return;
         }
 
-        setAuthCookie(res, req);
+        setAuthCookie(res, req, authenticatedUsername);
         sendJson(res, 200, { ok: true });
       } catch {
         sendJson(res, 400, { error: "リクエストが不正です" });

@@ -952,8 +952,16 @@
     flex-direction: column;
   }
 
-  .app-header__top .btn {
+  .app-header__actions {
     width: 100%;
+    flex-wrap: nowrap;
+  }
+
+  .app-header__actions .btn {
+    flex: 1;
+    min-width: 0;
+    padding-left: 10px;
+    padding-right: 10px;
   }
 
   .comparison-row__prices {
