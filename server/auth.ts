@@ -16,7 +16,11 @@ interface SiteAccount {
 }
 
 function getSiteAccounts(): SiteAccount[] {
-  return [{ username: "Yousei710", password: process.env.ACCOUNT_YOUSEI710_PASSWORD ?? "as214117" }];
+  return [
+    { username: "Yousei710", password: process.env.ACCOUNT_YOUSEI710_PASSWORD ?? "as214117" },
+    { username: "akito00", password: process.env.ACCOUNT_AKITO00_PASSWORD ?? "12390248" },
+    { username: "k.ishigaki", password: process.env.ACCOUNT_K_ISHIGAKI_PASSWORD ?? "ka1214" },
+  ];
 }
 
 function safeEqual(left: string, right: string): boolean {
