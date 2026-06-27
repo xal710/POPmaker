@@ -67,14 +67,20 @@ function setAuthCookie(res: ServerResponse, req: IncomingMessage, username: stri
 }
 
 function isAuthenticated(req: IncomingMessage): boolean {
-  const token = parseCookies(req)[AUTH_COOKIE];
-  if (!token) return false;
+  return getAuthenticatedUsername(req) !== null;
+}
 
-  return getSiteAccounts().some((account) => {
+export function getAuthenticatedUsername(req: IncomingMessage): string | null {
+  const token = parseCookies(req)[AUTH_COOKIE];
+  if (!token) return null;
+
+  for (const account of getSiteAccounts()) {
     const expected = createAuthToken(account.username);
-    if (token.length !== expected.length) return false;
-    return safeEqual(token, expected);
-  });
+    if (token.length !== expected.length) continue;
+    if (safeEqual(token, expected)) return account.username;
+  }
+
+  return null;
 }
 
 function verifyCredentials(username: string, password: string): string | null {
@@ -339,6 +345,17 @@ export function createAuthMiddleware(): Connect.NextHandleFunction {
       } catch {
         sendJson(res, 400, { error: "リクエストが不正です" });
       }
+      return;
+    }
+
+    if (pathname === "/api/auth/me" && req.method === "GET") {
+      const username = getAuthenticatedUsername(req);
+      if (!username) {
+        sendJson(res, 401, { error: "Unauthorized" });
+        return;
+      }
+
+      sendJson(res, 200, { username });
       return;
     }
 
