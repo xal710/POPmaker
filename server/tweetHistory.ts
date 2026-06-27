@@ -1,13 +1,12 @@
+import { resolveTweetHistoryScreenName } from "../shared/tweetHistoryAccounts";
 import {
   annotateDailyPostOrder,
   buildTweetUrl,
-  HARERUYA_ANNEX_SCREEN_NAME,
   parseBuyInfoTweet,
   type RawTweetInput,
   type TweetHistoryEntry,
 } from "../shared/tweetHistoryParse";
 
-const FXTWITTER_TIMELINE_URL = `https://api.fxtwitter.com/2/profile/${HARERUYA_ANNEX_SCREEN_NAME}/statuses`;
 const MAX_PAGES = 5;
 const PAGE_SIZE = 100;
 
@@ -41,17 +40,20 @@ function parsePostedAt(status: FxStatus): string | null {
   return null;
 }
 
-async function fetchTimelinePage(cursor?: string): Promise<FxTimelineResponse> {
-  const url = new URL(FXTWITTER_TIMELINE_URL);
+function buildTimelineUrl(screenName: string, cursor?: string): URL {
+  const url = new URL(`https://api.fxtwitter.com/2/profile/${screenName}/statuses`);
   url.searchParams.set("count", String(PAGE_SIZE));
   if (cursor) {
     url.searchParams.set("cursor", cursor);
   }
+  return url;
+}
 
-  const response = await fetch(url, {
+async function fetchTimelinePage(screenName: string, cursor?: string): Promise<FxTimelineResponse> {
+  const response = await fetch(buildTimelineUrl(screenName, cursor), {
     headers: {
       Accept: "application/json",
-      "User-Agent": "pop-kaitori-tool/0.1 (local tweet history)",
+      "User-Agent": "pop-kaitori-tool/0.1 (tweet history)",
     },
   });
 
@@ -62,12 +64,12 @@ async function fetchTimelinePage(cursor?: string): Promise<FxTimelineResponse> {
   return (await response.json()) as FxTimelineResponse;
 }
 
-async function fetchRecentStatuses(): Promise<FxStatus[]> {
+async function fetchRecentStatuses(screenName: string): Promise<FxStatus[]> {
   const statuses: FxStatus[] = [];
   let cursor: string | undefined;
 
   for (let page = 0; page < MAX_PAGES; page += 1) {
-    const payload = await fetchTimelinePage(cursor);
+    const payload = await fetchTimelinePage(screenName, cursor);
     const pageResults = payload.results ?? [];
     statuses.push(...pageResults.filter((item) => item.type === "status" || !item.type));
 
@@ -80,8 +82,9 @@ async function fetchRecentStatuses(): Promise<FxStatus[]> {
   return statuses;
 }
 
-export async function fetchBuyInfoTweetHistory(): Promise<TweetHistoryEntry[]> {
-  const statuses = await fetchRecentStatuses();
+export async function fetchBuyInfoTweetHistory(username: string | null): Promise<TweetHistoryEntry[]> {
+  const screenName = resolveTweetHistoryScreenName(username);
+  const statuses = await fetchRecentStatuses(screenName);
   const allTimeline: { id: string; postedAt: string }[] = [];
   const rawTweets: RawTweetInput[] = [];
 
@@ -96,7 +99,7 @@ export async function fetchBuyInfoTweetHistory(): Promise<TweetHistoryEntry[]> {
       id: status.id,
       postedAt,
       text: status.text,
-      tweetUrl: buildTweetUrl(status.id),
+      tweetUrl: buildTweetUrl(status.id, screenName),
     });
   }
 

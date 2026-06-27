@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Connect } from "vite";
+import { getAuthenticatedUsername } from "./auth";
 import { sendJson } from "./http";
 import { fetchBuyInfoTweetHistory } from "./tweetHistory";
 
@@ -17,8 +18,14 @@ export function createTweetHistoryMiddleware(): Connect.NextHandleFunction {
       return;
     }
 
+    const username = getAuthenticatedUsername(req);
+    if (!username) {
+      sendJson(res, 401, { error: "Unauthorized" });
+      return;
+    }
+
     try {
-      const entries = await fetchBuyInfoTweetHistory();
+      const entries = await fetchBuyInfoTweetHistory(username);
       sendJson(res, 200, {
         source: "live",
         entries,

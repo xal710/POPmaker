@@ -31,12 +31,17 @@ function isFooterLine(line: string): boolean {
     line.startsWith("#") ||
     line.startsWith("▼") ||
     line.includes("hareruya2.com") ||
-    line.includes("アネックス店")
+    line.includes("アネックス店") ||
+    line.includes("ハレツー高田馬場店") ||
+    line.includes("ハレツー郡山店") ||
+    line.includes("までお持ちこみ") ||
+    line.includes("ポケカの買取は")
   );
 }
 
 function isPriceLine(line: string): boolean {
-  return /^¥[\d,]+$/.test(line) || /^\d{1,3}(?:,\d{3})*円$/.test(line);
+  const normalized = line.replace(/✨+$/, "");
+  return /^¥[\d,]+$/.test(normalized) || /^\d{1,3}(?:,\d{3})*円$/.test(normalized);
 }
 
 function isCommentLine(line: string): boolean {
@@ -92,26 +97,35 @@ function getJstDateKey(iso: string): string {
 }
 
 function buildDailyPostMetrics(
+  buyInfoEntries: TweetHistoryEntry[],
   allTimelinePosts: TimelinePostRef[],
 ): Map<string, { dailyIndex: number; dailyTotal: number }> {
-  const byDay = new Map<string, TimelinePostRef[]>();
+  const dayTotals = new Map<string, number>();
 
   for (const post of allTimelinePosts) {
     const key = getJstDateKey(post.postedAt);
-    const bucket = byDay.get(key);
-    if (bucket) bucket.push(post);
-    else byDay.set(key, [post]);
+    dayTotals.set(key, (dayTotals.get(key) ?? 0) + 1);
+  }
+
+  const buyInfoByDay = new Map<string, TweetHistoryEntry[]>();
+
+  for (const entry of buyInfoEntries) {
+    const key = getJstDateKey(entry.postedAt);
+    const bucket = buyInfoByDay.get(key);
+    if (bucket) bucket.push(entry);
+    else buyInfoByDay.set(key, [entry]);
   }
 
   const metrics = new Map<string, { dailyIndex: number; dailyTotal: number }>();
 
-  for (const dayPosts of byDay.values()) {
-    const sortedAsc = [...dayPosts].sort(
+  for (const [dayKey, dayEntries] of buyInfoByDay) {
+    const dailyTotal = dayTotals.get(dayKey) ?? dayEntries.length;
+    const sortedAsc = [...dayEntries].sort(
       (a, b) => new Date(a.postedAt).getTime() - new Date(b.postedAt).getTime(),
     );
-    const total = sortedAsc.length;
-    sortedAsc.forEach((post, index) => {
-      metrics.set(post.id, { dailyIndex: index + 1, dailyTotal: total });
+
+    sortedAsc.forEach((entry, index) => {
+      metrics.set(entry.id, { dailyIndex: index + 1, dailyTotal });
     });
   }
 
@@ -119,14 +133,14 @@ function buildDailyPostMetrics(
 }
 
 /**
- * その日の投稿順（分子）と、その日の総投稿数（分母）を付与。
- * 分母は【買取情報】以外も含むアカウント全体の投稿数。
+ * その日の【買取情報】投稿の通番（分子）と、その日の総投稿数（分母）を付与。
+ * 分子は同日の【買取情報】投稿を古い順に 1, 2, 3… と数えた値。
  */
 export function annotateDailyPostOrder(
   entries: TweetHistoryEntry[],
   allTimelinePosts: TimelinePostRef[],
 ): TweetHistoryEntry[] {
-  const metrics = buildDailyPostMetrics(allTimelinePosts);
+  const metrics = buildDailyPostMetrics(entries, allTimelinePosts);
 
   for (const entry of entries) {
     const daily = metrics.get(entry.id);

@@ -119,7 +119,7 @@ export function TweetHistoryList({ entries, loading = false, error }: TweetHisto
             <thead>
               <tr>
                 <th scope="col">投稿日時</th>
-                <th scope="col" title="その日の投稿順 / その日の総投稿数（買取情報以外も含む）">
+                <th scope="col" title="その日の【買取情報】通番 / その日の総投稿数">
                   その日の投稿
                 </th>
                 <th scope="col">カード名</th>
