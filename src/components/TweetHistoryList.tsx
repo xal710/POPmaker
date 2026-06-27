@@ -1,7 +1,6 @@
 import { useId, useMemo, useState } from "react";
 
 import { formatDateTime } from "../utils/format";
-import type { TweetHistorySource } from "../hooks/useTweetHistory";
 import type { TweetHistoryEntry } from "../../shared/tweetHistoryParse";
 import {
   buildTweetHistorySearchIndex,
@@ -15,7 +14,6 @@ import {
 
 interface TweetHistoryListProps {
   entries: TweetHistoryEntry[];
-  source: TweetHistorySource;
   loading?: boolean;
   error?: string | null;
 }
@@ -25,7 +23,7 @@ function formatDailyPostLabel(entry: TweetHistoryEntry): string {
   return `${entry.dailyIndex} / ${entry.dailyTotal}`;
 }
 
-export function TweetHistoryList({ entries, source, loading = false, error }: TweetHistoryListProps) {
+export function TweetHistoryList({ entries, loading = false, error }: TweetHistoryListProps) {
   const searchId = useId();
   const [searchQuery, setSearchQuery] = useState("");
   const [seriesFilter, setSeriesFilter] = useState<TweetSeriesFilter>("all");
@@ -44,12 +42,9 @@ export function TweetHistoryList({ entries, source, loading = false, error }: Tw
         <h2 id="tweet-history-title" className="tweet-history__title">
           POP投稿履歴
         </h2>
-        {source === "mock" && (
-          <p className="tweet-history__note">オフライン仮データ</p>
-        )}
-        {error && source === "mock" && (
-          <p className="tweet-history__error" role="status">
-            投稿の取得に失敗したため仮データを表示しています（{error}）
+        {error && (
+          <p className="tweet-history__error" role="alert">
+            {error}
           </p>
         )}
       </div>

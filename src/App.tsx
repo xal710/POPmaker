@@ -50,7 +50,6 @@ function App() {
 
   const {
     entries: tweetHistoryEntries,
-    source: tweetHistorySource,
     loading: tweetHistoryLoading,
     error: tweetHistoryError,
   } = useTweetHistory();
@@ -182,7 +181,6 @@ function App() {
 
           <TweetHistoryList
             entries={tweetHistoryEntries}
-            source={tweetHistorySource}
             loading={tweetHistoryLoading}
             error={tweetHistoryError}
           />

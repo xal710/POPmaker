@@ -17,7 +17,7 @@ export function createPopApp(options: CreatePopAppOptions): Connect.Server {
   const {
     distDir,
     enableAuth = process.env.POP_LOCAL !== "1",
-    enableTweetHistory = process.env.POP_LOCAL === "1",
+    enableTweetHistory = true,
   } = options;
   const app = connect();
 
