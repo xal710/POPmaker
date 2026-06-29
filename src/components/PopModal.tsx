@@ -7,6 +7,7 @@ import { usePopImage } from "../hooks/usePopImage";
 import type { ComparisonItem } from "../types";
 
 import { copyImageBlob, copyImageElement, downloadBlob } from "../utils/clipboard";
+import { printPopImageBlob } from "../utils/printPopImage";
 import { buildTweetText, formatHareruyaBuyListName, getTweetTemplateId, parsePriceInput } from "../utils/format";
 import { countTweetCharacters, formatTweetCharCount, TWEET_MAX_LENGTH } from "../utils/tweetCount";
 
@@ -27,6 +28,8 @@ export function PopModal({ item, onClose }: PopModalProps) {
   const [priceError, setPriceError] = useState<string | null>(null);
   const [popCopying, setPopCopying] = useState(false);
   const [popCopyError, setPopCopyError] = useState<string | null>(null);
+  const [popPrinting, setPopPrinting] = useState(false);
+  const [popPrintError, setPopPrintError] = useState<string | null>(null);
   const popImageRef = useRef<HTMLImageElement>(null);
 
   const {
@@ -73,6 +76,8 @@ export function PopModal({ item, onClose }: PopModalProps) {
     setPriceError(null);
     setPopCopying(false);
     setPopCopyError(null);
+    setPopPrinting(false);
+    setPopPrintError(null);
   }, [item]);
 
   useEffect(() => {
@@ -137,12 +142,26 @@ export function PopModal({ item, onClose }: PopModalProps) {
     downloadBlob(popImageState.blob, popImageState.filename);
   };
 
-  const handlePrintPop = () => {
-    if (popImageState.status !== "success" || !popImageRef.current) return;
-    window.print();
+  const handlePrintPop = async () => {
+    if (popImageState.status !== "success") return;
+
+    setPopPrinting(true);
+    setPopPrintError(null);
+
+    try {
+      await printPopImageBlob(popImageState.blob);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "印刷に失敗しました";
+      setPopPrintError(message);
+    } finally {
+      setPopPrinting(false);
+    }
   };
 
-  const canPrintPop = cardImageState.status === "success" && popImageState.status === "success";
+  const canPrintPop =
+    cardImageState.status === "success" &&
+    popImageState.status === "success" &&
+    !popPrinting;
 
   const handleApplyPriceToPop = () => {
     if (!item) return;
@@ -185,11 +204,11 @@ export function PopModal({ item, onClose }: PopModalProps) {
             <button
               type="button"
               className="btn btn--secondary btn--compact modal__print"
-              onClick={handlePrintPop}
+              onClick={() => void handlePrintPop()}
               disabled={!canPrintPop}
               aria-label="POPを印刷"
             >
-              印刷
+              {popPrinting ? "印刷中..." : "印刷"}
             </button>
             <button type="button" className="modal__close" onClick={onClose} aria-label="閉じる">
               ×
@@ -279,6 +298,11 @@ export function PopModal({ item, onClose }: PopModalProps) {
                   {popCopyError && (
                     <p className="pop-preview__image-error" role="alert">
                       {popCopyError}
+                    </p>
+                  )}
+                  {popPrintError && (
+                    <p className="pop-preview__image-error" role="alert">
+                      {popPrintError}
                     </p>
                   )}
                 </>
