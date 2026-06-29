@@ -203,7 +203,7 @@ export function PopModal({ item, onClose }: PopModalProps) {
             </button>
             <button
               type="button"
-              className="btn btn--secondary btn--compact modal__print"
+              className="btn btn--primary btn--compact modal__print"
               onClick={() => void handlePrintPop()}
               disabled={!canPrintPop}
               aria-label="POPを印刷"
