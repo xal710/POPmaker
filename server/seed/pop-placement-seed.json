@@ -1,0 +1,175 @@
+{
+  "layoutVersion": 2,
+  "updatedAt": "2026-06-29T22:59:31.258Z",
+  "updatedBy": "Yousei710",
+  "assignments": {
+    "line-3": {
+      "line-3-slot-9": {
+        "cardName": "ピカチュウV〈001/015〉[S8a-G]",
+        "sourceName": "ピカチュウV(D){雷}〈001/015〉[S8a-G]",
+        "priceYen": 100000,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/products/uTzY1qR3xfIKtv4YHtB6GWsFl4Ran49UTmSw8B3m.jpg?v=1705512522"
+      },
+      "line-3-slot-8": {
+        "cardName": "メガオーダイルex〈169/742〉[MC]",
+        "sourceName": "メガオーダイルex(-){水}〈169/742〉[MC]",
+        "priceYen": 1200,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/files/ex-169742mc-2536091.webp?v=1781505149"
+      },
+      "line-3-slot-7": {
+        "cardName": "エーフィEX〈035/080〉[XY9]",
+        "sourceName": "エーフィEX(RR){超}〈035/080〉[XY9]",
+        "priceYen": 3500,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/products/MQGgCX4PWoJxaakQnYsCJWw3UsKCTaF5ivQIWDyf.jpg?v=1705457130"
+      },
+      "line-3-slot-6": {
+        "cardName": "メガリザードンYex〈085/742〉[MC]",
+        "sourceName": "メガリザードンYex(-){炎}〈085/742〉[MC]",
+        "priceYen": 6500,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/files/yex-085742mc-8269830.webp?v=1781504959"
+      },
+      "line-3-slot-4": {
+        "cardName": "メガリザードンXex〈110/080〉[M2]",
+        "sourceName": "メガリザードンXex(SAR){炎}〈110/080〉[M2]",
+        "priceYen": 80000,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/files/xexsar110080m2-9331713.webp?v=1781507348"
+      },
+      "line-3-slot-3": {
+        "cardName": "ジバコイル〈025/070〉[BW7]",
+        "sourceName": "ジバコイル(R){雷}〈025/070〉[BW7]",
+        "priceYen": 2500,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/products/tM53lXI9cvRegcifkq564gljR2PGOcWJX9tLHNzq.jpg?v=1705444977"
+      },
+      "line-3-slot-5": {
+        "cardName": "チリ〈088/062〉[SV3a]",
+        "sourceName": "チリ(SAR){サポート}〈088/062〉[SV3a]",
+        "priceYen": 2400,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/products/MIaTD4hcHk5pLqRXxpLSjfhxiA3XROUO0VA8mObg.jpg?v=1705529557"
+      },
+      "line-3-slot-1": {
+        "cardName": "MリザードンEX〈013/087〉[CP6]",
+        "sourceName": "MリザードンEX(RR){炎}〈013/087〉[CP6]",
+        "priceYen": 24000,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/products/M73wyPb80LPfW6OKEFlG70577semHKLGYJp3Fejn.jpg?v=1705460731"
+      }
+    },
+    "line-2": {
+      "line-2-slot-2": {
+        "cardName": "ゼルネアスEX〈038/036〉[CP5]",
+        "sourceName": "ゼルネアスEX(CP){フェアリー}〈038/036〉[CP5]",
+        "priceYen": 70000,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/products/WSvskgyesdcHNomXrc2F0HCKlGE8AcWe2XTXLTYS.jpg?v=1705460303"
+      },
+      "line-2-slot-7": {
+        "cardName": "ポッチャマ〈006/020〉[SC]",
+        "sourceName": "ポッチャマ(U){水}〈006/020〉[SC]",
+        "priceYen": 3000,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/products/MZ5Chq2gm5uE4ZOInmYB1bK68zhQZ7ylhmlfg5hK.jpg?v=1705448634"
+      },
+      "line-2-slot-6": {
+        "cardName": "ソーナンス〈013/032〉[CP3]",
+        "sourceName": "ソーナンス(C){超}〈013/032〉[CP3]",
+        "priceYen": 1800,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/products/9RLmCxViBZtpOQPWGDxQsJ96tUw0NU5VAyhrBFZt.jpg?v=1705460191"
+      },
+      "line-2-slot-5": {
+        "cardName": "Nのゾロアークex〈127/100〉[SV9]",
+        "sourceName": "Nのゾロアークex(SAR){悪}〈127/100〉[SV9]",
+        "priceYen": 4500,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/files/nexsar127100sv9-7349903.webp?v=1781515991"
+      },
+      "line-2-slot-14": {
+        "cardName": "パーフェクトミキサー〈014/022〉[SVLS]",
+        "sourceName": "パーフェクトミキサー(D){グッズ}〈014/022〉[SVLS]",
+        "priceYen": 300,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/files/d014022svls-2205440.webp?v=1781523255"
+      },
+      "line-2-slot-13": {
+        "cardName": "ボーマンダ〈195/BW-P〉[BW-P]",
+        "sourceName": "ボーマンダ(PROMO){ドラゴン}〈195/BW-P〉[BW-P]",
+        "priceYen": 3000,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/products/7i4NVhseDWgvgugHCTQH67HEo2cSue29wuFKOnav.jpg?v=1705450826"
+      },
+      "line-2-slot-15": {
+        "cardName": "キチキギスex〈244/193〉[M2a]",
+        "sourceName": "キチキギスex(SAR){悪}〈244/193〉[M2a]",
+        "priceYen": 1200,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/files/exsar244193m2a-9324146.webp?v=1781505920"
+      },
+      "line-2-slot-4": {
+        "cardName": "レックウザVMAX〈016/030〉[SO]",
+        "sourceName": "レックウザVMAX(-){ドラゴン}〈016/030〉[SO]",
+        "priceYen": 1800,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/products/c1V9eedasrcwbgIbqiXj6CVrV1QI8XlmQ0ji17ey.jpg?v=1705517310"
+      },
+      "line-2-slot-11": {
+        "cardName": "メガルチャブルex〈239/193〉[M2a]",
+        "sourceName": "メガルチャブルex(SAR){闘}〈239/193〉[M2a]",
+        "priceYen": 800,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/files/exsar239193m2a-2748846.webp?v=1781505922"
+      },
+      "line-2-slot-12": {
+        "cardName": "メガズルズキンex〈241/193〉[M2a]",
+        "sourceName": "メガズルズキンex(SAR){悪}〈241/193〉[M2a]",
+        "priceYen": 700,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/files/exsar241193m2a-5899612.webp?v=1781505921"
+      }
+    },
+    "line-4": {
+      "line-4-slot-3": {
+        "cardName": "メガダークライex〈118/081〉[M5]",
+        "sourceName": "メガダークライex(MUR){悪}〈118/081〉[M5]",
+        "priceYen": 55000,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/files/exmur118081m5-8055614.webp?v=1781503451"
+      },
+      "line-4-slot-4": {
+        "cardName": "メガダークライex〈099/081〉[M5]",
+        "sourceName": "メガダークライex(SR){悪}〈099/081〉[M5]",
+        "priceYen": 900,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/files/exsr099081m5-9558750.webp?v=1781503337"
+      },
+      "line-4-slot-5": {
+        "cardName": "メガシャンデラex〈113/081〉[M5]",
+        "sourceName": "メガシャンデラex(SAR){超}〈113/081〉[M5]",
+        "priceYen": 1600,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/files/exsar113081m5-9626078.webp?v=1781503452"
+      },
+      "line-4-slot-8": {
+        "cardName": "グラジオの決戦〈116/081〉[M5]",
+        "sourceName": "グラジオの決戦(SAR){サポート}〈116/081〉[M5]",
+        "priceYen": 700,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/files/sar116081m5-7348333.webp?v=1781503453"
+      },
+      "line-4-slot-9": {
+        "cardName": "カスミの元気〈108/081〉[M5]",
+        "sourceName": "カスミの元気(SR){サポート}〈108/081〉[M5]",
+        "priceYen": 2100,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/files/cnysr108081m5-5033665.webp?v=1781503453"
+      },
+      "line-4-slot-10": {
+        "cardName": "ムク〈111/081〉[M5]",
+        "sourceName": "ムク(SR){サポート}〈111/081〉[M5]",
+        "priceYen": 1600,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/files/sr111081m5-5495590.webp?v=1781503453"
+      },
+      "line-4-slot-6": {
+        "cardName": "モルペコex〈115/081〉[M5]",
+        "sourceName": "モルペコex(SAR){悪}〈115/081〉[M5]",
+        "priceYen": 3300,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/files/exsar115081m5-3045693.webp?v=1781503454"
+      },
+      "line-4-slot-11": {
+        "cardName": "トサキント〈084/081〉[M5]",
+        "sourceName": "トサキント(AR){水}〈084/081〉[M5]",
+        "priceYen": 100,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/files/ar084081m5-7223661.webp?v=1781503339"
+      },
+      "line-4-slot-12": {
+        "cardName": "ヤドラン〈087/081〉[M5]",
+        "sourceName": "ヤドラン(AR){超}〈087/081〉[M5]",
+        "priceYen": 800,
+        "cardImageUrl": "https://cdn.shopify.com/s/files/1/0763/0536/7360/files/ar087081m5-3136728.webp?v=1781503339"
+      }
+    }
+  }
+}

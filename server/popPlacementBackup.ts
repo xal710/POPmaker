@@ -6,7 +6,8 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   POP_PLACEMENT_LAYOUT_VERSION,
@@ -18,6 +19,7 @@ import { getDataDir } from "./config";
 const BACKUP_DIR_NAME = "pop-placement-backups";
 const BACKUP_KEEP_COUNT = 30;
 const BACKUP_FILENAME_PATTERN = /^(\d{8}T\d{6}Z)\.json$/;
+const SEED_PATH = resolve(dirname(fileURLToPath(import.meta.url)), "seed/pop-placement-seed.json");
 
 function emptyPayload(): PopPlacementPayload {
   return {
@@ -155,11 +157,37 @@ export function restorePopPlacementFromBackupIfNewer(): boolean {
   return true;
 }
 
+function countAssignments(store: PopPlacementAssignmentStore): number {
+  let count = 0;
+  for (const wall of Object.values(store)) {
+    if (wall && typeof wall === "object") count += Object.keys(wall).length;
+  }
+  return count;
+}
+
+function readSeedPayload(): PopPlacementPayload | null {
+  if (!existsSync(SEED_PATH)) return null;
+  return readPayload(SEED_PATH);
+}
+
 export function ensurePopPlacementDataFile(): void {
   restorePopPlacementFromBackupIfNewer();
 
   const mainPath = getWritablePopPlacementJsonPath();
-  if (existsSync(mainPath)) return;
+  const current = existsSync(mainPath) ? readPayload(mainPath) : null;
+  if (current && countAssignments(current.assignments) > 0) return;
 
-  persistPopPlacementPayload(emptyPayload());
+  const seed = readSeedPayload();
+  if (seed && countAssignments(seed.assignments) > 0) {
+    persistPopPlacementPayload({
+      ...seed,
+      updatedAt: new Date().toISOString(),
+      updatedBy: seed.updatedBy ?? "migration-seed",
+    });
+    return;
+  }
+
+  if (!existsSync(mainPath)) {
+    persistPopPlacementPayload(emptyPayload());
+  }
 }
