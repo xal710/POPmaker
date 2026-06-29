@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Connect } from "vite";
+import { getAppVersion } from "./appVersion";
 import { readComparisonFromJson } from "./excel";
 import { sendJson } from "./http";
 import { getRefreshProgress, refreshComparisonFromWeb } from "./refreshComparison";
@@ -10,6 +11,11 @@ export function createComparisonMiddleware(): Connect.NextHandleFunction {
 
     if (url.pathname === "/api/comparison/status") {
       sendJson(res, 200, getRefreshProgress());
+      return;
+    }
+
+    if (url.pathname === "/api/app-version" && req.method === "GET") {
+      sendJson(res, 200, { version: getAppVersion() });
       return;
     }
 

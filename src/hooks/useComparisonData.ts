@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ComparisonData } from "../types";
+import { startAppVersionWatcher } from "../utils/appVersion";
 
 const DATA_URL = "/api/comparison";
 const REFRESH_URL = "/api/comparison/refresh";
@@ -29,6 +30,7 @@ export function useComparisonData() {
   const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
   const intervalRef = useRef<number | null>(null);
   const pollRef = useRef<number | null>(null);
+  const refreshingRef = useRef(false);
 
   const loadCachedData = useCallback(async () => {
     setError(null);
@@ -120,6 +122,19 @@ export function useComparisonData() {
       window.setTimeout(() => setProgressMessage(null), 3000);
     }
   }, [loadCachedData, pollRefreshStatus]);
+
+  useEffect(() => {
+    refreshingRef.current = refreshing;
+  }, [refreshing]);
+
+  useEffect(() => {
+    return startAppVersionWatcher(refresh, {
+      isRefreshing: () => refreshingRef.current,
+      onDeployDetected: () => {
+        setProgressMessage("新しいバージョンを検知しました。最新価格を取得しています...");
+      },
+    });
+  }, [refresh]);
 
   useEffect(() => {
     void (async () => {
