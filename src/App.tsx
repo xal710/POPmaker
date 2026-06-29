@@ -4,9 +4,12 @@ import { ComparisonList } from "./components/ComparisonList";
 
 import { FilterPanel, DEFAULT_PRICE_FILTER } from "./components/FilterPanel";
 
-import { Header } from "./components/Header";
+import { Header, type AppView } from "./components/Header";
 
+import type { PendingPopPlacement } from "../shared/popPlacement";
 import { PopModal } from "./components/PopModal";
+
+import { PopPlacementView } from "./components/PopPlacementView";
 
 import { TweetHistoryList } from "./components/TweetHistoryList";
 
@@ -15,6 +18,8 @@ import { SearchBar } from "./components/SearchBar";
 import { useCardSearch } from "./hooks/useCardSearch";
 
 import { useComparisonData } from "./hooks/useComparisonData";
+import { useAuthUser } from "./hooks/useAuthUser";
+import { usePopPlacementOnlineSync } from "./hooks/usePopPlacementOnlineSync";
 
 import { useTweetHistory } from "./hooks/useTweetHistory";
 
@@ -38,15 +43,14 @@ import "./App.css";
 const LIST_PAGE_SIZE = 100;
 const SEARCH_DEBOUNCE_MS = 300;
 
-type AppView = "tool" | "tweetHistory";
-
-
-
 function App() {
 
   const { data, loading, refreshing, error, warning, progressMessage, lastFetchedAt, refresh } =
 
     useComparisonData();
+
+  const { username } = useAuthUser();
+  usePopPlacementOnlineSync(username);
 
   const {
     entries: tweetHistoryEntries,
@@ -57,6 +61,7 @@ function App() {
   const [view, setView] = useState<AppView>("tool");
 
   const [selectedItem, setSelectedItem] = useState<ComparisonItem | null>(null);
+  const [pendingPlacement, setPendingPlacement] = useState<PendingPopPlacement | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearchQuery = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
@@ -110,6 +115,12 @@ function App() {
 
   const handleSelectItem = useCallback((item: ComparisonItem) => {
     setSelectedItem(item);
+  }, []);
+
+  const handlePlacePop = useCallback((placement: PendingPopPlacement) => {
+    setPendingPlacement(placement);
+    setSelectedItem(null);
+    setView("popPlacement");
   }, []);
 
   const handlePageChange = useCallback((page: number) => {
@@ -169,7 +180,7 @@ function App() {
 
         view={view}
 
-        onToggleView={() => setView((current) => (current === "tool" ? "tweetHistory" : "tool"))}
+        onNavigate={setView}
 
       />
 
@@ -183,6 +194,15 @@ function App() {
             entries={tweetHistoryEntries}
             loading={tweetHistoryLoading}
             error={tweetHistoryError}
+          />
+
+        ) : view === "popPlacement" ? (
+
+          <PopPlacementView
+            username={username}
+            pendingPlacement={pendingPlacement}
+            onPendingPlacementConsumed={() => setPendingPlacement(null)}
+            onCancelPendingPlacement={() => setPendingPlacement(null)}
           />
 
         ) : (
@@ -325,7 +345,11 @@ function App() {
 
 
 
-      <PopModal item={selectedItem} onClose={() => setSelectedItem(null)} />
+      <PopModal
+        item={selectedItem}
+        onClose={() => setSelectedItem(null)}
+        onPlacePop={handlePlacePop}
+      />
 
     </div>
 

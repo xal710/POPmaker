@@ -5,6 +5,7 @@ import serveStatic from "serve-static";
 import { createAuthMiddleware } from "./auth";
 import { createCardImageMiddleware } from "./cardImageApi";
 import { createComparisonMiddleware } from "./comparisonApi";
+import { createPopPlacementMiddleware } from "./popPlacementApi";
 import { createTweetHistoryMiddleware } from "./tweetHistoryApi";
 
 export interface CreatePopAppOptions {
@@ -30,6 +31,7 @@ export function createPopApp(options: CreatePopAppOptions): Connect.Server {
   if (enableTweetHistory) {
     app.use(createTweetHistoryMiddleware());
   }
+  app.use(createPopPlacementMiddleware());
   app.use((_req, res, next) => {
     res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive");
     next();

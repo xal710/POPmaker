@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react";
 import { createAuthMiddleware } from "./server/auth";
 import { createCardImageMiddleware } from "./server/cardImageApi";
 import { createComparisonMiddleware } from "./server/comparisonApi";
+import { createPopPlacementMiddleware } from "./server/popPlacementApi";
 import { createTweetHistoryMiddleware } from "./server/tweetHistoryApi";
 
 const isProductionBuild = process.env.NODE_ENV === "production";
@@ -32,12 +33,14 @@ export default defineConfig({
         server.middlewares.use(createComparisonMiddleware());
         server.middlewares.use(createCardImageMiddleware());
         server.middlewares.use(createTweetHistoryMiddleware());
+        server.middlewares.use(createPopPlacementMiddleware());
       },
       configurePreviewServer(server) {
         server.middlewares.use(createAuthMiddleware());
         server.middlewares.use(createComparisonMiddleware());
         server.middlewares.use(createCardImageMiddleware());
         server.middlewares.use(createTweetHistoryMiddleware());
+        server.middlewares.use(createPopPlacementMiddleware());
       },
     },
   ],

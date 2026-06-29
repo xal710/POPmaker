@@ -4,6 +4,7 @@ import { useAuthUser } from "../hooks/useAuthUser";
 import { useCardImage } from "../hooks/useCardImage";
 import { usePopImage } from "../hooks/usePopImage";
 
+import type { PendingPopPlacement } from "../../shared/popPlacement";
 import type { ComparisonItem } from "../types";
 
 import { copyImageBlob, copyImageElement, downloadBlob } from "../utils/clipboard";
@@ -16,9 +17,10 @@ type CopyField = "pop" | "tweet" | "cardName";
 interface PopModalProps {
   item: ComparisonItem | null;
   onClose: () => void;
+  onPlacePop?: (placement: PendingPopPlacement) => void;
 }
 
-export function PopModal({ item, onClose }: PopModalProps) {
+export function PopModal({ item, onClose, onPlacePop }: PopModalProps) {
   const { username } = useAuthUser();
   const tweetTemplateId = getTweetTemplateId(username);
   const [copiedField, setCopiedField] = useState<CopyField | null>(null);
@@ -316,7 +318,6 @@ export function PopModal({ item, onClose }: PopModalProps) {
           </div>
 
           <div className="pop-text-block">
-            <h3>ツイート用テキスト</h3>
             <div className="pop-text-block__price-row">
               <label className="pop-text-block__price-label" htmlFor="pop-price-input">
                 買取価格
@@ -352,7 +353,7 @@ export function PopModal({ item, onClose }: PopModalProps) {
               value={tweetDraft}
               onChange={(event) => setTweetDraft(event.target.value)}
               rows={12}
-              aria-label="ツイート用テキスト"
+              aria-label="ツイート文"
             />
             <div className="pop-text-block__tweet-actions">
               <button
@@ -373,6 +374,25 @@ export function PopModal({ item, onClose }: PopModalProps) {
         </div>
 
         <footer className="modal__footer">
+          {onPlacePop ? (
+            <button
+              type="button"
+              className="btn btn--secondary"
+              disabled={!cardImageReady}
+              onClick={() =>
+                onPlacePop({
+                  cardName: item.name,
+                  sourceName: productTitle ?? item.name,
+                  priceYen: appliedPriceYen,
+                  cardImageUrl,
+                })
+              }
+            >
+              POPを配置
+            </button>
+          ) : (
+            <span aria-hidden="true" />
+          )}
           <button type="button" className="btn btn--primary" onClick={onClose}>
             閉じる
           </button>

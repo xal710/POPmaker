@@ -4,6 +4,8 @@ import {
 } from "../../shared/hareruyaBuyListPages";
 import { formatDateTime } from "../utils/format";
 
+export type AppView = "tool" | "popPlacement" | "tweetHistory";
+
 interface HeaderProps {
   itemCount: number;
   lastFetchedAt: Date | null;
@@ -16,8 +18,8 @@ interface HeaderProps {
   updatedAt?: string | null;
   dataSource?: "excel" | "json" | "web";
   hareruyaBuyListUpdatedAt?: Partial<Record<string, string>>;
-  view?: "tool" | "tweetHistory";
-  onToggleView?: () => void;
+  view?: AppView;
+  onNavigate?: (view: AppView) => void;
 }
 
 function formatDataDate(value: string | null | undefined): string {
@@ -52,6 +54,12 @@ function updatedDateHint(source: HeaderProps["dataSource"]): string {
   return "サーバー上の比較データが最後に更新された日（「最新価格を取得」成功時）";
 }
 
+function getHeaderTitle(view: AppView): string {
+  if (view === "popPlacement") return "POP配置登録";
+  if (view === "tweetHistory") return "POP投稿履歴";
+  return "買取価格比較 POP作成ツール";
+}
+
 export function Header({
   itemCount,
   lastFetchedAt,
@@ -65,32 +73,49 @@ export function Header({
   dataSource,
   hareruyaBuyListUpdatedAt,
   view = "tool",
-  onToggleView,
+  onNavigate,
 }: HeaderProps) {
   const busy = loading || refreshing;
-  const isTweetHistoryView = view === "tweetHistory";
+  const isToolView = view === "tool";
 
   return (
     <header className="app-header">
       <div className="app-header__top">
         <div>
           <p className="app-header__eyebrow">晴れる屋2 × カードラッシュ</p>
-          <h1 className="app-header__title">
-            {isTweetHistoryView ? "POP投稿履歴" : "買取価格比較 POP作成ツール"}
-          </h1>
+          <h1 className="app-header__title">{getHeaderTitle(view)}</h1>
         </div>
         <div className="app-header__actions">
-          {onToggleView && (
+          {onNavigate && isToolView && (
+            <>
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={() => onNavigate("popPlacement")}
+                disabled={busy}
+              >
+                POP配置
+              </button>
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={() => onNavigate("tweetHistory")}
+                disabled={busy}
+              >
+                ツイート履歴
+              </button>
+            </>
+          )}
+          {onNavigate && !isToolView && (
             <button
               type="button"
-              className={`btn ${isTweetHistoryView ? "btn--primary" : "btn--secondary"}`}
-              onClick={onToggleView}
-              disabled={!isTweetHistoryView && busy}
+              className="btn btn--primary"
+              onClick={() => onNavigate("tool")}
             >
-              {isTweetHistoryView ? "POP作成ツール" : "ツイート履歴"}
+              POP作成ツール
             </button>
           )}
-          {!isTweetHistoryView && (
+          {isToolView && (
             <button
               type="button"
               className="btn btn--primary"
@@ -103,7 +128,7 @@ export function Header({
         </div>
       </div>
 
-      {!isTweetHistoryView && (
+      {isToolView && (
         <>
           {progressMessage && (
             <p className="app-header__progress" role="status">
