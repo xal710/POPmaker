@@ -137,6 +137,13 @@ export function PopModal({ item, onClose }: PopModalProps) {
     downloadBlob(popImageState.blob, popImageState.filename);
   };
 
+  const handlePrintPop = () => {
+    if (popImageState.status !== "success" || !popImageRef.current) return;
+    window.print();
+  };
+
+  const canPrintPop = cardImageState.status === "success" && popImageState.status === "success";
+
   const handleApplyPriceToPop = () => {
     if (!item) return;
 
@@ -174,6 +181,15 @@ export function PopModal({ item, onClose }: PopModalProps) {
               aria-label="カード画像を更新"
             >
               {cardImageRefreshing ? "更新中..." : "更新"}
+            </button>
+            <button
+              type="button"
+              className="btn btn--secondary btn--compact modal__print"
+              onClick={handlePrintPop}
+              disabled={!canPrintPop}
+              aria-label="POPを印刷"
+            >
+              印刷
             </button>
             <button type="button" className="modal__close" onClick={onClose} aria-label="閉じる">
               ×
