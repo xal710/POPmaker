@@ -28,8 +28,8 @@ export function PopModal({ item, onClose }: PopModalProps) {
   const [priceError, setPriceError] = useState<string | null>(null);
   const [popCopying, setPopCopying] = useState(false);
   const [popCopyError, setPopCopyError] = useState<string | null>(null);
-  const [popPrinting, setPopPrinting] = useState(false);
   const [popPrintError, setPopPrintError] = useState<string | null>(null);
+  const popPrintingRef = useRef(false);
   const popImageRef = useRef<HTMLImageElement>(null);
 
   const {
@@ -76,8 +76,8 @@ export function PopModal({ item, onClose }: PopModalProps) {
     setPriceError(null);
     setPopCopying(false);
     setPopCopyError(null);
-    setPopPrinting(false);
     setPopPrintError(null);
+    popPrintingRef.current = false;
   }, [item]);
 
   useEffect(() => {
@@ -143,9 +143,9 @@ export function PopModal({ item, onClose }: PopModalProps) {
   };
 
   const handlePrintPop = async () => {
-    if (popImageState.status !== "success") return;
+    if (popImageState.status !== "success" || popPrintingRef.current) return;
 
-    setPopPrinting(true);
+    popPrintingRef.current = true;
     setPopPrintError(null);
 
     try {
@@ -154,14 +154,11 @@ export function PopModal({ item, onClose }: PopModalProps) {
       const message = error instanceof Error ? error.message : "印刷に失敗しました";
       setPopPrintError(message);
     } finally {
-      setPopPrinting(false);
+      popPrintingRef.current = false;
     }
   };
 
-  const canPrintPop =
-    cardImageState.status === "success" &&
-    popImageState.status === "success" &&
-    !popPrinting;
+  const canPrintPop = cardImageState.status === "success" && popImageState.status === "success";
 
   const handleApplyPriceToPop = () => {
     if (!item) return;
@@ -208,7 +205,7 @@ export function PopModal({ item, onClose }: PopModalProps) {
               disabled={!canPrintPop}
               aria-label="POPを印刷"
             >
-              {popPrinting ? "印刷中..." : "印刷"}
+              印刷
             </button>
             <button type="button" className="modal__close" onClick={onClose} aria-label="閉じる">
               ×
