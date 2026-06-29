@@ -1,8 +1,25 @@
 const APP_VERSION_URL = "/api/app-version";
-const APP_VERSION_STORAGE_KEY = "pop_app_version";
+const APP_BUILD_STORAGE_KEY = "pop_app_build_id";
+const LEGACY_APP_VERSION_STORAGE_KEY = "pop_app_version";
 const VERSION_CHECK_MS = 5 * 60 * 1000;
 
-async function fetchAppVersion(): Promise<string | null> {
+function getStoredBuildId(): string | null {
+  return (
+    localStorage.getItem(APP_BUILD_STORAGE_KEY) ??
+    localStorage.getItem(LEGACY_APP_VERSION_STORAGE_KEY)
+  );
+}
+
+function saveBuildId(buildId: string): void {
+  localStorage.setItem(APP_BUILD_STORAGE_KEY, buildId);
+  localStorage.removeItem(LEGACY_APP_VERSION_STORAGE_KEY);
+}
+
+function getClientBuildId(): string {
+  return typeof __APP_BUILD_ID__ !== "undefined" ? __APP_BUILD_ID__ : "dev";
+}
+
+async function fetchServerBuildId(): Promise<string | null> {
   try {
     const response = await fetch(`${APP_VERSION_URL}?t=${Date.now()}`);
     if (!response.ok) return null;
@@ -20,19 +37,20 @@ export async function checkAppVersionAndMaybeRefresh(
 ): Promise<void> {
   if (options.isRefreshing()) return;
 
-  const version = await fetchAppVersion();
-  if (!version) return;
+  const clientBuildId = getClientBuildId();
+  const serverBuildId = await fetchServerBuildId();
+  const currentBuildId = serverBuildId ?? clientBuildId;
+  const stored = getStoredBuildId();
 
-  const stored = localStorage.getItem(APP_VERSION_STORAGE_KEY);
-  if (stored && stored !== version) {
-    localStorage.setItem(APP_VERSION_STORAGE_KEY, version);
+  if (stored && stored !== currentBuildId) {
+    saveBuildId(currentBuildId);
     options.onDeployDetected?.();
     await refresh();
     return;
   }
 
   if (!stored) {
-    localStorage.setItem(APP_VERSION_STORAGE_KEY, version);
+    saveBuildId(currentBuildId);
   }
 }
 

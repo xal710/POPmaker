@@ -128,13 +128,15 @@ export function useComparisonData() {
   }, [refreshing]);
 
   useEffect(() => {
+    if (loading) return;
+
     return startAppVersionWatcher(refresh, {
       isRefreshing: () => refreshingRef.current,
       onDeployDetected: () => {
         setProgressMessage("新しいバージョンを検知しました。最新価格を取得しています...");
       },
     });
-  }, [refresh]);
+  }, [loading, refresh]);
 
   useEffect(() => {
     void (async () => {
