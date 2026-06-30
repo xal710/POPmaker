@@ -35,6 +35,10 @@ export interface StoredWallSlotPop {
   sourceName: string;
   priceYen: number;
   cardImageUrl: string | null;
+  /** POPを配置・更新した日（YYYY-MM-DD、ローカル日付） */
+  placedAt?: string;
+  /** 配置・更新時点の買取価格（晴れる屋2） */
+  placedPriceYen?: number;
 }
 
 export type PopPlacementAssignmentStore = Record<string, Record<string, StoredWallSlotPop>>;

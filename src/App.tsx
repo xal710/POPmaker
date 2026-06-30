@@ -199,7 +199,7 @@ function App() {
         ) : view === "popPlacement" ? (
 
           <PopPlacementView
-            username={username}
+            comparisonItems={items}
             pendingPlacement={pendingPlacement}
             onPendingPlacementConsumed={() => setPendingPlacement(null)}
             onCancelPendingPlacement={() => setPendingPlacement(null)}

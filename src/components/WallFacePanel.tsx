@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import type { ComparisonItem } from "../types";
+
 import {
   POP_PLACEMENT_SYNC_EVENT,
   type PendingPopPlacement,
@@ -15,6 +17,11 @@ import {
   saveWallSlotAssignment,
   type StoredWallSlotPop,
 } from "../utils/popPlacementStorage";
+import {
+  createStoredWallSlotPop,
+  findComparisonItemPrice,
+  getWallSlotIndicatorClassNames,
+} from "../utils/popPlacementIndicators";
 import { detectBluePopSlots } from "../utils/popPlacementSlots";
 
 const LONG_PRESS_MS = 500;
@@ -39,6 +46,7 @@ interface PointerSession {
 
 interface WallFacePanelProps {
   zone: PopPlacementZone;
+  comparisonItems: ComparisonItem[];
   pendingPlacement: PendingPopPlacement | null;
   onPendingPlacementConsumed: () => void;
   onBack: () => void;
@@ -70,6 +78,7 @@ function findSlotAtPoint(
 
 export function WallFacePanel({
   zone,
+  comparisonItems,
   pendingPlacement,
   onPendingPlacementConsumed,
   onBack,
@@ -367,12 +376,12 @@ export function WallFacePanel({
     setError(null);
 
     try {
-      const assignment: StoredWallSlotPop = {
+      const assignment = createStoredWallSlotPop({
         cardName: pendingPlacement.cardName,
         sourceName: pendingPlacement.sourceName,
         priceYen: pendingPlacement.priceYen,
         cardImageUrl: pendingPlacement.cardImageUrl,
-      };
+      });
 
       await applyAssignmentToSlot(slotId, assignment);
       onPendingPlacementConsumed();
@@ -519,6 +528,25 @@ export function WallFacePanel({
           : "配置済みのPOPはドラッグで移動できます。クリックで選択、Backspace（スマホは長押し）で削除。"}
       </p>
 
+      <ul className="wall-face__indicator-legend" aria-label="POP表示の凡例">
+        <li className="wall-face__indicator-legend-item">
+          <span className="wall-face__indicator-swatch wall-face__indicator-swatch--yellow" aria-hidden="true" />
+          3日以上
+        </li>
+        <li className="wall-face__indicator-legend-item">
+          <span className="wall-face__indicator-swatch wall-face__indicator-swatch--orange" aria-hidden="true" />
+          5日以上
+        </li>
+        <li className="wall-face__indicator-legend-item">
+          <span className="wall-face__indicator-swatch wall-face__indicator-swatch--red" aria-hidden="true" />
+          7日以上
+        </li>
+        <li className="wall-face__indicator-legend-item">
+          <span className="wall-face__indicator-swatch wall-face__indicator-swatch--purple" aria-hidden="true" />
+          価格変更あり
+        </li>
+      </ul>
+
       {error && !saving && (
         <p className="wall-face__error" role="alert">
           {error}
@@ -546,12 +574,18 @@ export function WallFacePanel({
               const previewUrl = slotPreviews[slot.id];
               const assignment = assignments[slot.id];
               const isFilled = Boolean(previewUrl);
+              const currentPriceYen = assignment
+                ? findComparisonItemPrice(comparisonItems, assignment)
+                : null;
+              const indicatorClassName = isFilled
+                ? getWallSlotIndicatorClassNames(assignment, currentPriceYen)
+                : "";
 
               return (
                 <button
                   key={slot.id}
                   type="button"
-                  className={`wall-face__slot${isSelected ? " wall-face__slot--selected" : ""}${isFilled ? " wall-face__slot--filled" : ""}${isPlacementMode ? " wall-face__slot--placement-target" : ""}${isDropTarget ? " wall-face__slot--drop-target" : ""}${isDragSource ? " wall-face__slot--drag-source" : ""}`}
+                  className={`wall-face__slot${isSelected ? " wall-face__slot--selected" : ""}${isFilled ? " wall-face__slot--filled" : ""}${isPlacementMode ? " wall-face__slot--placement-target" : ""}${isDropTarget ? " wall-face__slot--drop-target" : ""}${isDragSource ? " wall-face__slot--drag-source" : ""}${indicatorClassName ? ` ${indicatorClassName}` : ""}`}
                   style={{
                     left: `${left * 100}%`,
                     top: `${top * 100}%`,

@@ -1,33 +1,34 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   POP_PLACEMENT_FLOOR_PLAN,
-  canUsePopPlacementOnline,
+  POP_PLACEMENT_SYNC_EVENT,
   type PendingPopPlacement,
   type PopPlacementZone,
 } from "../../shared/popPlacement";
 import { formatPopCopyName, formatYen } from "../utils/format";
 import {
-  exportPopPlacementJson,
-  forcePushPopPlacementToServer,
-  importPopPlacementJson,
-} from "../utils/popPlacementSync";
+  hasPopPlacementIssues,
+  summarizePopPlacementStatus,
+} from "../utils/popPlacementIndicators";
 import {
   detectPopPlacementZones,
   findZoneAtPoint,
   toMonochromeFloorPlan,
 } from "../utils/popPlacementDetect";
+import { readPopPlacementAssignmentStore } from "../utils/popPlacementStorage";
 import { WallFacePanel } from "./WallFacePanel";
+import type { ComparisonItem } from "../types";
 
 interface PopPlacementViewProps {
-  username: string | null;
+  comparisonItems: ComparisonItem[];
   pendingPlacement: PendingPopPlacement | null;
   onPendingPlacementConsumed: () => void;
   onCancelPendingPlacement: () => void;
 }
 
 export function PopPlacementView({
-  username,
+  comparisonItems,
   pendingPlacement,
   onPendingPlacementConsumed,
   onCancelPendingPlacement,
@@ -40,12 +41,25 @@ export function PopPlacementView({
   const [selectedZone, setSelectedZone] = useState<PopPlacementZone | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [syncMessage, setSyncMessage] = useState<string | null>(null);
-  const [syncing, setSyncing] = useState(false);
-  const [importOpen, setImportOpen] = useState(false);
-  const [importText, setImportText] = useState("");
+  const [statusVersion, setStatusVersion] = useState(0);
 
-  const canSyncOnline = canUsePopPlacementOnline(username);
+  const placementStatus = useMemo(
+    () => summarizePopPlacementStatus(readPopPlacementAssignmentStore(), comparisonItems),
+    [comparisonItems, statusVersion],
+  );
+  const hasPlacementIssues = hasPopPlacementIssues(placementStatus);
+
+  useEffect(() => {
+    const refreshStatus = () => setStatusVersion((value) => value + 1);
+
+    window.addEventListener("pop-placement-local-change", refreshStatus);
+    window.addEventListener(POP_PLACEMENT_SYNC_EVENT, refreshStatus);
+
+    return () => {
+      window.removeEventListener("pop-placement-local-change", refreshStatus);
+      window.removeEventListener(POP_PLACEMENT_SYNC_EVENT, refreshStatus);
+    };
+  }, []);
 
   useEffect(() => {
     const image = new Image();
@@ -150,51 +164,6 @@ export function PopPlacementView({
     if (zone) setSelectedZone(zone);
   };
 
-  const handlePushToServer = async () => {
-    setSyncing(true);
-    setSyncMessage(null);
-    setError(null);
-
-    try {
-      const ok = await forcePushPopPlacementToServer();
-      setSyncMessage(ok ? "サーバーへ反映しました。" : "サーバーへの反映に失敗しました。");
-    } catch {
-      setSyncMessage("サーバーへの反映に失敗しました。");
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const handleExport = async () => {
-    const json = exportPopPlacementJson();
-    try {
-      await navigator.clipboard.writeText(json);
-      setSyncMessage("配置データをクリップボードにコピーしました。");
-    } catch {
-      setSyncMessage("コピーに失敗しました。開発者ツールから localStorage を確認してください。");
-    }
-  };
-
-  const handleImportAndPush = async () => {
-    setSyncing(true);
-    setSyncMessage(null);
-    setError(null);
-
-    try {
-      importPopPlacementJson(importText.trim());
-      const ok = await forcePushPopPlacementToServer();
-      setImportOpen(false);
-      setImportText("");
-      setSyncMessage(ok ? "読み込んでサーバーへ反映しました。" : "読み込み後のサーバー反映に失敗しました。");
-    } catch (importError) {
-      const message =
-        importError instanceof Error ? importError.message : "配置データの読み込みに失敗しました";
-      setError(message);
-    } finally {
-      setSyncing(false);
-    }
-  };
-
   return (
     <section className="pop-placement" aria-labelledby="pop-placement-title">
       <div className="pop-placement__intro">
@@ -208,63 +177,31 @@ export function PopPlacementView({
         </p>
       </div>
 
-      {canSyncOnline ? (
-        <div className="pop-placement__sync">
-          <div className="pop-placement__sync-actions">
-            <button
-              type="button"
-              className="btn btn--secondary btn--compact"
-              onClick={() => void handlePushToServer()}
-              disabled={syncing}
-            >
-              {syncing ? "反映中..." : "サーバーに反映"}
-            </button>
-            <button
-              type="button"
-              className="btn btn--secondary btn--compact"
-              onClick={() => void handleExport()}
-              disabled={syncing}
-            >
-              配置データをコピー
-            </button>
-            <button
-              type="button"
-              className="btn btn--secondary btn--compact"
-              onClick={() => setImportOpen((open) => !open)}
-              disabled={syncing}
-            >
-              {importOpen ? "読み込みを閉じる" : "配置データを読み込む"}
-            </button>
-          </div>
-          {syncMessage ? (
-            <p className="pop-placement__sync-message" role="status">
-              {syncMessage}
-            </p>
-          ) : null}
-          {importOpen ? (
-            <div className="pop-placement__import">
-              <p className="pop-placement__note">
-                ローカル（localhost）でコピーした JSON を貼り付けて反映できます。
-              </p>
-              <textarea
-                className="pop-placement__import-input"
-                value={importText}
-                onChange={(event) => setImportText(event.target.value)}
-                rows={6}
-                placeholder='{"line-1":{"line-1-slot-1":{...}}}'
-              />
-              <button
-                type="button"
-                className="btn btn--primary btn--compact"
-                onClick={() => void handleImportAndPush()}
-                disabled={syncing || !importText.trim()}
-              >
-                読み込んでサーバーに反映
-              </button>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+      <div
+        className={`pop-placement__status${hasPlacementIssues ? " pop-placement__status--alert" : " pop-placement__status--ok"}`}
+        role="status"
+      >
+        {hasPlacementIssues ? (
+          <ul className="pop-placement__status-list">
+            {placementStatus.stale3Days > 0 ? (
+              <li>3日未更新POP枚数：{placementStatus.stale3Days}枚</li>
+            ) : null}
+            {placementStatus.stale5Days > 0 ? (
+              <li>5日未更新POP枚数：{placementStatus.stale5Days}枚</li>
+            ) : null}
+            {placementStatus.stale7Days > 0 ? (
+              <li>7日未更新POP枚数：{placementStatus.stale7Days}枚</li>
+            ) : null}
+            {placementStatus.priceMismatch > 0 ? (
+              <li className="pop-placement__status-warning">
+                ⚠最新価格と異なるPOPがあります！：{placementStatus.priceMismatch}枚
+              </li>
+            ) : null}
+          </ul>
+        ) : (
+          <p className="pop-placement__status-ok">更新すべきPOPはありません。</p>
+        )}
+      </div>
 
       {pendingPlacement ? (
         <div className="pop-placement__pending" role="status">
@@ -308,6 +245,7 @@ export function PopPlacementView({
       {selectedZone ? (
         <WallFacePanel
           zone={selectedZone}
+          comparisonItems={comparisonItems}
           pendingPlacement={pendingPlacement}
           onPendingPlacementConsumed={onPendingPlacementConsumed}
           onBack={() => setSelectedZone(null)}

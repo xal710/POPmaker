@@ -8,7 +8,6 @@ import {
   applyPopPlacementPayload,
   readPopPlacementAssignmentStore,
   readPopPlacementLocalUpdatedAt,
-  replacePopPlacementAssignmentStore,
 } from "./popPlacementStorage";
 
 const API_URL = "/api/pop-placement";
@@ -74,22 +73,6 @@ function countAssignments(store: PopPlacementAssignmentStore): number {
     count += Object.keys(wall).length;
   }
   return count;
-}
-
-export function exportPopPlacementJson(): string {
-  return JSON.stringify(readPopPlacementAssignmentStore(), null, 2);
-}
-
-export function importPopPlacementJson(json: string): void {
-  const parsed = JSON.parse(json) as PopPlacementAssignmentStore;
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("配置データの形式が不正です");
-  }
-  replacePopPlacementAssignmentStore(parsed);
-}
-
-export async function forcePushPopPlacementToServer(): Promise<boolean> {
-  return pushPopPlacementToServer();
 }
 
 export async function syncPopPlacementWithServer(options?: {

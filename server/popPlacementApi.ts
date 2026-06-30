@@ -60,6 +60,8 @@ function isAssignmentStore(value: unknown): value is PopPlacementAssignmentStore
       if (typeof record.sourceName !== "string") return false;
       if (typeof record.priceYen !== "number") return false;
       if (!(record.cardImageUrl === null || typeof record.cardImageUrl === "string")) return false;
+      if (record.placedAt !== undefined && typeof record.placedAt !== "string") return false;
+      if (record.placedPriceYen !== undefined && typeof record.placedPriceYen !== "number") return false;
     }
   }
 
