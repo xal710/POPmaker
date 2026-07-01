@@ -2,7 +2,8 @@ import { HARERUYA_BUY_LIST_PAGES } from "../../shared/hareruyaBuyListPages";
 import type { CardSeries } from "../series";
 import {
   fetchBuyListUpdatedAtFromPage,
-  getBuyListUpdatedAtDate,
+  getBuyListDisplayDate,
+  getHareruyaCatalogUpdatedAt,
   loadHareruyaCatalog,
   mapSeriesNameToCardSeries,
   type HareruyaCatalogProduct,
@@ -13,7 +14,8 @@ export {
   CARD_LINE_PATTERN,
   HARERUYA_BUY_LIST_PAGE_URL,
   HARERUYA_PRODUCTS_ALL_JSON_URL,
-  getBuyListUpdatedAtDate,
+  getBuyListDisplayDate,
+  getHareruyaCatalogUpdatedAt,
   loadHareruyaCatalog,
   parseBuyListUpdatedAt,
 } from "./hareruyaCatalog";
@@ -58,13 +60,14 @@ export async function fetchHareruyaBuyPrices(
 ): Promise<HareruyaBuyListFetchResult> {
   onProgress?.("晴れる屋2: 買取リストを取得中...");
 
-  const [products, updatedAt] = await Promise.all([
+  const [products, updatedAtFromHead] = await Promise.all([
     loadHareruyaCatalog({ onProgress }),
     fetchBuyListUpdatedAtFromPage(),
   ]);
 
   const rows = products.map(catalogProductToRow);
-  const resolvedUpdatedAt = updatedAt ?? getBuyListUpdatedAtDate();
+  const resolvedUpdatedAt =
+    getHareruyaCatalogUpdatedAt() ?? updatedAtFromHead ?? getBuyListDisplayDate();
 
   onProgress?.(`晴れる屋2: ${rows.length.toLocaleString("ja-JP")}件を取得しました`);
 

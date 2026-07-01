@@ -1,4 +1,3 @@
-import { fetchText } from "./http";
 import { normalizeImageLookupKey } from "../normalize";
 import type { CardSeries } from "../series";
 
@@ -39,6 +38,7 @@ interface CatalogCache {
   products: HareruyaCatalogProduct[];
   byLookupKey: Map<string, HareruyaCatalogProduct[]>;
   loadedAt: number;
+  updatedAt: string | null;
 }
 
 const CATALOG_CACHE_TTL_MS = 30 * 60 * 1000;
@@ -53,13 +53,45 @@ export function mapSeriesNameToCardSeries(seriesName: string | null | undefined)
   return SERIES_NAME_TO_CARD_SERIES[normalizeSeriesName(seriesName)] ?? null;
 }
 
-/** 買取リストページと同じ表示日（JSTの当日） */
-export function getBuyListUpdatedAtDate(now = new Date()): string {
+/** 買取リストページと同じ表示日（9:00より前は前日扱い） */
+export function getBuyListDisplayDate(now = new Date()): string {
   const jst = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+  const display = new Date(jst);
+  const currentMinutes = display.getHours() * 60 + display.getMinutes();
+  const borderMinutes = 9 * 60;
+
+  if (currentMinutes < borderMinutes) {
+    display.setDate(display.getDate() - 1);
+  }
+
+  const year = display.getFullYear();
+  const month = String(display.getMonth() + 1).padStart(2, "0");
+  const day = String(display.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/** @deprecated getBuyListDisplayDate または getHareruyaCatalogUpdatedAt を使用 */
+export function getBuyListUpdatedAtDate(now = new Date()): string {
+  return getBuyListDisplayDate(now);
+}
+
+function formatDateInJst(date: Date): string {
+  const jst = new Date(date.toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
   const year = jst.getFullYear();
   const month = String(jst.getMonth() + 1).padStart(2, "0");
   const day = String(jst.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+export function parseHttpDateToJstDateString(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return formatDateInJst(parsed);
+}
+
+export function getHareruyaCatalogUpdatedAt(): string | null {
+  return catalogCache?.updatedAt ?? null;
 }
 
 export function isVisibleBuyListProduct(product: HareruyaCatalogProduct): boolean {
@@ -135,6 +167,10 @@ export async function loadHareruyaCatalog(options?: {
   }
 
   const data = (await response.json()) as HareruyaCatalogResponse;
+  const updatedAt =
+    parseHttpDateToJstDateString(response.headers.get("last-modified")) ??
+    getBuyListDisplayDate();
+
   const products = (data.products ?? [])
     .map(parseCatalogProduct)
     .filter((product): product is HareruyaCatalogProduct => product !== null)
@@ -144,6 +180,7 @@ export async function loadHareruyaCatalog(options?: {
     products,
     byLookupKey: buildLookupIndex(products),
     loadedAt: Date.now(),
+    updatedAt,
   };
 
   return products;
@@ -178,9 +215,19 @@ export function parseBuyListUpdatedAt(html: string): string | null {
 
 export async function fetchBuyListUpdatedAtFromPage(): Promise<string | null> {
   try {
-    const html = await fetchText(HARERUYA_BUY_LIST_PAGE_URL);
-    return parseBuyListUpdatedAt(html) ?? getBuyListUpdatedAtDate();
+    const response = await fetch(HARERUYA_PRODUCTS_ALL_JSON_URL, {
+      method: "HEAD",
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      },
+    });
+
+    const fromJson = parseHttpDateToJstDateString(response.headers.get("last-modified"));
+    if (fromJson) return fromJson;
   } catch {
-    return getBuyListUpdatedAtDate();
+    // fall through
   }
+
+  return getBuyListDisplayDate();
 }

@@ -1,4 +1,4 @@
-import { getBuyListUpdatedAtDate, parseBuyListUpdatedAt } from "../server/fetch/hareruya";
+import { getBuyListDisplayDate, parseBuyListUpdatedAt, parseHttpDateToJstDateString } from "../server/fetch/hareruyaCatalog";
 import { formatBuyListDateMmDd } from "../shared/hareruyaBuyListPages";
 
 const sample =
@@ -15,9 +15,15 @@ if (formatBuyListDateMmDd(parsed) !== "06/17") {
   process.exit(1);
 }
 
-const today = getBuyListUpdatedAtDate();
+const today = getBuyListDisplayDate();
 if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) {
   console.error("NG today format", today);
+  process.exit(1);
+}
+
+const fromHttp = parseHttpDateToJstDateString("Wed, 01 Jul 2026 09:00:08 GMT");
+if (fromHttp !== "2026-07-01") {
+  console.error("NG http date", fromHttp);
   process.exit(1);
 }
 
