@@ -1,5 +1,28 @@
 export const HARERUYA_BUY_LIST_PAGE_URL = "https://www.hareruya2.com/pages/buying-list";
 
+/**
+ * 買取リストページのシリーズ絞り込み（「すべて」選択時）に表示されるシリーズ。
+ * buying-list のプルダウンと同一。
+ */
+export const HARERUYA_BUY_LIST_SERIES_NAMES = [
+  "MEGAシリーズ",
+  "スカーレット&バイオレットシリーズ",
+  "ソード&シールドシリーズ",
+  "サン&ムーンシリーズ",
+  "XYシリーズ",
+  "BWシリーズ",
+] as const;
+
+const BUY_LIST_SERIES_SET = new Set<string>(
+  HARERUYA_BUY_LIST_SERIES_NAMES.map((name) => name.replace(/＆/g, "&")),
+);
+
+/** 買取リスト「すべて」タブに掲載されるシリーズか（ADV/neo 等は JSON にあっても非表示） */
+export function isHareruyaBuyListListedSeries(seriesName: string | null | undefined): boolean {
+  if (!seriesName) return false;
+  return BUY_LIST_SERIES_SET.has(seriesName.replace(/＆/g, "&").trim());
+}
+
 /** ヘッダー表示用ラベル（データは buying-list の単一JSONから取得） */
 export const HARERUYA_BUY_LIST_PAGES = [
   { slug: "buying-list-kyouka", label: "強化", title: "強化買取リスト" },

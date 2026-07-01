@@ -1,3 +1,4 @@
+import { isHareruyaBuyListListedSeries } from "../../shared/hareruyaBuyListPages";
 import { normalizeImageLookupKey } from "../normalize";
 import type { CardSeries } from "../series";
 
@@ -100,6 +101,7 @@ export function isVisibleBuyListProduct(product: HareruyaCatalogProduct): boolea
   if (buyPrice < 50) return false;
   if (sellPrice >= 500000) return false;
   if (!CARD_LINE_PATTERN.test(product.title)) return false;
+  if (!isHareruyaBuyListListedSeries(product.series_name)) return false;
   return true;
 }
 
