@@ -26,6 +26,10 @@ interface FilterPanelProps {
   open: boolean;
   onToggle: () => void;
   items: ComparisonItem[];
+  internalComparisonMode: boolean;
+  onInternalComparisonModeChange: (value: boolean) => void;
+  allItemsCount: number;
+  buyListCount: number;
   matchFilter: MatchFilter;
   onMatchFilterChange: (value: MatchFilter) => void;
   seriesFilter: SeriesFilterValue;
@@ -98,6 +102,10 @@ export function FilterPanel({
   open,
   onToggle,
   items,
+  internalComparisonMode,
+  onInternalComparisonModeChange,
+  allItemsCount,
+  buyListCount,
   matchFilter,
   onMatchFilterChange,
   seriesFilter,
@@ -124,7 +132,10 @@ export function FilterPanel({
   const matchActive = isMatchFilterActive(matchFilter);
   const priceActive = isPriceFilterActive(priceFilter);
   const activeCount =
-    (matchActive ? 1 : 0) + (seriesActive ? 1 : 0) + countActivePriceFilters(priceFilter);
+    (internalComparisonMode ? 1 : 0) +
+    (matchActive ? 1 : 0) +
+    (seriesActive ? 1 : 0) +
+    countActivePriceFilters(priceFilter);
 
   const updatePrice = (patch: Partial<PriceFilterState>) => {
     onPriceFilterChange({ ...priceFilter, ...patch });
@@ -164,6 +175,37 @@ export function FilterPanel({
                 条件をクリア
               </button>
             )}
+          </div>
+
+          <div className="filter-panel__section">
+            <h3 className="filter-panel__title">表示</h3>
+            <div className="series-filter__buttons" role="group" aria-label="表示モード">
+              <button
+                type="button"
+                className={`series-filter__btn${
+                  !internalComparisonMode ? " series-filter__btn--active" : ""
+                }`}
+                onClick={() => onInternalComparisonModeChange(false)}
+                aria-pressed={!internalComparisonMode}
+              >
+                買取リスト
+                <span className="series-filter__count">{buyListCount.toLocaleString("ja-JP")}</span>
+              </button>
+              <button
+                type="button"
+                className={`series-filter__btn${
+                  internalComparisonMode ? " series-filter__btn--active series-filter__btn--internal" : ""
+                }`}
+                onClick={() => onInternalComparisonModeChange(true)}
+                aria-pressed={internalComparisonMode}
+              >
+                内部データ比較
+                <span className="series-filter__count">{allItemsCount.toLocaleString("ja-JP")}</span>
+              </button>
+            </div>
+            <p className="price-filter__hint">
+              買取リストは晴れる屋2公式と同じ条件です。内部データ比較は取得データ全件を表示します。
+            </p>
           </div>
 
           <div className="filter-panel__section">

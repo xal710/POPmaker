@@ -105,6 +105,8 @@ function App() {
     [allItems, internalComparisonMode],
   );
 
+  const buyListCount = useMemo(() => filterToOfficialBuyList(allItems).length, [allItems]);
+
   const filteredItems = useMemo(() => {
     const byMatch = applyMatchFilter(catalogItems, matchFilter);
     const byPrice = applyPriceFilter(byMatch, priceFilter);
@@ -170,6 +172,7 @@ function App() {
 
 
   const clearFilters = () => {
+    setInternalComparisonMode(false);
     setMatchFilter(DEFAULT_MATCH_FILTER);
     setSeriesFilter("all");
     setPriceFilter(DEFAULT_PRICE_FILTER);
@@ -216,8 +219,6 @@ function App() {
         onAdminModeToggle={toggleAdminMode}
 
         internalComparisonMode={internalComparisonMode}
-
-        onInternalComparisonToggle={() => setInternalComparisonMode((value) => !value)}
 
       />
 
@@ -312,6 +313,10 @@ function App() {
               open={filterOpen}
               onToggle={() => setFilterOpen((value) => !value)}
               items={catalogItems}
+              internalComparisonMode={internalComparisonMode}
+              onInternalComparisonModeChange={setInternalComparisonMode}
+              allItemsCount={allItems.length}
+              buyListCount={buyListCount}
               matchFilter={matchFilter}
               onMatchFilterChange={setMatchFilter}
               seriesFilter={seriesFilter}

@@ -9,7 +9,7 @@ interface UseAdminPanelResult {
   saving: boolean;
   error: string | null;
   reload: () => Promise<void>;
-  saveAnnouncement: (value: string) => Promise<boolean>;
+  saveAnnouncement: (announcement: string, targets: string[] | null) => Promise<boolean>;
   saveDebugMemo: (value: string) => Promise<boolean>;
 }
 
@@ -55,7 +55,11 @@ export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
   }, [reload]);
 
   const patchSettings = useCallback(
-    async (patch: { announcement?: string; debugMemo?: string }) => {
+    async (patch: {
+      announcement?: string;
+      announcementTargets?: string[] | null;
+      debugMemo?: string;
+    }) => {
       setSaving(true);
       setError(null);
 
@@ -86,7 +90,8 @@ export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
   );
 
   const saveAnnouncement = useCallback(
-    async (value: string) => patchSettings({ announcement: value }),
+    async (announcement: string, targets: string[] | null) =>
+      patchSettings({ announcement, announcementTargets: targets }),
     [patchSettings],
   );
 

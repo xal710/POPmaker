@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Connect } from "vite";
 
-import { isAdministrator } from "../shared/admin";
+import { isAdministrator, isAnnouncementVisibleToUser } from "../shared/admin";
 import { getAuthenticatedUsername, listSiteAccountSummaries } from "./auth";
 import { readAdminSettings, saveAdminSettings } from "./adminStore";
 import { sendJson } from "./http";
@@ -52,12 +52,14 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
     const pathname = url.pathname;
 
     if (pathname === "/api/admin/announcement" && req.method === "GET") {
-      if (!requireAuthenticatedUser(req, res)) return;
+      const username = requireAuthenticatedUser(req, res);
+      if (!username) return;
 
       const settings = readAdminSettings();
+      const visible = isAnnouncementVisibleToUser(settings, username);
       sendJson(res, 200, {
-        announcement: settings.announcement,
-        updatedAt: settings.updatedAt,
+        announcement: visible ? settings.announcement : "",
+        updatedAt: visible ? settings.updatedAt : null,
       });
       return;
     }
@@ -80,13 +82,19 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
         try {
           const body = (await readJsonBody(req)) as {
             announcement?: unknown;
+            announcementTargets?: unknown;
             debugMemo?: unknown;
           } | null;
 
           const patch: {
             announcement?: string;
+            announcementTargets?: string[] | null;
             debugMemo?: string;
           } = {};
+
+          const knownUsernames = new Set(
+            listSiteAccountSummaries().map((account) => account.username),
+          );
 
           if (body && "announcement" in body) {
             if (typeof body.announcement !== "string") {
@@ -94,6 +102,25 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
               return;
             }
             patch.announcement = body.announcement;
+          }
+
+          if (body && "announcementTargets" in body) {
+            const targets = body.announcementTargets;
+            if (targets === null) {
+              patch.announcementTargets = null;
+            } else if (!Array.isArray(targets)) {
+              sendJson(res, 400, { error: "announcementTargets は配列または null で指定してください" });
+              return;
+            } else if (!targets.every((entry) => typeof entry === "string")) {
+              sendJson(res, 400, { error: "announcementTargets の要素は文字列で指定してください" });
+              return;
+            } else {
+              const filtered = targets
+                .map((entry) => entry.trim())
+                .filter((entry) => entry && knownUsernames.has(entry));
+              patch.announcementTargets =
+                filtered.length === knownUsernames.size ? null : [...new Set(filtered)].sort();
+            }
           }
 
           if (body && "debugMemo" in body) {
@@ -104,7 +131,11 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
             patch.debugMemo = body.debugMemo;
           }
 
-          if (!("announcement" in patch) && !("debugMemo" in patch)) {
+          if (
+            !("announcement" in patch) &&
+            !("announcementTargets" in patch) &&
+            !("debugMemo" in patch)
+          ) {
             sendJson(res, 400, { error: "更新する項目を指定してください" });
             return;
           }

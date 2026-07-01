@@ -24,7 +24,6 @@ interface HeaderProps {
   adminMode?: boolean;
   onAdminModeToggle?: () => void;
   internalComparisonMode?: boolean;
-  onInternalComparisonToggle?: () => void;
 }
 
 function formatDataDate(value: string | null | undefined): string {
@@ -83,7 +82,6 @@ export function Header({
   adminMode = false,
   onAdminModeToggle,
   internalComparisonMode = false,
-  onInternalComparisonToggle,
 }: HeaderProps) {
   const busy = loading || refreshing;
   const isToolView = view === "tool";
@@ -109,24 +107,6 @@ export function Header({
           )}
           {onNavigate && isToolView && (
             <>
-              {onInternalComparisonToggle && (
-                <button
-                  type="button"
-                  className={`btn btn--secondary${
-                    internalComparisonMode ? " btn--internal-active" : ""
-                  }`}
-                  onClick={onInternalComparisonToggle}
-                  disabled={busy}
-                  aria-pressed={internalComparisonMode}
-                  title={
-                    internalComparisonMode
-                      ? "晴れる屋2買取リスト準拠の表示に戻す"
-                      : "取得データ全件の内部比較表示に切り替え"
-                  }
-                >
-                  {internalComparisonMode ? "内部データ比較 ON" : "内部データ比較"}
-                </button>
-              )}
               <button
                 type="button"
                 className="btn btn--secondary"

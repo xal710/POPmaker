@@ -1,6 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import type { AdminAccountSummary, AdminSettings } from "../../shared/admin";
+import {
+  normalizeAnnouncementTargets,
+  resolveAnnouncementTargetSelection,
+  type AdminAccountSummary,
+  type AdminSettings,
+} from "../../shared/admin";
 import { formatDateTime } from "../utils/format";
 
 interface AdminToolsPanelProps {
@@ -9,7 +14,7 @@ interface AdminToolsPanelProps {
   loading: boolean;
   saving: boolean;
   error: string | null;
-  onSaveAnnouncement: (value: string) => Promise<boolean>;
+  onSaveAnnouncement: (announcement: string, targets: string[] | null) => Promise<boolean>;
   onSaveDebugMemo: (value: string) => Promise<boolean>;
   onAnnouncementSaved?: () => void;
 }
@@ -25,17 +30,54 @@ export function AdminToolsPanel({
   onAnnouncementSaved,
 }: AdminToolsPanelProps) {
   const [announcementDraft, setAnnouncementDraft] = useState("");
+  const [announcementTargetsDraft, setAnnouncementTargetsDraft] = useState<Set<string>>(new Set());
   const [debugMemoDraft, setDebugMemoDraft] = useState("");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+
+  const accountUsernames = useMemo(
+    () => accounts.map((account) => account.username),
+    [accounts],
+  );
 
   useEffect(() => {
     setAnnouncementDraft(settings?.announcement ?? "");
     setDebugMemoDraft(settings?.debugMemo ?? "");
-  }, [settings]);
+    setAnnouncementTargetsDraft(
+      resolveAnnouncementTargetSelection(settings?.announcementTargets, accountUsernames),
+    );
+  }, [settings, accountUsernames]);
+
+  const allTargetsSelected =
+    accountUsernames.length > 0 && announcementTargetsDraft.size === accountUsernames.length;
+  const selectedTargetCount = announcementTargetsDraft.size;
+
+  const toggleAnnouncementTarget = (username: string) => {
+    setAnnouncementTargetsDraft((current) => {
+      const next = new Set(current);
+      if (next.has(username)) {
+        next.delete(username);
+      } else {
+        next.add(username);
+      }
+      return next;
+    });
+  };
+
+  const selectAllTargets = () => {
+    setAnnouncementTargetsDraft(new Set(accountUsernames));
+  };
+
+  const clearAllTargets = () => {
+    setAnnouncementTargetsDraft(new Set());
+  };
 
   const handleSaveAnnouncement = async () => {
     setSaveMessage(null);
-    const ok = await onSaveAnnouncement(announcementDraft);
+    const targets = normalizeAnnouncementTargets(
+      [...announcementTargetsDraft],
+      accountUsernames,
+    );
+    const ok = await onSaveAnnouncement(announcementDraft, targets);
     if (ok) {
       setSaveMessage("アナウンスを保存しました");
       onAnnouncementSaved?.();
@@ -96,8 +138,56 @@ export function AdminToolsPanel({
         <section className="admin-tools__card">
           <h3 className="admin-tools__card-title">アカウントへのアナウンス</h3>
           <p className="admin-tools__hint">
-            保存すると、ログイン中の全アカウントの画面上部にお知らせが表示されます。
+            配信先アカウントを選び、保存すると選択したアカウントの画面上部にお知らせが表示されます。
           </p>
+
+          <div className="admin-target-picker">
+            <div className="admin-target-picker__header">
+              <p className="admin-target-picker__label">配信先</p>
+              <div className="admin-target-picker__actions">
+                <button
+                  type="button"
+                  className="admin-target-picker__link"
+                  onClick={selectAllTargets}
+                  disabled={loading || saving || allTargetsSelected}
+                >
+                  すべて選択
+                </button>
+                <button
+                  type="button"
+                  className="admin-target-picker__link"
+                  onClick={clearAllTargets}
+                  disabled={loading || saving || selectedTargetCount === 0}
+                >
+                  すべて解除
+                </button>
+              </div>
+            </div>
+            <ul className="admin-target-picker__list" aria-label="アナウンス配信先アカウント">
+              {accounts.map((account) => {
+                const checked = announcementTargetsDraft.has(account.username);
+                return (
+                  <li key={account.username}>
+                    <label className="admin-target-picker__item">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleAnnouncementTarget(account.username)}
+                        disabled={loading || saving}
+                      />
+                      <span className="admin-target-picker__name">{account.username}</span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="admin-target-picker__meta" role="status">
+              {allTargetsSelected
+                ? "全アカウントに配信"
+                : `${selectedTargetCount.toLocaleString("ja-JP")} 件のアカウントに配信`}
+            </p>
+          </div>
+
           <textarea
             className="admin-tools__textarea"
             value={announcementDraft}
@@ -111,7 +201,7 @@ export function AdminToolsPanel({
               type="button"
               className="btn btn--primary"
               onClick={() => void handleSaveAnnouncement()}
-              disabled={loading || saving}
+              disabled={loading || saving || selectedTargetCount === 0}
             >
               {saving ? "保存中..." : "アナウンスを保存"}
             </button>
