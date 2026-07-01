@@ -24,6 +24,9 @@ export interface ComparisonItem {
   hareruyaTitle?: string;
   /** 晴れる屋2のレアリティ（検索用） */
   rarity?: string;
+  hareruyaSellPrice?: number;
+  hareruyaSeriesName?: string;
+  officialBuyListVisible?: boolean;
 }
 
 export interface HareruyaOnlyItem {
@@ -32,6 +35,10 @@ export interface HareruyaOnlyItem {
   hareruya2: number;
   series?: ComparisonItem["series"];
   hareruyaTitle?: string;
+  rarity?: string;
+  hareruyaSellPrice?: number;
+  hareruyaSeriesName?: string;
+  officialBuyListVisible?: boolean;
 }
 
 export interface ComparisonPayload {

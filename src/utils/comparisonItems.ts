@@ -20,6 +20,9 @@ export function mergeComparisonItems(data: ComparisonData | null): ComparisonIte
     diff: item.diff,
     series: item.series,
     matched: item.matched ?? true,
+    hareruyaSellPrice: item.hareruyaSellPrice,
+    hareruyaSeriesName: item.hareruyaSeriesName,
+    officialBuyListVisible: item.officialBuyListVisible,
   }));
 
   const unmatched: ComparisonItem[] = (data.unmatchedHareruya ?? []).map((item, index) => ({
@@ -34,6 +37,9 @@ export function mergeComparisonItems(data: ComparisonData | null): ComparisonIte
     diff: null,
     series: item.series,
     matched: false,
+    hareruyaSellPrice: item.hareruyaSellPrice,
+    hareruyaSeriesName: item.hareruyaSeriesName,
+    officialBuyListVisible: item.officialBuyListVisible,
   }));
 
   return [...matched, ...unmatched];

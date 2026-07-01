@@ -8,6 +8,9 @@ export interface ComparisonItem {
   diff: number | null;
   series?: "M" | "SV" | "S" | "SM" | "XY" | "BW";
   matched: boolean;
+  hareruyaSellPrice?: number;
+  hareruyaSeriesName?: string;
+  officialBuyListVisible?: boolean;
 }
 
 export interface HareruyaOnlyItem {
@@ -17,6 +20,9 @@ export interface HareruyaOnlyItem {
   rarity?: string;
   hareruya2: number;
   series?: ComparisonItem["series"];
+  hareruyaSellPrice?: number;
+  hareruyaSeriesName?: string;
+  officialBuyListVisible?: boolean;
 }
 
 export interface ComparisonData {

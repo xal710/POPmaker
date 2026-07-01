@@ -1,4 +1,5 @@
 import type { ComparisonItem } from "./excel";
+import { isOfficialBuyListVisible } from "../shared/hareruyaBuyListFilter";
 import {
   buildCardRushMatchIndex,
   findCardRushMatch,
@@ -15,11 +16,26 @@ export interface HareruyaOnlyItem {
   series?: ComparisonItem["series"];
   hareruyaTitle?: string;
   rarity?: string;
+  hareruyaSellPrice?: number;
+  hareruyaSeriesName?: string;
+  officialBuyListVisible?: boolean;
 }
 
 export interface ComparisonBuildResult {
   items: ComparisonItem[];
   unmatchedHareruya: HareruyaOnlyItem[];
+}
+
+function buildBuyListMeta(entry: HareruyaPriceEntry) {
+  const hareruyaSellPrice = entry.sellPrice;
+  const hareruyaSeriesName = entry.seriesName || undefined;
+  const officialBuyListVisible = isOfficialBuyListVisible({
+    buyPrice: entry.price,
+    sellPrice: hareruyaSellPrice,
+    seriesName: entry.seriesName,
+  });
+
+  return { hareruyaSellPrice, hareruyaSeriesName, officialBuyListVisible };
 }
 
 /**
@@ -38,6 +54,8 @@ export function buildComparisonResult(
     const identity = parseHareruyaIdentity(entry.rawName);
     if (!identity) continue;
 
+    const buyListMeta = buildBuyListMeta(entry);
+
     const match = findCardRushMatch(identity, index);
     if (!match) {
       unmatchedHareruya.push({
@@ -47,6 +65,7 @@ export function buildComparisonResult(
         rarity: identity.rarity ?? undefined,
         hareruya2: entry.price,
         series: resolveItemSeries(displayName, entry.series) ?? undefined,
+        ...buyListMeta,
       });
       continue;
     }
@@ -61,6 +80,7 @@ export function buildComparisonResult(
       diff: entry.price - match.price,
       series: resolveItemSeries(displayName, entry.series),
       matched: true,
+      ...buyListMeta,
     });
   }
 

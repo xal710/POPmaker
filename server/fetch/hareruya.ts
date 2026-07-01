@@ -26,6 +26,8 @@ export interface RawPriceRow {
   series: CardSeries | null;
   imageUrl: string | null;
   productId: number | null;
+  sellPrice?: number;
+  seriesName?: string;
 }
 
 export interface HareruyaBuyListFetchResult {
@@ -40,6 +42,8 @@ function catalogProductToRow(product: HareruyaCatalogProduct): RawPriceRow {
     series: mapSeriesNameToCardSeries(product.series_name),
     imageUrl: product.image_url,
     productId: product.id,
+    sellPrice: product.sell_price,
+    seriesName: product.series_name,
   };
 }
 

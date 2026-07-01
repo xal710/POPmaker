@@ -238,6 +238,8 @@ export interface HareruyaPriceEntry {
   price: number;
   series: import("./series").CardSeries | null;
   rawName: string;
+  sellPrice: number;
+  seriesName: string;
 }
 
 export function normalizeHareruyaRows(
@@ -247,7 +249,13 @@ export function normalizeHareruyaRows(
 
   for (const row of rows) {
     const key = normalizeHareruyaName(row.name);
-    map.set(key, { price: row.price, series: row.series, rawName: row.name });
+    map.set(key, {
+      price: row.price,
+      series: row.series,
+      rawName: row.name,
+      sellPrice: row.sellPrice ?? 0,
+      seriesName: row.seriesName ?? "",
+    });
   }
 
   return map;
