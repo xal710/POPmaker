@@ -1,5 +1,9 @@
 import { prefetchImage } from "./imageCache";
 import {
+  findCatalogProductByCardName,
+  loadHareruyaCatalog,
+} from "./fetch/hareruyaCatalog";
+import {
   buildHareruyaVariantPackCode,
   detectMirrorVariantLabel,
   normalizeImageLookupKey,
@@ -285,7 +289,20 @@ export async function fetchCardImage(
   let matched: Awaited<ReturnType<typeof findMatchingProduct>> = null;
 
   try {
-    matched = await findMatchingProduct(cardName);
+    await loadHareruyaCatalog();
+    const catalogProduct = findCatalogProductByCardName(cardName);
+    if (catalogProduct?.image_url && isExactProductMatch(cardName, catalogProduct.title)) {
+      matched = {
+        productId: String(catalogProduct.id),
+        title: catalogProduct.title,
+        imageUrl: catalogProduct.image_url,
+        searchQuery: "buying-list-catalog",
+      };
+    }
+
+    if (!matched) {
+      matched = await findMatchingProduct(cardName);
+    }
   } catch {
     throw new Error("晴れる屋2への接続に失敗しました。しばらくしてから更新してください。");
   }

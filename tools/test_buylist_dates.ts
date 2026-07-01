@@ -1,4 +1,4 @@
-import { parseBuyListUpdatedAt } from "../server/fetch/hareruya";
+import { getBuyListUpdatedAtDate, parseBuyListUpdatedAt } from "../server/fetch/hareruya";
 import { formatBuyListDateMmDd } from "../shared/hareruyaBuyListPages";
 
 const sample =
@@ -12,6 +12,12 @@ if (parsed !== "2026-06-17") {
 
 if (formatBuyListDateMmDd(parsed) !== "06/17") {
   console.error("NG format", formatBuyListDateMmDd(parsed));
+  process.exit(1);
+}
+
+const today = getBuyListUpdatedAtDate();
+if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) {
+  console.error("NG today format", today);
   process.exit(1);
 }
 

@@ -1,22 +1,29 @@
-import { fetchText, htmlToLines, parsePrice } from "./http";
-import { HARERUYA_URL_SERIES, type CardSeries } from "../series";
+import { HARERUYA_BUY_LIST_PAGES } from "../../shared/hareruyaBuyListPages";
+import type { CardSeries } from "../series";
+import {
+  fetchBuyListUpdatedAtFromPage,
+  getBuyListUpdatedAtDate,
+  loadHareruyaCatalog,
+  mapSeriesNameToCardSeries,
+  type HareruyaCatalogProduct,
+} from "./hareruyaCatalog";
 
-export const BUY_LIST_UPDATED_AT_PATTERN = /更新日時:\s*(\d{4})\/(\d{2})\/(\d{2})/;
-
-export const HARERUYA_BUY_LIST_URLS = [
-  "https://www.hareruya2.com/pages/buying-list-kyouka",
-  "https://www.hareruya2.com/pages/buying-list-mega",
-  "https://www.hareruya2.com/pages/buying-list-sv",
-  "https://www.hareruya2.com/pages/buying-list-ss",
-  "https://www.hareruya2.com/pages/buying-list-sm",
-  "https://www.hareruya2.com/pages/buying-list-xy",
-  "https://www.hareruya2.com/pages/buying-list-bw",
-] as const;
+export {
+  BUY_LIST_UPDATED_AT_PATTERN,
+  CARD_LINE_PATTERN,
+  HARERUYA_BUY_LIST_PAGE_URL,
+  HARERUYA_PRODUCTS_ALL_JSON_URL,
+  getBuyListUpdatedAtDate,
+  loadHareruyaCatalog,
+  parseBuyListUpdatedAt,
+} from "./hareruyaCatalog";
 
 export interface RawPriceRow {
   name: string;
   price: number;
   series: CardSeries | null;
+  imageUrl: string | null;
+  productId: number | null;
 }
 
 export interface HareruyaBuyListFetchResult {
@@ -24,61 +31,54 @@ export interface HareruyaBuyListFetchResult {
   pageUpdatedAt: Partial<Record<string, string>>;
 }
 
-/** 晴れる屋2 買取表HTMLから「更新日時: YYYY/MM/DD」を抽出 */
-export function parseBuyListUpdatedAt(html: string): string | null {
-  const match = BUY_LIST_UPDATED_AT_PATTERN.exec(html);
-  if (!match) return null;
-  return `${match[1]}-${match[2]}-${match[3]}`;
+function catalogProductToRow(product: HareruyaCatalogProduct): RawPriceRow {
+  return {
+    name: product.title,
+    price: product.buy_price,
+    series: mapSeriesNameToCardSeries(product.series_name),
+    imageUrl: product.image_url,
+    productId: product.id,
+  };
 }
 
-const CARD_LINE_PATTERN = /〈[^〉]+〉/;
+function buildPageUpdatedAt(updatedAt: string): Partial<Record<string, string>> {
+  const pageUpdatedAt: Partial<Record<string, string>> = {
+    "buying-list": updatedAt,
+  };
 
-export function parseHareruyaBuyListHtml(html: string): RawPriceRow[] {
-  const lines = htmlToLines(html);
-  const rows: RawPriceRow[] = [];
-
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
-    if (!CARD_LINE_PATTERN.test(line)) continue;
-    if (line.includes("買取価格") || line.includes("カード名")) continue;
-
-    const nextLine = lines[index + 1];
-    const price = nextLine ? parsePrice(nextLine) : null;
-    if (price === null) continue;
-
-    rows.push({ name: line, price, series: null });
-    index += 1;
+  for (const page of HARERUYA_BUY_LIST_PAGES) {
+    pageUpdatedAt[page.slug] = updatedAt;
   }
 
-  return rows;
+  return pageUpdatedAt;
 }
 
 export async function fetchHareruyaBuyPrices(
   onProgress?: (message: string) => void,
 ): Promise<HareruyaBuyListFetchResult> {
-  onProgress?.("晴れる屋2: 買取表を取得中...");
+  onProgress?.("晴れる屋2: 買取リストを取得中...");
 
-  const pageResults = await Promise.all(
-    HARERUYA_BUY_LIST_URLS.map(async (url) => {
-      const slug = url.split("/").pop() ?? url;
-      const series = HARERUYA_URL_SERIES[slug] ?? null;
-      const html = await fetchText(url);
-      const updatedAt = parseBuyListUpdatedAt(html);
-      const rows = parseHareruyaBuyListHtml(html).map((row) => ({ ...row, series }));
+  const [products, updatedAt] = await Promise.all([
+    loadHareruyaCatalog({ onProgress }),
+    fetchBuyListUpdatedAtFromPage(),
+  ]);
 
-      return { slug, updatedAt, rows };
-    }),
-  );
+  const rows = products.map(catalogProductToRow);
+  const resolvedUpdatedAt = updatedAt ?? getBuyListUpdatedAtDate();
 
-  const pageUpdatedAt: Partial<Record<string, string>> = {};
-  const allRows: RawPriceRow[] = [];
+  onProgress?.(`晴れる屋2: ${rows.length.toLocaleString("ja-JP")}件を取得しました`);
 
-  for (const page of pageResults) {
-    if (page.updatedAt) {
-      pageUpdatedAt[page.slug] = page.updatedAt;
-    }
-    allRows.push(...page.rows);
-  }
+  return {
+    rows,
+    pageUpdatedAt: buildPageUpdatedAt(resolvedUpdatedAt),
+  };
+}
 
-  return { rows: allRows, pageUpdatedAt };
+/** @deprecated 旧7ページHTML方式。互換のため定数のみ残す */
+export const HARERUYA_BUY_LIST_URLS = [
+  "https://www.hareruya2.com/pages/buying-list",
+] as const;
+
+export function parseHareruyaBuyListHtml(_html: string): RawPriceRow[] {
+  return [];
 }

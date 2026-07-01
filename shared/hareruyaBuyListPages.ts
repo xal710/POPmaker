@@ -1,3 +1,6 @@
+export const HARERUYA_BUY_LIST_PAGE_URL = "https://www.hareruya2.com/pages/buying-list";
+
+/** ヘッダー表示用ラベル（データは buying-list の単一JSONから取得） */
 export const HARERUYA_BUY_LIST_PAGES = [
   { slug: "buying-list-kyouka", label: "強化", title: "強化買取リスト" },
   { slug: "buying-list-mega", label: "M", title: "MEGAシリーズ" },

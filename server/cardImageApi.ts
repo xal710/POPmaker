@@ -18,7 +18,8 @@ function isAllowedProxyImageUrl(imageUrl: string): boolean {
       parsed.hostname === "www.hareruya2.com" ||
       parsed.hostname.endsWith(".hareruya2.com") ||
       parsed.hostname.endsWith(".shopify.com") ||
-      parsed.hostname.endsWith(".shopifycdn.com")
+      parsed.hostname.endsWith(".shopifycdn.com") ||
+      parsed.hostname.endsWith(".amazonaws.com")
     );
   } catch {
     return false;
