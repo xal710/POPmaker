@@ -44,8 +44,7 @@ import { applyPriceFilter, isPriceFilterActive } from "./utils/priceFilter";
 import { mergeComparisonItems } from "./utils/comparisonItems";
 import { applyMatchFilter, isMatchFilterActive } from "./utils/matchFilter";
 import {
-  applyOfficialBuyListFilter,
-  countOfficialBuyListHidden,
+  filterToOfficialBuyList,
 } from "./utils/officialBuyListFilter";
 
 import { filterBySeries, type SeriesFilter as SeriesFilterValue } from "./utils/series";
@@ -92,7 +91,7 @@ function App() {
   const [filterOpen, setFilterOpen] = useState(false);
 
   const [matchFilter, setMatchFilter] = useState(DEFAULT_MATCH_FILTER);
-  const [includeHighValue, setIncludeHighValue] = useState(false);
+  const [internalComparisonMode, setInternalComparisonMode] = useState(false);
 
   const [seriesFilter, setSeriesFilter] = useState<SeriesFilterValue>("all");
 
@@ -102,13 +101,8 @@ function App() {
   const allItems = useMemo(() => mergeComparisonItems(data), [data]);
 
   const catalogItems = useMemo(
-    () => applyOfficialBuyListFilter(allItems, includeHighValue),
-    [allItems, includeHighValue],
-  );
-
-  const hiddenOfficialCount = useMemo(
-    () => countOfficialBuyListHidden(allItems),
-    [allItems],
+    () => (internalComparisonMode ? allItems : filterToOfficialBuyList(allItems)),
+    [allItems, internalComparisonMode],
   );
 
   const filteredItems = useMemo(() => {
@@ -132,7 +126,7 @@ function App() {
 
   useEffect(() => {
     setListPage(1);
-  }, [debouncedSearchQuery, matchFilter, includeHighValue, seriesFilter, priceFilter, sort]);
+  }, [debouncedSearchQuery, matchFilter, internalComparisonMode, seriesFilter, priceFilter, sort]);
 
   const handleSortChange = useCallback((key: ComparisonSortKey) => {
     setSort((current) => toggleComparisonSort(current, key));
@@ -168,17 +162,14 @@ function App() {
   const isSeriesFiltered = seriesFilter !== "all";
 
   const isPriceFiltered = isPriceFilterActive(priceFilter);
-  const isOfficialFiltered = !includeHighValue && hiddenOfficialCount > 0;
 
-  const isListFiltered =
-    isSearching || isMatchFiltered || isSeriesFiltered || isPriceFiltered || isOfficialFiltered;
+  const isListFiltered = isSearching || isMatchFiltered || isSeriesFiltered || isPriceFiltered;
 
   const visibleCount = isSearching ? resultCount : filteredItems.length;
 
 
 
   const clearFilters = () => {
-    setIncludeHighValue(false);
     setMatchFilter(DEFAULT_MATCH_FILTER);
     setSeriesFilter("all");
     setPriceFilter(DEFAULT_PRICE_FILTER);
@@ -223,6 +214,10 @@ function App() {
         adminMode={adminMode}
 
         onAdminModeToggle={toggleAdminMode}
+
+        internalComparisonMode={internalComparisonMode}
+
+        onInternalComparisonToggle={() => setInternalComparisonMode((value) => !value)}
 
       />
 
@@ -317,10 +312,6 @@ function App() {
               open={filterOpen}
               onToggle={() => setFilterOpen((value) => !value)}
               items={catalogItems}
-              allItemsCount={allItems.length}
-              hiddenOfficialCount={hiddenOfficialCount}
-              includeHighValue={includeHighValue}
-              onIncludeHighValueChange={setIncludeHighValue}
               matchFilter={matchFilter}
               onMatchFilterChange={setMatchFilter}
               seriesFilter={seriesFilter}

@@ -23,6 +23,8 @@ interface HeaderProps {
   isAdministrator?: boolean;
   adminMode?: boolean;
   onAdminModeToggle?: () => void;
+  internalComparisonMode?: boolean;
+  onInternalComparisonToggle?: () => void;
 }
 
 function formatDataDate(value: string | null | undefined): string {
@@ -80,6 +82,8 @@ export function Header({
   isAdministrator = false,
   adminMode = false,
   onAdminModeToggle,
+  internalComparisonMode = false,
+  onInternalComparisonToggle,
 }: HeaderProps) {
   const busy = loading || refreshing;
   const isToolView = view === "tool";
@@ -105,6 +109,24 @@ export function Header({
           )}
           {onNavigate && isToolView && (
             <>
+              {onInternalComparisonToggle && (
+                <button
+                  type="button"
+                  className={`btn btn--secondary${
+                    internalComparisonMode ? " btn--internal-active" : ""
+                  }`}
+                  onClick={onInternalComparisonToggle}
+                  disabled={busy}
+                  aria-pressed={internalComparisonMode}
+                  title={
+                    internalComparisonMode
+                      ? "晴れる屋2買取リスト準拠の表示に戻す"
+                      : "取得データ全件の内部比較表示に切り替え"
+                  }
+                >
+                  {internalComparisonMode ? "内部データ比較 ON" : "内部データ比較"}
+                </button>
+              )}
               <button
                 type="button"
                 className="btn btn--secondary"
@@ -157,6 +179,15 @@ export function Header({
             <span className="meta-pill">
               {isFiltered ? "検索結果" : "件数"}: <strong>{itemCount.toLocaleString("ja-JP")}</strong> 件
             </span>
+            {internalComparisonMode ? (
+              <span className="meta-pill meta-pill--internal" title="取得データ全件を表示中">
+                表示: <strong>内部データ比較</strong>
+              </span>
+            ) : (
+              <span className="meta-pill meta-pill--buylist" title="晴れる屋2公式買取リストと同じ条件">
+                表示: <strong>買取リスト</strong>
+              </span>
+            )}
             <span className="meta-pill" title={updatedDateHint(dataSource)}>
               更新日: <strong>{formatServerUpdatedDate(updatedAt, dataDate)}</strong>
             </span>

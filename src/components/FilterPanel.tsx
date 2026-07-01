@@ -26,10 +26,6 @@ interface FilterPanelProps {
   open: boolean;
   onToggle: () => void;
   items: ComparisonItem[];
-  allItemsCount: number;
-  hiddenOfficialCount: number;
-  includeHighValue: boolean;
-  onIncludeHighValueChange: (value: boolean) => void;
   matchFilter: MatchFilter;
   onMatchFilterChange: (value: MatchFilter) => void;
   seriesFilter: SeriesFilterValue;
@@ -102,10 +98,6 @@ export function FilterPanel({
   open,
   onToggle,
   items,
-  allItemsCount,
-  hiddenOfficialCount,
-  includeHighValue,
-  onIncludeHighValueChange,
   matchFilter,
   onMatchFilterChange,
   seriesFilter,
@@ -132,10 +124,7 @@ export function FilterPanel({
   const matchActive = isMatchFilterActive(matchFilter);
   const priceActive = isPriceFilterActive(priceFilter);
   const activeCount =
-    (includeHighValue ? 1 : 0) +
-    (matchActive ? 1 : 0) +
-    (seriesActive ? 1 : 0) +
-    countActivePriceFilters(priceFilter);
+    (matchActive ? 1 : 0) + (seriesActive ? 1 : 0) + countActivePriceFilters(priceFilter);
 
   const updatePrice = (patch: Partial<PriceFilterState>) => {
     onPriceFilterChange({ ...priceFilter, ...patch });
@@ -175,35 +164,6 @@ export function FilterPanel({
                 条件をクリア
               </button>
             )}
-          </div>
-
-          <div className="filter-panel__section">
-            <h3 className="filter-panel__title">表示</h3>
-            <div className="series-filter__buttons" role="group" aria-label="高額カードの表示">
-              <button
-                type="button"
-                className={`series-filter__btn${
-                  includeHighValue ? " series-filter__btn--active" : ""
-                }`}
-                onClick={() => onIncludeHighValueChange(!includeHighValue)}
-                aria-pressed={includeHighValue}
-              >
-                高額込み
-                {!includeHighValue && hiddenOfficialCount > 0 && (
-                  <span className="series-filter__count">
-                    +{hiddenOfficialCount.toLocaleString("ja-JP")}
-                  </span>
-                )}
-                {includeHighValue && (
-                  <span className="series-filter__count">
-                    {allItemsCount.toLocaleString("ja-JP")}
-                  </span>
-                )}
-              </button>
-            </div>
-            <p className="price-filter__hint">
-              OFF（初期状態）は晴れる屋2公式の買取リストと同じ条件です。ONにすると販売価格50万円以上なども含めて表示します。
-            </p>
           </div>
 
           <div className="filter-panel__section">

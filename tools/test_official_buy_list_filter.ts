@@ -1,6 +1,6 @@
 import { isOfficialBuyListVisible } from "../shared/hareruyaBuyListFilter";
 import type { ComparisonItem } from "../src/types";
-import { applyOfficialBuyListFilter, passesOfficialBuyListFilter } from "../src/utils/officialBuyListFilter";
+import { filterToOfficialBuyList, passesOfficialBuyListFilter } from "../src/utils/officialBuyListFilter";
 
 function item(partial: Partial<ComparisonItem> & Pick<ComparisonItem, "id" | "name" | "hareruya2">): ComparisonItem {
   return {
@@ -55,7 +55,7 @@ assert(
 
 assert(passesOfficialBuyListFilter(officialVisible), "official item passes");
 assert(!passesOfficialBuyListFilter(highValue), "high value hidden");
-assert(applyOfficialBuyListFilter([officialVisible, highValue, lowBuy], false).length === 1, "default filter");
-assert(applyOfficialBuyListFilter([officialVisible, highValue, lowBuy], true).length === 3, "include all");
+assert(filterToOfficialBuyList([officialVisible, highValue, lowBuy]).length === 1, "buy list filter");
+assert(filterToOfficialBuyList([officialVisible, highValue, lowBuy]).length < 3, "not all items");
 
 console.log("OK official buy list filter");

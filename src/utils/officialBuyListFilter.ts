@@ -12,7 +12,7 @@ export function toOfficialBuyListFilterInput(item: ComparisonItem): OfficialBuyL
   };
 }
 
-/** 公式サイト準拠の表示（高額込み OFF） */
+/** 晴れる屋2 買取リスト公式サイト（シリーズ=すべて）と同じ表示条件 */
 export function passesOfficialBuyListFilter(item: ComparisonItem): boolean {
   if (item.officialBuyListVisible !== undefined) {
     return item.officialBuyListVisible;
@@ -25,14 +25,6 @@ export function passesOfficialBuyListFilter(item: ComparisonItem): boolean {
   return isOfficialBuyListVisible(toOfficialBuyListFilterInput(item));
 }
 
-export function applyOfficialBuyListFilter(
-  items: ComparisonItem[],
-  includeHighValue: boolean,
-): ComparisonItem[] {
-  if (includeHighValue) return items;
+export function filterToOfficialBuyList(items: ComparisonItem[]): ComparisonItem[] {
   return items.filter((item) => passesOfficialBuyListFilter(item));
-}
-
-export function countOfficialBuyListHidden(items: ComparisonItem[]): number {
-  return items.filter((item) => !passesOfficialBuyListFilter(item)).length;
 }

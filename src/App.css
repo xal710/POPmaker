@@ -1978,6 +1978,30 @@
   background: #1d4ed8;
 }
 
+.btn--internal-active {
+  background: #0f766e;
+  color: #fff;
+  border-color: #0f766e;
+}
+
+.btn--internal-active:hover:not(:disabled) {
+  background: #0d9488;
+}
+
+.meta-pill--internal {
+  background: #ecfdf5;
+  border-color: #99f6e4;
+  color: #0f766e;
+}
+
+.meta-pill--internal strong {
+  color: #0f766e;
+}
+
+.meta-pill--buylist strong {
+  color: var(--primary);
+}
+
 .announcement-banner {
   display: flex;
   gap: 12px;
