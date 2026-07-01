@@ -1,35 +1,38 @@
 import type { ComparisonItem } from "./excel";
 import {
-  cardrushLookupKey,
-  resolveCardRushPrice,
-  type CardRushPriceBucket,
-} from "./normalize";
-import { resolveItemSeries, type CardSeries } from "./series";
+  buildCardRushMatchIndex,
+  findCardRushMatch,
+  parseHareruyaIdentity,
+} from "./cardMatch";
+import type { CardRushRawRow } from "./fetch/cardrush";
+import type { HareruyaPriceEntry } from "./normalize";
+import { resolveItemSeries } from "./series";
 
 /**
  * 晴れる屋2を基準にカードラッシュ価格を突合する。
- * 同一型番でもミラー/通常は別価格として扱い、誤った価格帯での比較を避ける。
+ * 型番・カード名（大小文字区別）・ミラー種別・レアリティで構造化照合する。
  */
 export function buildComparisonItems(
-  hareruya: Map<string, { price: number; series: CardSeries | null }>,
-  cardrush: Map<string, CardRushPriceBucket>,
+  hareruya: Map<string, HareruyaPriceEntry>,
+  cardrushRows: CardRushRawRow[],
 ): ComparisonItem[] {
+  const index = buildCardRushMatchIndex(cardrushRows);
   const items: ComparisonItem[] = [];
 
-  for (const [name, entry] of hareruya) {
-    const bucket = cardrush.get(cardrushLookupKey(name));
-    if (!bucket) continue;
+  for (const [displayName, entry] of hareruya) {
+    const identity = parseHareruyaIdentity(entry.rawName);
+    if (!identity) continue;
 
-    const cardrushPrice = resolveCardRushPrice(name, bucket);
-    if (cardrushPrice === undefined) continue;
+    const match = findCardRushMatch(identity, index);
+    if (!match) continue;
 
     items.push({
       id: items.length,
-      name,
-      cardrush: cardrushPrice,
+      name: displayName,
+      cardrush: match.price,
       hareruya2: entry.price,
-      diff: entry.price - cardrushPrice,
-      series: resolveItemSeries(name, entry.series),
+      diff: entry.price - match.price,
+      series: resolveItemSeries(displayName, entry.series),
     });
   }
 

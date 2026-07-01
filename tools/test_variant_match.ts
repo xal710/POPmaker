@@ -27,7 +27,7 @@ const cardrushRows = [
 
 const items = buildComparisonItems(
   normalizeHareruyaRows(hareruyaRows),
-  normalizeCardRushRows(cardrushRows),
+  cardrushRows,
 );
 
 const regular = items.find((item) => item.name === "リーリエのピッピex〈287/742〉[MC]");

@@ -1,4 +1,3 @@
-import { isHareruyaBuyListListedSeries } from "../../shared/hareruyaBuyListPages";
 import { normalizeImageLookupKey } from "../normalize";
 import type { CardSeries } from "../series";
 
@@ -95,16 +94,6 @@ export function getHareruyaCatalogUpdatedAt(): string | null {
   return catalogCache?.updatedAt ?? null;
 }
 
-export function isVisibleBuyListProduct(product: HareruyaCatalogProduct): boolean {
-  const buyPrice = product.buy_price ?? 0;
-  const sellPrice = product.sell_price ?? 0;
-  if (buyPrice < 50) return false;
-  if (sellPrice >= 500000) return false;
-  if (!CARD_LINE_PATTERN.test(product.title)) return false;
-  if (!isHareruyaBuyListListedSeries(product.series_name)) return false;
-  return true;
-}
-
 function buildLookupIndex(products: HareruyaCatalogProduct[]): Map<string, HareruyaCatalogProduct[]> {
   const byLookupKey = new Map<string, HareruyaCatalogProduct[]>();
 
@@ -175,8 +164,7 @@ export async function loadHareruyaCatalog(options?: {
 
   const products = (data.products ?? [])
     .map(parseCatalogProduct)
-    .filter((product): product is HareruyaCatalogProduct => product !== null)
-    .filter(isVisibleBuyListProduct);
+    .filter((product): product is HareruyaCatalogProduct => product !== null);
 
   catalogCache = {
     products,

@@ -234,14 +234,20 @@ function createEmptyBucket(): CardRushPriceBucket {
   return { normal: null, mirror: null, other: null };
 }
 
+export interface HareruyaPriceEntry {
+  price: number;
+  series: import("./series").CardSeries | null;
+  rawName: string;
+}
+
 export function normalizeHareruyaRows(
   rows: RawPriceRow[],
-): Map<string, { price: number; series: import("./series").CardSeries | null }> {
-  const map = new Map<string, { price: number; series: import("./series").CardSeries | null }>();
+): Map<string, HareruyaPriceEntry> {
+  const map = new Map<string, HareruyaPriceEntry>();
 
   for (const row of rows) {
     const key = normalizeHareruyaName(row.name);
-    map.set(key, { price: row.price, series: row.series });
+    map.set(key, { price: row.price, series: row.series, rawName: row.name });
   }
 
   return map;

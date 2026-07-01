@@ -3,7 +3,7 @@ import { persistComparisonPayload } from "./comparisonBackup";
 import type { ComparisonPayload } from "./excel";
 import { fetchCardRushBuyPrices } from "./fetch/cardrush";
 import { fetchHareruyaBuyPrices } from "./fetch/hareruya";
-import { normalizeCardRushRows, normalizeHareruyaRows } from "./normalize";
+import { normalizeHareruyaRows } from "./normalize";
 
 export interface RefreshProgress {
   status: "idle" | "running" | "done" | "error";
@@ -64,8 +64,7 @@ export async function refreshComparisonFromWeb(): Promise<ComparisonPayload> {
       updateProgress({ message: "価格を突合・比較しています..." });
 
       const hareruyaMap = normalizeHareruyaRows(hareruyaResult.rows);
-      const cardrushMap = normalizeCardRushRows(cardrushResult.rows);
-      const items = buildComparisonItems(hareruyaMap, cardrushMap);
+      const items = buildComparisonItems(hareruyaMap, cardrushResult.rows);
 
       if (items.length === 0) {
         throw new Error("比較できるカードが見つかりませんでした。名称マッチングを確認してください。");

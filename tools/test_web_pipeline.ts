@@ -13,8 +13,7 @@ const cardrush = await fetchCardRushBuyPrices((m) => console.log(m));
 console.log("Cardrush rows:", cardrush.rows.length);
 
 const hareruyaMap = normalizeHareruyaRows(hareruyaResult.rows);
-const cardrushMap = normalizeCardRushRows(cardrush.rows);
-const items = buildComparisonItems(hareruyaMap, cardrushMap);
+const items = buildComparisonItems(hareruyaMap, cardrush.rows);
 
 console.log("Normalized hareruya:", hareruyaMap.size);
 console.log("Normalized cardrush:", cardrushMap.size);

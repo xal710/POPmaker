@@ -49,10 +49,8 @@ for (const row of cardrushSamples) {
 }
 
 const items = buildComparisonItems(
-  normalizeHareruyaRows(
-    hareruyaSamples.map((name, index) => ({ name, price: 1000 - index * 100, series: null })),
-  ),
-  normalizeCardRushRows(cardrushSamples),
+  normalizeHareruyaRows(hareruyaSamples.map((name, index) => ({ name, price: 1000 - index * 100, series: null }))),
+  cardrushSamples,
 );
 
 console.log("\n=== Matched items ===");

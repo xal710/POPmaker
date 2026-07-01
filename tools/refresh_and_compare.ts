@@ -10,8 +10,7 @@ const hareruyaResult = await fetchHareruyaBuyPrices();
 const cardrushResult = await fetchCardRushBuyPrices();
 
 const hareruyaMap = normalizeHareruyaRows(hareruyaResult.rows);
-const cardrushMap = normalizeCardRushRows(cardrushResult.rows);
-const items = buildComparisonItems(hareruyaMap, cardrushMap);
+const items = buildComparisonItems(hareruyaMap, cardrushResult.rows);
 
 saveComparisonPayload({
   updatedAt: new Date().toISOString(),
