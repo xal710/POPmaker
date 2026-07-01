@@ -10,6 +10,7 @@ interface UseAdminPanelResult {
   error: string | null;
   reload: () => Promise<void>;
   saveAnnouncement: (announcement: string, targets: string[] | null) => Promise<boolean>;
+  deleteAnnouncement: () => Promise<boolean>;
   saveDebugMemo: (value: string) => Promise<boolean>;
 }
 
@@ -95,6 +96,11 @@ export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
     [patchSettings],
   );
 
+  const deleteAnnouncement = useCallback(
+    async () => patchSettings({ announcement: "", announcementTargets: null }),
+    [patchSettings],
+  );
+
   const saveDebugMemo = useCallback(
     async (value: string) => patchSettings({ debugMemo: value }),
     [patchSettings],
@@ -108,6 +114,7 @@ export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
     error,
     reload,
     saveAnnouncement,
+    deleteAnnouncement,
     saveDebugMemo,
   };
 }

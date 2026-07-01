@@ -236,6 +236,7 @@ function App() {
             saving={adminPanel.saving}
             error={adminPanel.error}
             onSaveAnnouncement={adminPanel.saveAnnouncement}
+            onDeleteAnnouncement={adminPanel.deleteAnnouncement}
             onSaveDebugMemo={adminPanel.saveDebugMemo}
             onAnnouncementSaved={() => void reloadAnnouncement()}
           />

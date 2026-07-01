@@ -2193,6 +2193,16 @@
   color: #047857;
 }
 
+.admin-tools__delete-btn:not(:disabled) {
+  color: var(--danger);
+  border-color: #fecaca;
+}
+
+.admin-tools__delete-btn:not(:disabled):hover {
+  background: var(--danger-soft);
+  border-color: #fca5a5;
+}
+
 .admin-target-picker {
   display: flex;
   flex-direction: column;

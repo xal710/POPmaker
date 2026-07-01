@@ -15,6 +15,7 @@ interface AdminToolsPanelProps {
   saving: boolean;
   error: string | null;
   onSaveAnnouncement: (announcement: string, targets: string[] | null) => Promise<boolean>;
+  onDeleteAnnouncement: () => Promise<boolean>;
   onSaveDebugMemo: (value: string) => Promise<boolean>;
   onAnnouncementSaved?: () => void;
 }
@@ -26,6 +27,7 @@ export function AdminToolsPanel({
   saving,
   error,
   onSaveAnnouncement,
+  onDeleteAnnouncement,
   onSaveDebugMemo,
   onAnnouncementSaved,
 }: AdminToolsPanelProps) {
@@ -83,6 +85,30 @@ export function AdminToolsPanel({
       onAnnouncementSaved?.();
     }
   };
+
+  const handleDeleteAnnouncement = async () => {
+    const hasSavedAnnouncement = Boolean(settings?.announcement.trim());
+    const hasDraft = Boolean(announcementDraft.trim());
+    if (!hasSavedAnnouncement && !hasDraft) return;
+
+    if (
+      hasSavedAnnouncement &&
+      !window.confirm("保存済みのアナウンスを削除しますか？全アカウントの画面上部から消えます。")
+    ) {
+      return;
+    }
+
+    setSaveMessage(null);
+    const ok = await onDeleteAnnouncement();
+    if (ok) {
+      setAnnouncementDraft("");
+      setAnnouncementTargetsDraft(new Set(accountUsernames));
+      setSaveMessage("アナウンスを削除しました");
+      onAnnouncementSaved?.();
+    }
+  };
+
+  const canDeleteAnnouncement = Boolean(settings?.announcement.trim() || announcementDraft.trim());
 
   const handleSaveDebugMemo = async () => {
     setSaveMessage(null);
@@ -204,6 +230,14 @@ export function AdminToolsPanel({
               disabled={loading || saving || selectedTargetCount === 0}
             >
               {saving ? "保存中..." : "アナウンスを保存"}
+            </button>
+            <button
+              type="button"
+              className="btn btn--secondary admin-tools__delete-btn"
+              onClick={() => void handleDeleteAnnouncement()}
+              disabled={loading || saving || !canDeleteAnnouncement}
+            >
+              {saving ? "処理中..." : "アナウンスを削除"}
             </button>
           </div>
         </section>
