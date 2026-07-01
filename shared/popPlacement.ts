@@ -45,7 +45,7 @@ export type PopPlacementAssignmentStore = Record<string, Record<string, StoredWa
 
 export const POP_PLACEMENT_LAYOUT_VERSION = 2;
 
-export const POP_PLACEMENT_ONLINE_USERNAMES = ["Yousei710", "akito00"] as const;
+export const POP_PLACEMENT_ONLINE_USERNAMES = ["administrator", "Yousei710", "akito00"] as const;
 
 export type PopPlacementOnlineUsername = (typeof POP_PLACEMENT_ONLINE_USERNAMES)[number];
 

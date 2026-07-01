@@ -2,6 +2,7 @@ import {
   normalizeHareruyaPackCode,
   resolveHareruyaDisplayPackCode,
 } from "../../shared/hareruyaPack";
+import type { ComparisonItem } from "../types";
 
 export function formatYen(value: number): string {
   return `¥${value.toLocaleString("ja-JP")}`;
@@ -19,16 +20,23 @@ export function formatDateTime(date: Date): string {
 
 export type DiffTone = "positive" | "negative" | "zero";
 
-export function getDiffTone(diff: number): DiffTone {
+export function getDiffTone(diff: number | null): DiffTone {
+  if (diff === null) return "zero";
   if (diff > 0) return "positive";
   if (diff < 0) return "negative";
   return "zero";
 }
 
-export function formatDiff(diff: number): string {
+export function formatDiff(diff: number | null): string {
+  if (diff === null) return "—";
   if (diff === 0) return "±0";
   const sign = diff > 0 ? "+" : "";
   return `${sign}${formatYen(diff)}`;
+}
+
+export function formatOptionalYen(value: number | null): string {
+  if (value === null) return "—";
+  return formatYen(value);
 }
 
 /** 金額入力欄の文字列を円単位の数値に変換 */
@@ -65,6 +73,13 @@ export function formatHareruyaBuyListName(name: string): string {
   return normalized.replace(/\[([^\]]+)\]/g, (_match, packCode: string) => {
     return `[${resolveHareruyaDisplayPackCode(normalized, packCode)}]`;
   });
+}
+
+/** 比較リストのカード名表示（晴れる屋2買取表準拠） */
+export function getComparisonListCardName(
+  item: Pick<ComparisonItem, "name" | "hareruyaTitle">,
+): string {
+  return formatHareruyaBuyListName(item.hareruyaTitle ?? item.name);
 }
 
 /**

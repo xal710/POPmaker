@@ -2,7 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ComparisonList } from "./components/ComparisonList";
 
-import { FilterPanel, DEFAULT_PRICE_FILTER } from "./components/FilterPanel";
+import { AdminToolsPanel } from "./components/AdminToolsPanel";
+import { AnnouncementBanner } from "./components/AnnouncementBanner";
+
+import { FilterPanel, DEFAULT_MATCH_FILTER, DEFAULT_PRICE_FILTER } from "./components/FilterPanel";
 
 import { Header, type AppView } from "./components/Header";
 
@@ -18,6 +21,9 @@ import { SearchBar } from "./components/SearchBar";
 import { useCardSearch } from "./hooks/useCardSearch";
 
 import { useComparisonData } from "./hooks/useComparisonData";
+import { useAdminMode } from "./hooks/useAdminMode";
+import { useAdminPanel } from "./hooks/useAdminPanel";
+import { useAnnouncement } from "./hooks/useAnnouncement";
 import { useAuthUser } from "./hooks/useAuthUser";
 import { usePopPlacementOnlineSync } from "./hooks/usePopPlacementOnlineSync";
 
@@ -35,8 +41,12 @@ import {
   type ComparisonSortState,
 } from "./utils/comparisonSort";
 import { applyPriceFilter, isPriceFilterActive } from "./utils/priceFilter";
+import { mergeComparisonItems } from "./utils/comparisonItems";
+import { applyMatchFilter, isMatchFilterActive } from "./utils/matchFilter";
 
 import { filterBySeries, type SeriesFilter as SeriesFilterValue } from "./utils/series";
+
+import { isAdministrator } from "../shared/admin";
 
 import "./App.css";
 
@@ -50,6 +60,14 @@ function App() {
     useComparisonData();
 
   const { username } = useAuthUser();
+  const isAdminUser = isAdministrator(username);
+  const { adminMode, toggleAdminMode } = useAdminMode(isAdminUser);
+  const {
+    announcement,
+    updatedAt: announcementUpdatedAt,
+    reload: reloadAnnouncement,
+  } = useAnnouncement();
+  const adminPanel = useAdminPanel(isAdminUser && adminMode);
   usePopPlacementOnlineSync(username);
 
   const {
@@ -69,20 +87,20 @@ function App() {
 
   const [filterOpen, setFilterOpen] = useState(false);
 
+  const [matchFilter, setMatchFilter] = useState(DEFAULT_MATCH_FILTER);
+
   const [seriesFilter, setSeriesFilter] = useState<SeriesFilterValue>("all");
 
   const [priceFilter, setPriceFilter] = useState(DEFAULT_PRICE_FILTER);
   const [sort, setSort] = useState<ComparisonSortState>(DEFAULT_COMPARISON_SORT);
 
-  const items = data?.items ?? [];
+  const allItems = useMemo(() => mergeComparisonItems(data), [data]);
 
   const filteredItems = useMemo(() => {
-
-    const byPrice = applyPriceFilter(items, priceFilter);
-
+    const byMatch = applyMatchFilter(allItems, matchFilter);
+    const byPrice = applyPriceFilter(byMatch, priceFilter);
     return filterBySeries(byPrice, seriesFilter);
-
-  }, [items, priceFilter, seriesFilter]);
+  }, [allItems, matchFilter, priceFilter, seriesFilter]);
 
 
 
@@ -99,7 +117,7 @@ function App() {
 
   useEffect(() => {
     setListPage(1);
-  }, [debouncedSearchQuery, seriesFilter, priceFilter, sort]);
+  }, [debouncedSearchQuery, matchFilter, seriesFilter, priceFilter, sort]);
 
   const handleSortChange = useCallback((key: ComparisonSortKey) => {
     setSort((current) => toggleComparisonSort(current, key));
@@ -130,22 +148,22 @@ function App() {
 
 
 
+  const isMatchFiltered = isMatchFilterActive(matchFilter);
+
   const isSeriesFiltered = seriesFilter !== "all";
 
   const isPriceFiltered = isPriceFilterActive(priceFilter);
 
-  const isListFiltered = isSearching || isSeriesFiltered || isPriceFiltered;
+  const isListFiltered = isSearching || isMatchFiltered || isSeriesFiltered || isPriceFiltered;
 
   const visibleCount = isSearching ? resultCount : filteredItems.length;
 
 
 
   const clearFilters = () => {
-
+    setMatchFilter(DEFAULT_MATCH_FILTER);
     setSeriesFilter("all");
-
     setPriceFilter(DEFAULT_PRICE_FILTER);
-
   };
 
 
@@ -182,11 +200,32 @@ function App() {
 
         onNavigate={setView}
 
+        isAdministrator={isAdminUser}
+
+        adminMode={adminMode}
+
+        onAdminModeToggle={toggleAdminMode}
+
       />
 
 
 
       <main className="app-main">
+
+        <AnnouncementBanner announcement={announcement} updatedAt={announcementUpdatedAt} />
+
+        {isAdminUser && adminMode && (
+          <AdminToolsPanel
+            accounts={adminPanel.accounts}
+            settings={adminPanel.settings}
+            loading={adminPanel.loading}
+            saving={adminPanel.saving}
+            error={adminPanel.error}
+            onSaveAnnouncement={adminPanel.saveAnnouncement}
+            onSaveDebugMemo={adminPanel.saveDebugMemo}
+            onAnnouncementSaved={() => void reloadAnnouncement()}
+          />
+        )}
 
         {view === "tweetHistory" ? (
 
@@ -199,7 +238,7 @@ function App() {
         ) : view === "popPlacement" ? (
 
           <PopPlacementView
-            comparisonItems={items}
+            comparisonItems={allItems}
             pendingPlacement={pendingPlacement}
             onPendingPlacementConsumed={() => setPendingPlacement(null)}
             onCancelPendingPlacement={() => setPendingPlacement(null)}
@@ -233,7 +272,7 @@ function App() {
 
 
 
-        {!loading || items.length > 0 ? (
+        {!loading || allItems.length > 0 ? (
 
           <>
 
@@ -257,25 +296,17 @@ function App() {
             />
 
             <FilterPanel
-
               open={filterOpen}
-
               onToggle={() => setFilterOpen((value) => !value)}
-
-              items={items}
-
+              items={allItems}
+              matchFilter={matchFilter}
+              onMatchFilterChange={setMatchFilter}
               seriesFilter={seriesFilter}
-
               onSeriesFilterChange={setSeriesFilter}
-
               priceFilter={priceFilter}
-
               onPriceFilterChange={setPriceFilter}
-
               onClear={clearFilters}
-
               filteredCount={filteredItems.length}
-
             />
 
           </>
@@ -284,7 +315,7 @@ function App() {
 
 
 
-        {loading && items.length === 0 ? (
+        {loading && allItems.length === 0 ? (
 
           <div className="loading-state">
 
@@ -315,9 +346,9 @@ function App() {
             <p>絞り込み条件に一致するカードがありません</p>
 
             <p className="empty-state__hint">
-
-              金額の上限・下限やシリーズを変更するか、「条件をクリア」でリセットしてください。
-
+              {matchFilter === "unmatched"
+                ? "「最新価格を取得」でデータを更新するか、絞り込み条件を変更してください。"
+                : "金額の上限・下限やシリーズを変更するか、「条件をクリア」でリセットしてください。"}
             </p>
 
           </div>

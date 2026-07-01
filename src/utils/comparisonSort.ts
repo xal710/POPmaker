@@ -19,6 +19,12 @@ export const COMPARISON_SORT_LABELS: Record<ComparisonSortKey, string> = {
   diff: "差額",
 };
 
+function sortValue(item: ComparisonItem, key: ComparisonSortKey): number {
+  const value = item[key];
+  if (value === null) return Number.NEGATIVE_INFINITY;
+  return value;
+}
+
 export function sortComparisonItems(
   items: ComparisonItem[],
   sort: ComparisonSortState,
@@ -26,8 +32,8 @@ export function sortComparisonItems(
   const factor = sort.direction === "desc" ? -1 : 1;
 
   return [...items].sort((a, b) => {
-    const left = a[sort.key];
-    const right = b[sort.key];
+    const left = sortValue(a, sort.key);
+    const right = sortValue(b, sort.key);
     if (left !== right) return (left - right) * factor;
     return a.id - b.id;
   });

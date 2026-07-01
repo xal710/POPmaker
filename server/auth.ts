@@ -2,6 +2,8 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Connect } from "vite";
 import { sendJson } from "./http";
+import { ADMIN_USERNAME, type AdminAccountSummary } from "../shared/admin";
+import { canUsePopPlacementOnline } from "../shared/popPlacement";
 
 const AUTH_COOKIE = "pop_auth";
 const COOKIE_MAX_AGE_SEC = 60 * 60 * 24 * 30;
@@ -17,11 +19,20 @@ interface SiteAccount {
 
 function getSiteAccounts(): SiteAccount[] {
   return [
+    { username: "administrator", password: process.env.ACCOUNT_ADMINISTRATOR_PASSWORD ?? "as214117" },
     { username: "Yousei710", password: process.env.ACCOUNT_YOUSEI710_PASSWORD ?? "as214117" },
     { username: "akito00", password: process.env.ACCOUNT_AKITO00_PASSWORD ?? "12390248" },
     { username: "k.ishigaki", password: process.env.ACCOUNT_K_ISHIGAKI_PASSWORD ?? "ka1214" },
     { username: "20260605", password: process.env.ACCOUNT_20260605_PASSWORD ?? "kouki0306" },
   ];
+}
+
+export function listSiteAccountSummaries(): AdminAccountSummary[] {
+  return getSiteAccounts().map((account) => ({
+    username: account.username,
+    isAdministrator: account.username === ADMIN_USERNAME,
+    canUsePopPlacementOnline: canUsePopPlacementOnline(account.username),
+  }));
 }
 
 function safeEqual(left: string, right: string): boolean {

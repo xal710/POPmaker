@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { ComparisonItem } from "../types";
-import { formatDiff, getDiffTone } from "../utils/format";
+import { formatDiff, getComparisonListCardName, getDiffTone } from "../utils/format";
 
 interface SearchBarProps {
   query: string;
@@ -114,7 +114,7 @@ export function SearchBar({
               type="search"
               enterKeyHint="search"
               value={query}
-              placeholder="カード名・型番・エキスパンション（例: リザードン, 003/032, M5, pikachu）"
+              placeholder="カード名・型番・レアリティ・エキスパンション（例: リザードン, SR, 003/032, M5）"
               autoComplete="off"
               role="combobox"
               aria-expanded={showSuggestions}
@@ -176,7 +176,7 @@ export function SearchBar({
                 onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => handleSelect(item)}
               >
-                <span className="search-bar__suggestion-name">{item.name}</span>
+                <span className="search-bar__suggestion-name">{getComparisonListCardName(item)}</span>
                 <span
                   className={`search-bar__suggestion-diff search-bar__suggestion-diff--${getDiffTone(item.diff)}`}
                 >

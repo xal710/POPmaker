@@ -1,4 +1,4 @@
-import { buildComparisonItems } from "./compare";
+import { buildComparisonResult } from "./compare";
 import { persistComparisonPayload } from "./comparisonBackup";
 import type { ComparisonPayload } from "./excel";
 import { fetchCardRushBuyPrices } from "./fetch/cardrush";
@@ -64,9 +64,12 @@ export async function refreshComparisonFromWeb(): Promise<ComparisonPayload> {
       updateProgress({ message: "価格を突合・比較しています..." });
 
       const hareruyaMap = normalizeHareruyaRows(hareruyaResult.rows);
-      const items = buildComparisonItems(hareruyaMap, cardrushResult.rows);
+      const { items, unmatchedHareruya } = buildComparisonResult(
+        hareruyaMap,
+        cardrushResult.rows,
+      );
 
-      if (items.length === 0) {
+      if (items.length === 0 && unmatchedHareruya.length === 0) {
         throw new Error("比較できるカードが見つかりませんでした。名称マッチングを確認してください。");
       }
 
@@ -78,6 +81,7 @@ export async function refreshComparisonFromWeb(): Promise<ComparisonPayload> {
         dataDate: new Date().toISOString().slice(0, 10).replace(/-/g, ""),
         hareruyaBuyListUpdatedAt: hareruyaResult.pageUpdatedAt,
         items,
+        unmatchedHareruya,
         warning: undefined,
       };
 
@@ -85,7 +89,7 @@ export async function refreshComparisonFromWeb(): Promise<ComparisonPayload> {
 
       updateProgress({
         status: "done",
-        message: `更新完了（${items.length.toLocaleString("ja-JP")}件）`,
+        message: `更新完了（比較 ${items.length.toLocaleString("ja-JP")}件 / 未比較 ${unmatchedHareruya.length.toLocaleString("ja-JP")}件）`,
         finishedAt: new Date().toISOString(),
       });
 

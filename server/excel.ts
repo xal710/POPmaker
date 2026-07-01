@@ -18,6 +18,20 @@ export interface ComparisonItem {
   hareruya2: number;
   diff: number;
   series?: "M" | "SV" | "S" | "SM" | "XY" | "BW";
+  /** 比較済み（省略時は true） */
+  matched?: boolean;
+  /** 晴れる屋2買取表の生タイトル（リスト表示用） */
+  hareruyaTitle?: string;
+  /** 晴れる屋2のレアリティ（検索用） */
+  rarity?: string;
+}
+
+export interface HareruyaOnlyItem {
+  id: number;
+  name: string;
+  hareruya2: number;
+  series?: ComparisonItem["series"];
+  hareruyaTitle?: string;
 }
 
 export interface ComparisonPayload {
@@ -28,6 +42,7 @@ export interface ComparisonPayload {
   dataDate: string | null;
   hareruyaBuyListUpdatedAt?: Partial<Record<string, string>>;
   items: ComparisonItem[];
+  unmatchedHareruya?: HareruyaOnlyItem[];
   warning?: string;
 }
 

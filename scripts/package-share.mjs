@@ -6,7 +6,7 @@ import { execSync } from "node:child_process";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 const productName = pkg.build?.productName ?? "POP作成ツール";
-const releaseDir = join(root, "release-build");
+const releaseDir = join(root, process.env.POP_RELEASE_DIR ?? "release-build");
 const shareRoot = join(root, "share");
 const shareDir = join(shareRoot, productName);
 const zipPath = join(shareRoot, `${productName}.zip`);

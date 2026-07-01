@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import connect, { type Connect } from "connect";
 import serveStatic from "serve-static";
+import { createAdminMiddleware } from "./adminApi";
 import { createAuthMiddleware } from "./auth";
 import { createCardImageMiddleware } from "./cardImageApi";
 import { createComparisonMiddleware } from "./comparisonApi";
@@ -28,6 +29,7 @@ export function createPopApp(options: CreatePopAppOptions): Connect.Server {
 
   app.use(createComparisonMiddleware());
   app.use(createCardImageMiddleware());
+  app.use(createAdminMiddleware());
   if (enableTweetHistory) {
     app.use(createTweetHistoryMiddleware());
   }

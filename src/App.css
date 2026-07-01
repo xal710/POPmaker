@@ -380,6 +380,22 @@
   text-decoration-color: currentColor;
 }
 
+.comparison-row__badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.14);
+  color: #4338ca;
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.price-chip--muted {
+  opacity: 0.55;
+}
+
 .comparison-row__prices {
   display: flex;
   flex-wrap: wrap;
@@ -1949,5 +1965,216 @@
   .wall-face__input-row {
     flex-direction: column;
     align-items: stretch;
+  }
+}
+
+.btn--admin-active {
+  background: #1e3a8a;
+  color: #fff;
+  border-color: #1e3a8a;
+}
+
+.btn--admin-active:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.announcement-banner {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
+
+.announcement-banner__label {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.announcement-banner__body {
+  min-width: 0;
+}
+
+.announcement-banner__text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.announcement-banner__meta {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.admin-tools {
+  background: var(--surface);
+  border: 1px solid #c7d2fe;
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-tools__header {
+  margin-bottom: 16px;
+}
+
+.admin-tools__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e3a8a;
+}
+
+.admin-tools__subtitle {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.admin-tools__error {
+  margin: 0 0 12px;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.admin-tools__status {
+  margin: 0 0 12px;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.admin-tools__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-tools__card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+}
+
+.admin-tools__card--wide {
+  grid-column: 1 / -1;
+}
+
+.admin-tools__card-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.admin-tools__hint,
+.admin-tools__muted,
+.admin-tools__updated {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.admin-tools__textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.admin-tools__textarea--mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+
+.admin-tools__textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.admin-tools__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-account-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-account-list__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.admin-account-list__name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.admin-account-list__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.admin-badge--admin {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.admin-badge--sync {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+@media (max-width: 768px) {
+  .admin-tools__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .announcement-banner {
+    flex-direction: column;
   }
 }

@@ -1,10 +1,22 @@
 export interface ComparisonItem {
   id: number;
   name: string;
-  cardrush: number;
+  hareruyaTitle?: string;
+  rarity?: string;
   hareruya2: number;
-  diff: number;
+  cardrush: number | null;
+  diff: number | null;
   series?: "M" | "SV" | "S" | "SM" | "XY" | "BW";
+  matched: boolean;
+}
+
+export interface HareruyaOnlyItem {
+  id: number;
+  name: string;
+  hareruyaTitle?: string;
+  rarity?: string;
+  hareruya2: number;
+  series?: ComparisonItem["series"];
 }
 
 export interface ComparisonData {
@@ -15,5 +27,14 @@ export interface ComparisonData {
   dataDate?: string | null;
   hareruyaBuyListUpdatedAt?: Partial<Record<string, string>>;
   warning?: string;
-  items: ComparisonItem[];
+  items: Array<
+    Omit<ComparisonItem, "matched" | "cardrush" | "diff"> & {
+      cardrush: number;
+      diff: number;
+      matched?: boolean;
+      hareruyaTitle?: string;
+      rarity?: string;
+    }
+  >;
+  unmatchedHareruya?: HareruyaOnlyItem[];
 }

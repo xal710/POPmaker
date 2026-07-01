@@ -20,6 +20,9 @@ interface HeaderProps {
   hareruyaBuyListUpdatedAt?: Partial<Record<string, string>>;
   view?: AppView;
   onNavigate?: (view: AppView) => void;
+  isAdministrator?: boolean;
+  adminMode?: boolean;
+  onAdminModeToggle?: () => void;
 }
 
 function formatDataDate(value: string | null | undefined): string {
@@ -74,6 +77,9 @@ export function Header({
   hareruyaBuyListUpdatedAt,
   view = "tool",
   onNavigate,
+  isAdministrator = false,
+  adminMode = false,
+  onAdminModeToggle,
 }: HeaderProps) {
   const busy = loading || refreshing;
   const isToolView = view === "tool";
@@ -86,6 +92,17 @@ export function Header({
           <h1 className="app-header__title">{getHeaderTitle(view)}</h1>
         </div>
         <div className="app-header__actions">
+          {isAdministrator && onAdminModeToggle && (
+            <button
+              type="button"
+              className={`btn btn--secondary${adminMode ? " btn--admin-active" : ""}`}
+              onClick={onAdminModeToggle}
+              disabled={busy}
+              aria-pressed={adminMode}
+            >
+              {adminMode ? "管理者モード ON" : "管理者モード"}
+            </button>
+          )}
           {onNavigate && isToolView && (
             <>
               <button

@@ -39,6 +39,7 @@ export function buildTweetHistorySearchIndex(entries: TweetHistoryEntry[]): Twee
     cardrush: 0,
     hareruya2: 0,
     diff: 0,
+    matched: true,
   }));
   return { prepared: prepareSearchIndex(items), entries };
 }

@@ -61,12 +61,21 @@ export function applyPriceFilter(
   const cardrushMax = parseBound(filter.cardrushMax);
 
   return items.filter((item) => {
-    if (filter.diffSign === "positive" && item.diff <= 0) return false;
-    if (filter.diffSign === "negative" && item.diff >= 0) return false;
+    if (!item.matched) {
+      if (filter.diffSign !== "all") return false;
+      if (filter.diffMin.trim() || filter.diffMax.trim()) return false;
+      if (filter.cardrushMin.trim() || filter.cardrushMax.trim()) return false;
+      return withinRange(item.hareruya2, hareruyaMin, hareruyaMax);
+    }
 
-    if (!withinRange(item.diff, diffMin, diffMax)) return false;
+    if (filter.diffSign === "positive" && (item.diff ?? 0) <= 0) return false;
+    if (filter.diffSign === "negative" && (item.diff ?? 0) >= 0) return false;
+
+    if (item.diff !== null && !withinRange(item.diff, diffMin, diffMax)) return false;
     if (!withinRange(item.hareruya2, hareruyaMin, hareruyaMax)) return false;
-    if (!withinRange(item.cardrush, cardrushMin, cardrushMax)) return false;
+    if (item.cardrush !== null && !withinRange(item.cardrush, cardrushMin, cardrushMax)) {
+      return false;
+    }
 
     return true;
   });

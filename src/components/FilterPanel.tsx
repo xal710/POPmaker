@@ -8,6 +8,14 @@ import {
   type PriceFilterState,
 } from "../utils/priceFilter";
 import {
+  applyMatchFilter,
+  countByMatchFilter,
+  DEFAULT_MATCH_FILTER,
+  isMatchFilterActive,
+  MATCH_FILTER_LABELS,
+  type MatchFilter,
+} from "../utils/matchFilter";
+import {
   countBySeries,
   SERIES_LABELS,
   SERIES_OPTIONS,
@@ -18,6 +26,8 @@ interface FilterPanelProps {
   open: boolean;
   onToggle: () => void;
   items: ComparisonItem[];
+  matchFilter: MatchFilter;
+  onMatchFilterChange: (value: MatchFilter) => void;
   seriesFilter: SeriesFilterValue;
   onSeriesFilterChange: (value: SeriesFilterValue) => void;
   priceFilter: PriceFilterState;
@@ -88,6 +98,8 @@ export function FilterPanel({
   open,
   onToggle,
   items,
+  matchFilter,
+  onMatchFilterChange,
   seriesFilter,
   onSeriesFilterChange,
   priceFilter,
@@ -96,14 +108,23 @@ export function FilterPanel({
   filteredCount,
 }: FilterPanelProps) {
   const panelId = useId();
+  const seriesSource = useMemo(
+    () => (open ? applyMatchFilter(items, matchFilter) : []),
+    [open, items, matchFilter],
+  );
   const seriesCounts = useMemo(
-    () => (open ? countBySeries(items) : null),
+    () => (open ? countBySeries(seriesSource) : null),
+    [open, seriesSource],
+  );
+  const matchCounts = useMemo(
+    () => (open ? countByMatchFilter(items) : null),
     [open, items],
   );
   const seriesActive = seriesFilter !== "all";
+  const matchActive = isMatchFilterActive(matchFilter);
   const priceActive = isPriceFilterActive(priceFilter);
   const activeCount =
-    (seriesActive ? 1 : 0) + countActivePriceFilters(priceFilter);
+    (matchActive ? 1 : 0) + (seriesActive ? 1 : 0) + countActivePriceFilters(priceFilter);
 
   const updatePrice = (patch: Partial<PriceFilterState>) => {
     onPriceFilterChange({ ...priceFilter, ...patch });
@@ -146,6 +167,33 @@ export function FilterPanel({
           </div>
 
           <div className="filter-panel__section">
+            <h3 className="filter-panel__title">比較状態</h3>
+            <div className="series-filter__buttons" role="group" aria-label="比較状態で絞り込み">
+              {(Object.keys(MATCH_FILTER_LABELS) as MatchFilter[]).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={`series-filter__btn${
+                    matchFilter === value ? " series-filter__btn--active" : ""
+                  }`}
+                  onClick={() => onMatchFilterChange(value)}
+                  aria-pressed={matchFilter === value}
+                >
+                  {MATCH_FILTER_LABELS[value]}
+                  <span className="series-filter__count">
+                    {(matchCounts?.[value] ?? 0).toLocaleString("ja-JP")}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {matchFilter === "unmatched" && (
+              <p className="price-filter__hint">
+                カードラッシュにない晴れる屋2のカードです。晴れる屋2の買取価格でPOPを作成できます。
+              </p>
+            )}
+          </div>
+
+          <div className="filter-panel__section">
             <h3 className="filter-panel__title">シリーズ</h3>
             <div className="series-filter__buttons" role="group" aria-label="シリーズで絞り込み">
               <button
@@ -157,7 +205,7 @@ export function FilterPanel({
                 aria-pressed={seriesFilter === "all"}
               >
                 すべて
-                <span className="series-filter__count">{items.length.toLocaleString("ja-JP")}</span>
+                <span className="series-filter__count">{seriesSource.length.toLocaleString("ja-JP")}</span>
               </button>
               {SERIES_OPTIONS.map((series) => (
                 <button
@@ -240,3 +288,4 @@ export function FilterPanel({
 }
 
 export { DEFAULT_PRICE_FILTER };
+export { DEFAULT_MATCH_FILTER };

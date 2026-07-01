@@ -1,5 +1,6 @@
 import { createServer, type Server } from "node:http";
 import { resolve } from "node:path";
+import { ensureAdminSettingsFile } from "./adminStore";
 import { createPopApp } from "./createApp";
 import { ensureComparisonDataFile, getProjectRoot } from "./config";
 import { ensurePopPlacementDataFile } from "./popPlacementBackup";
@@ -28,6 +29,7 @@ export async function startPopServer(options: StartPopServerOptions = {}): Promi
   process.env.PROJECT_ROOT ??= root;
   ensureComparisonDataFile();
   ensurePopPlacementDataFile();
+  ensureAdminSettingsFile();
 
   const app = createPopApp({
     distDir,

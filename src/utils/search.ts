@@ -1,9 +1,14 @@
 import * as wanakana from "wanakana";
+import {
+  extractHareruyaRarityFromTitle,
+  isRaritySearchToken,
+  rarityMatches,
+  raritySearchText,
+} from "../../shared/hareruyaRarity";
 import type { ComparisonItem } from "../types";
-
 const CARD_NAME_PATTERN = /^(.+?)〈([^〉]+)〉\[([^\]]+)\]$/;
 
-const STRIP_SYMBOLS = /[〈〉＜＞\[\]【】()（）{}｛｝:：\\・･\-－—_＿,，.．!！?？☆★♦♢*＊+＋#＃@＠&＆'"`´'']/g;
+const STRIP_SYMBOLS = /[〈〉＜＞\[\]【】()（）{}｛｝:：\\・･\-－—_＿,，.．!！?？♦♢*＊+＋#＃@＠&＆'"`´'']/g;
 
 const LATIN_TOKEN = /^[a-z0-9][a-z0-9+\-]*$/i;
 
@@ -23,6 +28,7 @@ function isPackLikeToken(token: string): boolean {
 export function shouldKeepLatinToken(token: string): boolean {
   if (!LATIN_TOKEN.test(token)) return false;
   if (RARITY_TOKENS.has(token)) return true;
+  if (isRaritySearchToken(token)) return true;
   return isPackLikeToken(token);
 }
 
@@ -37,6 +43,7 @@ export interface SearchIndexEntry {
   cardName: string;
   number: string;
   pack: string;
+  rarity: string | null;
   tags: string[];
   romajiName: string;
   searchText: string;
@@ -71,6 +78,7 @@ function tokenizeRaw(query: string): string[] {
   const text = query
     .normalize("NFKC")
     .replace(/(\d)\s*\/\s*(\d)/g, "$1/$2")
+    .replace(/([☆★])/g, " $1 ")
     .replace(STRIP_SYMBOLS, " ");
 
   return text.split(/\s+/).filter(Boolean);
@@ -164,6 +172,10 @@ function latinTokenMatches(entry: SearchIndexEntry, token: string): boolean {
   if (token === "vstar") return entry.tags.includes("vstar");
   if (token === "ex") return entry.tags.includes("ex");
 
+  if (isRaritySearchToken(token)) {
+    return rarityMatches(entry.rarity, token);
+  }
+
   if (packMatches(entry.pack, token)) return true;
   if (numberMatches(entry.number, token)) return true;
   if (entry.tags.includes(token)) return true;
@@ -172,6 +184,10 @@ function latinTokenMatches(entry: SearchIndexEntry, token: string): boolean {
 }
 
 function japaneseTokenMatches(entry: SearchIndexEntry, token: string): boolean {
+  if (isRaritySearchToken(token)) {
+    return rarityMatches(entry.rarity, token);
+  }
+
   if (token === "ボールミラー") {
     return entry.cardName.includes("ボールミラー");
   }
@@ -209,14 +225,21 @@ function tokenMatches(entry: SearchIndexEntry, token: string): boolean {
 
 export function shouldUseFuzzySearch(token: string): boolean {
   if (RARITY_TOKENS.has(token)) return false;
+  if (isRaritySearchToken(token)) return false;
   if (shouldKeepLatinToken(token)) return false;
   if (/[\u3040-\u30ff\u4e00-\u9fff]/.test(token)) return false;
   return wanakana.isRomaji(token) && token.length >= 4;
 }
 
+function resolveItemRarity(item: ComparisonItem, labelSource: string): string | null {
+  return item.rarity ?? extractHareruyaRarityFromTitle(labelSource);
+}
+
 export function buildSearchIndex(items: ComparisonItem[]): SearchIndexEntry[] {
   return items.map((item) => {
-    const parsed = parseLooseCardName(item.name);
+    const labelSource = item.hareruyaTitle ?? item.name;
+    const rarity = resolveItemRarity(item, labelSource);
+    const parsed = parseLooseCardName(labelSource);
     const cardName = parsed.cardName;
     const number = parsed.number;
     const pack = parsed.pack;
@@ -227,16 +250,20 @@ export function buildSearchIndex(items: ComparisonItem[]): SearchIndexEntry[] {
       : "";
     const normalizedCardName = normalizeToken(cardName);
     const hiraganaCardName = wanakana.toHiragana(cardName);
+    const rarityText = raritySearchText(rarity);
 
     const searchText = normalizeSearchText(
       [
         item.name,
+        labelSource,
         cardName,
         romajiName,
         hiraganaCardName,
         number,
         pack,
         numberCompact,
+        rarityText,
+        rarity,
         `${cardName} ${number} ${pack}`,
         cardName.replace(/\s/g, ""),
         ...tags,
@@ -248,6 +275,7 @@ export function buildSearchIndex(items: ComparisonItem[]): SearchIndexEntry[] {
       cardName,
       number,
       pack,
+      rarity,
       tags,
       romajiName,
       searchText,
@@ -273,6 +301,7 @@ export function scoreEntry(entry: SearchIndexEntry, tokens: string[]): number {
       if (packMatches(entry.pack, token)) score += 18;
       if (numberMatches(entry.number, token)) score += 16;
       if (entry.tags.includes(token)) score += 14;
+      if (isRaritySearchToken(token) && rarityMatches(entry.rarity, token)) score += 16;
     } else if (entry.normalizedCardName === token) {
       score += 15;
     }

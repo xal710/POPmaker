@@ -1,3 +1,7 @@
+import {
+  isRaritySearchToken,
+  rarityMatches,
+} from "../../shared/hareruyaRarity";
 import Fuse, { type IFuseOptions } from "fuse.js";
 import * as wanakana from "wanakana";
 
@@ -98,6 +102,7 @@ function entryMatches(entry: SearchIndexEntry, ctx: TokenContext): boolean {
     if (token === "vmax") return entry.tags.includes("vmax");
     if (token === "vstar") return entry.tags.includes("vstar");
     if (token === "ex") return entry.tags.includes("ex");
+    if (isRaritySearchToken(token)) return rarityMatches(entry.rarity, token);
     if (packMatches(entry.pack, token)) return true;
     if (numberMatches(entry.number, token)) return true;
     if (entry.tags.includes(token)) return true;
@@ -106,6 +111,10 @@ function entryMatches(entry: SearchIndexEntry, ctx: TokenContext): boolean {
 
   if (ctx.romaji) {
     return entry.romajiName.includes(token);
+  }
+
+  if (isRaritySearchToken(token)) {
+    return rarityMatches(entry.rarity, token);
   }
 
   if (token === "ボールミラー") {
@@ -145,6 +154,7 @@ function scoreEntryFast(entry: SearchIndexEntry, contexts: TokenContext[]): numb
       if (packMatches(entry.pack, ctx.token)) score += 18;
       if (numberMatches(entry.number, ctx.token)) score += 16;
       if (entry.tags.includes(ctx.token)) score += 14;
+      if (isRaritySearchToken(ctx.token) && rarityMatches(entry.rarity, ctx.token)) score += 16;
     } else if (entry.normalizedCardName === ctx.token) {
       score += 15;
     }
