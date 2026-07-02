@@ -10,6 +10,7 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  migratePopPlacementAssignmentsToV3,
   POP_PLACEMENT_LAYOUT_VERSION,
   type PopPlacementAssignmentStore,
   type PopPlacementPayload,
@@ -38,14 +39,30 @@ export function getWritablePopPlacementJsonPath(): string {
   return resolve(getDataDir(), "pop-placement.json");
 }
 
+function normalizePayload(parsed: PopPlacementPayload): PopPlacementPayload | null {
+  if (!parsed || typeof parsed !== "object") return null;
+  if (!parsed.assignments || typeof parsed.assignments !== "object") return null;
+  if (typeof parsed.updatedAt !== "string") return null;
+
+  if (parsed.layoutVersion === POP_PLACEMENT_LAYOUT_VERSION) {
+    return parsed;
+  }
+
+  if (parsed.layoutVersion === 2 && POP_PLACEMENT_LAYOUT_VERSION === 3) {
+    return {
+      ...parsed,
+      layoutVersion: POP_PLACEMENT_LAYOUT_VERSION,
+      assignments: migratePopPlacementAssignmentsToV3(parsed.assignments),
+    };
+  }
+
+  return null;
+}
+
 function readPayload(path: string): PopPlacementPayload | null {
   try {
     const parsed = JSON.parse(readFileSync(path, "utf-8")) as PopPlacementPayload;
-    if (!parsed || typeof parsed !== "object") return null;
-    if (parsed.layoutVersion !== POP_PLACEMENT_LAYOUT_VERSION) return null;
-    if (!parsed.assignments || typeof parsed.assignments !== "object") return null;
-    if (typeof parsed.updatedAt !== "string") return null;
-    return parsed;
+    return normalizePayload(parsed);
   } catch {
     return null;
   }

@@ -1,4 +1,6 @@
 import {
+  migratePopPlacementAssignmentsToV3,
+  POP_PLACEMENT_LAYOUT_VERSION,
   POP_PLACEMENT_SYNC_EVENT,
   type PopPlacementAssignmentStore,
   type PopPlacementPayload,
@@ -9,6 +11,7 @@ export type { StoredWallSlotPop };
 
 const STORAGE_KEY = "pop-placement-assignments-v2";
 const META_STORAGE_KEY = "pop-placement-meta-v2";
+const LAYOUT_MIGRATION_KEY = "pop-placement-layout-migrated-v3";
 
 interface PopPlacementMeta {
   updatedAt: string;
@@ -36,7 +39,19 @@ function readStore(): PopPlacementAssignmentStore {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw) as PopPlacementAssignmentStore;
-    return parsed && typeof parsed === "object" ? parsed : {};
+    if (!parsed || typeof parsed !== "object") return {};
+
+    if (
+      POP_PLACEMENT_LAYOUT_VERSION === 3 &&
+      localStorage.getItem(LAYOUT_MIGRATION_KEY) !== "1"
+    ) {
+      const migrated = migratePopPlacementAssignmentsToV3(parsed);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+      localStorage.setItem(LAYOUT_MIGRATION_KEY, "1");
+      return migrated;
+    }
+
+    return parsed;
   } catch {
     return {};
   }

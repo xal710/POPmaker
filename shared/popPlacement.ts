@@ -43,7 +43,45 @@ export interface StoredWallSlotPop {
 
 export type PopPlacementAssignmentStore = Record<string, Record<string, StoredWallSlotPop>>;
 
-export const POP_PLACEMENT_LAYOUT_VERSION = 2;
+export const POP_PLACEMENT_LAYOUT_VERSION = 3;
+
+/** 店外POP（line-1）の壁面ID */
+export const OUTSIDE_POP_WALL_ID = "line-1";
+
+const REMOVED_OUTSIDE_POP_SLOT_IDS = [
+  "line-1-slot-19",
+  "line-1-slot-20",
+  "line-1-slot-24",
+] as const;
+
+const OUTSIDE_POP_SLOT_REMAP_V3: Record<string, string> = {
+  "line-1-slot-21": "line-1-slot-19",
+  "line-1-slot-22": "line-1-slot-20",
+  "line-1-slot-23": "line-1-slot-21",
+};
+
+/** 店外POPレイアウト変更（2x3→2x2、右下1枠削除）に伴うスロットID移行 */
+export function migratePopPlacementAssignmentsToV3(
+  assignments: PopPlacementAssignmentStore,
+): PopPlacementAssignmentStore {
+  const wall = assignments[OUTSIDE_POP_WALL_ID];
+  if (!wall) return assignments;
+
+  const nextWall: Record<string, StoredWallSlotPop> = { ...wall };
+
+  for (const slotId of REMOVED_OUTSIDE_POP_SLOT_IDS) {
+    delete nextWall[slotId];
+  }
+
+  for (const [fromId, toId] of Object.entries(OUTSIDE_POP_SLOT_REMAP_V3)) {
+    const assignment = wall[fromId];
+    if (!assignment) continue;
+    delete nextWall[fromId];
+    nextWall[toId] = assignment;
+  }
+
+  return { ...assignments, [OUTSIDE_POP_WALL_ID]: nextWall };
+}
 
 export const POP_PLACEMENT_ONLINE_USERNAMES = ["administrator", "Yousei710", "akito00"] as const;
 
@@ -68,7 +106,7 @@ export const POP_PLACEMENT_SYNC_EVENT = "pop-placement-sync-applied";
 export const POP_PLACEMENT_FLOOR_PLAN = "/pop-placement/floor-plan.png";
 
 export const POP_PLACEMENT_DETAIL_IMAGES = [
-  "/pop-placement/details/wall-left.png",
+  "/pop-placement/details/outside-store-pop.png",
   "/pop-placement/details/wall-face-1.png",
   "/pop-placement/details/wall-face-2.png",
   "/pop-placement/details/wall-face-3.png",
