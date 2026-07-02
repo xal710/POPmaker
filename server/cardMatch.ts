@@ -2,6 +2,7 @@ import type { CardRushRawRow } from "./fetch/cardrush";
 import {
   detectMirrorVariantLabel,
   normalizeHareruyaPackCode,
+  stripSubsetDeckPackSuffix,
   type MirrorVariantLabel,
 } from "../shared/hareruyaPack";
 import { detectCardRushVariant } from "./normalize";
@@ -65,7 +66,7 @@ export function normalizePackForMatch(packCode: string | null | undefined): stri
   const trimmed = packCode.trim();
   if (!trimmed || trimmed === "その他") return null;
 
-  let normalized = normalizeHareruyaPackCode(trimmed);
+  let normalized = stripSubsetDeckPackSuffix(normalizeHareruyaPackCode(trimmed));
   const slashIndex = normalized.indexOf("/");
   if (slashIndex > 0) {
     normalized = normalized.slice(0, slashIndex);
@@ -147,16 +148,36 @@ export function parseHareruyaIdentity(title: string): CardIdentity | null {
   };
 }
 
+function isM2aPack(pack: string | null | undefined): boolean {
+  return normalizePackForMatch(pack) === "M2a";
+}
+
+/** マスター/モンスター以外の ○○ボールミラー（クイックボールミラー等） */
+function isGenericBallMirrorExtra(extra: string): boolean {
+  if (!extra.includes("ボールミラー")) return false;
+  if (extra.includes("マスターボールミラー")) return false;
+  if (extra.includes("モンスターボールミラー")) return false;
+  return true;
+}
+
 function resolveCardRushVariantLabel(row: CardRushRawRow): CardVariant {
   const extra = row.extraDifference?.trim() ?? "";
   const name = row.name.trim();
+  const m2a = isM2aPack(row.pack);
 
   if (extra.includes("未開封") || name.includes("未開封")) return "sealed";
   if (extra.includes("マスターボールミラー")) return "マスターボールミラー";
   if (extra.includes("モンスターボールミラー")) return "モンスターボールミラー";
-  if (extra.includes("エネルギーミラー")) return "エネルギーミラー";
   if (extra.includes("R団ミラー")) return "R団ミラー";
-  if (extra.includes("ボールミラー")) return "ボールミラー";
+
+  if (m2a) {
+    if (isGenericBallMirrorExtra(extra)) return "ボールミラー";
+    if (extra.includes("エネルギーミラー")) return "エネルギーミラー";
+  } else {
+    if (extra === "ボールミラー") return "ボールミラー";
+    if (extra === "エネルギーミラー") return "エネルギーミラー";
+  }
+
   if (extra === "ミラー" || name.includes("(ミラー)")) return "ミラー";
   return "normal";
 }
@@ -179,8 +200,18 @@ export function parseCardRushIdentity(row: CardRushRawRow): CardIdentity | null 
   };
 }
 
-function variantsEqual(left: CardVariant, right: CardVariant): boolean {
-  return left === right;
+function variantsCompatible(
+  hareruyaVariant: CardVariant,
+  cardrushVariant: CardVariant,
+  hareruyaPack: string | null | undefined,
+): boolean {
+  if (hareruyaVariant === cardrushVariant) return true;
+  if (!isM2aPack(hareruyaPack)) return false;
+  // M2a: CRのモンスターボールミラーは晴れる屋のボールミラーと同一扱い
+  if (hareruyaVariant === "ボールミラー" && cardrushVariant === "モンスターボールミラー") {
+    return true;
+  }
+  return false;
 }
 
 function identityCoreMatch(
@@ -190,7 +221,7 @@ function identityCoreMatch(
 ): boolean {
   if (left.baseName !== right.baseName) return false;
   if (left.modelNumber !== right.modelNumber) return false;
-  if (!variantsEqual(left.variant, right.variant)) return false;
+  if (!variantsCompatible(left.variant, right.variant, left.packCode)) return false;
 
   if (options.requireRarity) {
     const leftRarity = normalizeRarity(left.rarity);
@@ -294,6 +325,13 @@ export function buildCardRushMatchIndex(rows: CardRushRawRow[]): Map<string, Car
   }
 
   return byModel;
+}
+
+export function hasCardRushModel(
+  index: Map<string, CardRushMatchEntry[]>,
+  modelNumber: string,
+): boolean {
+  return (index.get(modelNumber)?.length ?? 0) > 0;
 }
 
 export function findCardRushMatch(

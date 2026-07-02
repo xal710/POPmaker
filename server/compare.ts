@@ -3,6 +3,7 @@ import { isOfficialBuyListVisible } from "../shared/hareruyaBuyListFilter";
 import {
   buildCardRushMatchIndex,
   findCardRushMatch,
+  hasCardRushModel,
   parseHareruyaIdentity,
 } from "./cardMatch";
 import type { CardRushRawRow } from "./fetch/cardrush";
@@ -38,6 +39,11 @@ function buildBuyListMeta(entry: HareruyaPriceEntry) {
   return { hareruyaSellPrice, hareruyaSeriesName, officialBuyListVisible };
 }
 
+function hasComparableHareruyaModelNumber(modelNumber: string): boolean {
+  const trimmed = modelNumber.trim();
+  return trimmed !== "" && trimmed !== "-";
+}
+
 /**
  * 晴れる屋2を基準にカードラッシュ価格を突合する。
  * 型番・カード名（大小文字区別）・ミラー種別・レアリティで構造化照合する。
@@ -58,6 +64,14 @@ export function buildComparisonResult(
 
     const match = findCardRushMatch(identity, index);
     if (!match) {
+      if (!hasComparableHareruyaModelNumber(identity.modelNumber)) {
+        continue;
+      }
+
+      if (!hasCardRushModel(index, identity.modelNumber)) {
+        continue;
+      }
+
       unmatchedHareruya.push({
         id: unmatchedHareruya.length,
         name: displayName,

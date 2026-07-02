@@ -44,6 +44,30 @@ const samples = [
     },
   },
   {
+    label: "subset pack suffix XY8-b",
+    hareruya: "MオニゴーリEX(RR){水}〈015/059〉[XY8-b]",
+    cardrush: {
+      name: "MオニゴーリEX",
+      pack: "XY8",
+      rarity: "RR",
+      modelNumber: "015/059",
+      price: 3000,
+      extraDifference: "",
+    },
+  },
+  {
+    label: "promo pack BW-P preserved",
+    hareruya: "ボーマンダ〈195/BW-P〉[BW-P]",
+    cardrush: {
+      name: "ボーマンダ",
+      pack: "BW-P",
+      rarity: "P",
+      modelNumber: "195/BW-P",
+      price: 1200,
+      extraDifference: "",
+    },
+  },
+  {
     label: "case sensitive ex",
     hareruya: "ピカチュウex〈025/165〉[SV2a]",
     cardrush: {
@@ -55,6 +79,67 @@ const samples = [
       extraDifference: "",
     },
     shouldMatch: false,
+  },
+  {
+    label: "M2a quick ball mirror -> ball mirror",
+    hareruya: "コダック:ボールミラー(-){水}〈032/193〉[M2a-BM]",
+    cardrush: {
+      name: "コダック",
+      pack: "M2a",
+      rarity: "-",
+      modelNumber: "032/193",
+      price: 50,
+      extraDifference: "クイックボールミラー",
+    },
+  },
+  {
+    label: "M2a dragon energy mirror -> energy mirror",
+    hareruya: "レックウザ:エネルギーミラー(-){ドラゴン}〈128/193〉[M2a-EM]",
+    cardrush: {
+      name: "レックウザ",
+      pack: "M2a",
+      rarity: "-",
+      modelNumber: "128/193",
+      price: 80,
+      extraDifference: "竜エネルギーミラー",
+    },
+  },
+  {
+    label: "non-M2a quick ball mirror held",
+    hareruya: "コダック:ボールミラー(-){水}〈032/193〉[M2a-BM]",
+    cardrush: {
+      name: "コダック",
+      pack: "SV2a",
+      rarity: "-",
+      modelNumber: "032/193",
+      price: 50,
+      extraDifference: "クイックボールミラー",
+    },
+    shouldMatch: false,
+  },
+  {
+    label: "M2a monster ball mirror on CR matches hareruya ball mirror",
+    hareruya: "Nのゼクロム:ボールミラー(-){ドラゴン}〈129/193〉[M2a-BM]",
+    cardrush: {
+      name: "Nのゼクロム",
+      pack: "M2a",
+      rarity: "-",
+      modelNumber: "129/193",
+      price: 120,
+      extraDifference: "モンスターボールミラー",
+    },
+  },
+  {
+    label: "M2a hareruya monster ball mirror still exact match",
+    hareruya: "Nのゼクロム:モンスターボールミラー(-){ドラゴン}〈129/193〉[M2a-Mo]",
+    cardrush: {
+      name: "Nのゼクロム",
+      pack: "M2a",
+      rarity: "-",
+      modelNumber: "129/193",
+      price: 120,
+      extraDifference: "モンスターボールミラー",
+    },
   },
 ];
 

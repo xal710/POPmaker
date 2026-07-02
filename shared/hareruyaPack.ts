@@ -17,6 +17,17 @@ const MIRROR_VARIANT_PACK_SUFFIX: Record<MirrorVariantLabel, string> = {
 
 const PACK_VARIANT_SUFFIX_PATTERN = /(?:-Ma|-Mo|-EM|-BM|-RM|-M)$/;
 
+/** 拡張パックのデッキ識別子（例: XY8-b, XY1-r）。プロモの -P とは別扱い。 */
+const SUBSET_DECK_SUFFIX_PATTERN = /-[brlB]$/;
+
+/** 晴れる屋2のサブセットパック suffix を除去（例: XY8-b → XY8） */
+export function stripSubsetDeckPackSuffix(packCode: string): string {
+  if (SUBSET_DECK_SUFFIX_PATTERN.test(packCode)) {
+    return packCode.slice(0, packCode.lastIndexOf("-"));
+  }
+  return packCode;
+}
+
 /** 比較表などで使うベースパック（例: SV2a-Ma → SV2a） */
 export function normalizeHareruyaPackCode(packCode: string): string {
   if (packCode.endsWith("-Ma") || packCode.endsWith("-Mo")) {
