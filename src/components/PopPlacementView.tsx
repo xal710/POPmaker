@@ -10,6 +10,8 @@ import { formatPopCopyName, formatYen } from "../utils/format";
 import {
   hasPopPlacementIssues,
   summarizePopPlacementStatus,
+  summarizeWallPlacementStatuses,
+  wallHasPriceMismatch,
 } from "../utils/popPlacementIndicators";
 import {
   detectPopPlacementZones,
@@ -19,6 +21,40 @@ import {
 import { readPopPlacementAssignmentStore } from "../utils/popPlacementStorage";
 import { WallFacePanel } from "./WallFacePanel";
 import type { ComparisonItem } from "../types";
+
+const ZONE_HIGHLIGHT_ORANGE = {
+  fill: "rgba(234, 88, 12, 0.35)",
+  stroke: "rgba(234, 88, 12, 0.95)",
+  fillIdle: "rgba(234, 88, 12, 0.2)",
+} as const;
+
+const ZONE_HIGHLIGHT_PURPLE = {
+  fill: "rgba(168, 85, 247, 0.38)",
+  stroke: "rgba(168, 85, 247, 0.95)",
+  fillIdle: "rgba(168, 85, 247, 0.24)",
+} as const;
+
+function drawZoneHighlight(
+  context: CanvasRenderingContext2D,
+  zone: PopPlacementZone,
+  canvas: HTMLCanvasElement,
+  colors: { fill: string; stroke: string; fillIdle: string },
+  hovered: boolean,
+): void {
+  const { left, top, width, height } = zone.rect;
+  const x = left * canvas.width;
+  const y = top * canvas.height;
+  const w = width * canvas.width;
+  const h = height * canvas.height;
+
+  context.save();
+  context.fillStyle = hovered ? colors.fill : colors.fillIdle;
+  context.strokeStyle = colors.stroke;
+  context.lineWidth = hovered ? 2.5 : 2;
+  context.fillRect(x, y, w, h);
+  context.strokeRect(x + 1, y + 1, Math.max(0, w - 2), Math.max(0, h - 2));
+  context.restore();
+}
 
 interface PopPlacementViewProps {
   comparisonItems: ComparisonItem[];
@@ -45,6 +81,10 @@ export function PopPlacementView({
 
   const placementStatus = useMemo(
     () => summarizePopPlacementStatus(readPopPlacementAssignmentStore(), comparisonItems),
+    [comparisonItems, statusVersion],
+  );
+  const wallStatuses = useMemo(
+    () => summarizeWallPlacementStatuses(readPopPlacementAssignmentStore(), comparisonItems),
     [comparisonItems, statusVersion],
   );
   const hasPlacementIssues = hasPopPlacementIssues(placementStatus);
@@ -120,26 +160,26 @@ export function PopPlacementView({
       0,
     );
 
-    if (highlight) {
-      const { left, top, width, height } = highlight.rect;
-      const x = left * canvas.width;
-      const y = top * canvas.height;
-      const w = width * canvas.width;
-      const h = height * canvas.height;
-      context.save();
-      context.fillStyle = "rgba(234, 88, 12, 0.35)";
-      context.strokeStyle = "rgba(234, 88, 12, 0.95)";
-      context.lineWidth = 2;
-      context.fillRect(x, y, w, h);
-      context.strokeRect(x + 1, y + 1, Math.max(0, w - 2), Math.max(0, h - 2));
-      context.restore();
+    for (const zone of zonesRef.current) {
+      if (!wallHasPriceMismatch(wallStatuses[zone.id])) continue;
+      drawZoneHighlight(
+        context,
+        zone,
+        canvas,
+        ZONE_HIGHLIGHT_PURPLE,
+        highlight?.id === zone.id,
+      );
+    }
+
+    if (highlight && !wallHasPriceMismatch(wallStatuses[highlight.id])) {
+      drawZoneHighlight(context, highlight, canvas, ZONE_HIGHLIGHT_ORANGE, true);
     }
   };
 
   useEffect(() => {
     if (loading) return;
     redraw(hoveredZone);
-  }, [hoveredZone, loading]);
+  }, [hoveredZone, loading, wallStatuses]);
 
   const handlePointer = (event: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -238,7 +278,7 @@ export function PopPlacementView({
           onPointerMove={handlePointer}
           onPointerLeave={() => setHoveredZone(null)}
           onClick={handleClick}
-          aria-label="店舗フロア図。オレンジの壁面をクリックすると展示配置画面を開きます。"
+          aria-label="店舗フロア図。壁面をクリックすると展示配置画面を開きます。価格変更がある壁は紫色で表示されます。"
         />
       </div>
 
@@ -253,9 +293,9 @@ export function PopPlacementView({
       ) : (
         <p className="pop-placement__hint">
           {pendingPlacement
-            ? "まず配置する壁面（オレンジ）をクリックしてください。"
+            ? "まず配置する壁面をクリックしてください。価格変更がある壁は紫色です。"
             : zones.length > 0
-              ? `${zones.length}箇所の壁面にカーソルを合わせるとハイライトされます。`
+              ? `${zones.length}箇所の壁面にカーソルを合わせるとハイライトされます。価格変更がある壁は常に紫色で表示されます。`
               : "クリック可能な壁面が見つかりませんでした。"}
         </p>
       )}

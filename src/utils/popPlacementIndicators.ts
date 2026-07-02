@@ -146,6 +146,55 @@ export function summarizePopPlacementStatus(
   return summary;
 }
 
+export interface PopPlacementWallStatus {
+  stale3Days: number;
+  stale5Days: number;
+  stale7Days: number;
+  priceMismatch: number;
+}
+
+export function summarizeWallPlacementStatuses(
+  store: PopPlacementAssignmentStore,
+  comparisonItems: ComparisonItem[],
+): Record<string, PopPlacementWallStatus> {
+  const statuses: Record<string, PopPlacementWallStatus> = {};
+
+  for (const [wallId, wall] of Object.entries(store)) {
+    if (!wall || typeof wall !== "object") continue;
+
+    const summary: PopPlacementWallStatus = {
+      stale3Days: 0,
+      stale5Days: 0,
+      stale7Days: 0,
+      priceMismatch: 0,
+    };
+
+    for (const assignment of Object.values(wall)) {
+      if (!assignment) continue;
+      const counts = countAssignmentStatus(assignment, comparisonItems);
+      summary.stale3Days += counts.stale3Days;
+      summary.stale5Days += counts.stale5Days;
+      summary.stale7Days += counts.stale7Days;
+      summary.priceMismatch += counts.priceMismatch;
+    }
+
+    if (
+      summary.stale3Days > 0 ||
+      summary.stale5Days > 0 ||
+      summary.stale7Days > 0 ||
+      summary.priceMismatch > 0
+    ) {
+      statuses[wallId] = summary;
+    }
+  }
+
+  return statuses;
+}
+
+export function wallHasPriceMismatch(status: PopPlacementWallStatus | undefined): boolean {
+  return (status?.priceMismatch ?? 0) > 0;
+}
+
 export function hasPopPlacementIssues(summary: PopPlacementStatusSummary): boolean {
   return (
     summary.stale3Days > 0 ||
