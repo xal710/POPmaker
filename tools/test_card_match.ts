@@ -141,6 +141,54 @@ const samples = [
       extraDifference: "モンスターボールミラー",
     },
   },
+  {
+    label: "underscore full/half width",
+    hareruya: "_のレックウザ(PROMO){ドラゴン}〈021/PLAY〉[P-P]",
+    cardrush: {
+      name: "＿のレックウザ",
+      pack: "P-P",
+      rarity: "P",
+      modelNumber: "021/PLAY",
+      price: 5000,
+      extraDifference: "",
+    },
+  },
+  {
+    label: "ignore spaces in card name",
+    hareruya: "ボスごっこピカチュウロケット団(PROMO){雷}〈191/SM-P〉[SM-P]",
+    cardrush: {
+      name: "ボスごっこピカチュウ ロケット団",
+      pack: "SM-P",
+      rarity: "P",
+      modelNumber: "191/SM-P",
+      price: 800,
+      extraDifference: "",
+    },
+  },
+  {
+    label: "pack case insensitive",
+    hareruya: "アローラキュウコンGX(RR){炎}〈025/050〉[SM7b]",
+    cardrush: {
+      name: "アローラキュウコンGX",
+      pack: "sm7b",
+      rarity: "RR",
+      modelNumber: "025/050",
+      price: 200,
+      extraDifference: "",
+    },
+  },
+  {
+    label: "hareruya p suffix equals CR plus",
+    hareruya: "アーゴヨンGX(RR){超}〈058/050〉[SM5p]",
+    cardrush: {
+      name: "アーゴヨンGX",
+      pack: "sm5+",
+      rarity: "RR",
+      modelNumber: "058/050",
+      price: 3000,
+      extraDifference: "",
+    },
+  },
 ];
 
 let failed = 0;

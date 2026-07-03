@@ -61,6 +61,10 @@ function normalizeRarity(value: string | null | undefined): string | null {
   return trimmed.replace(/＿/g, "_");
 }
 
+export function normalizeBaseNameForMatch(name: string): string {
+  return name.replace(/＿/g, "_").replace(/\s+/g, "");
+}
+
 export function normalizePackForMatch(packCode: string | null | undefined): string | null {
   if (!packCode) return null;
   const trimmed = packCode.trim();
@@ -70,6 +74,12 @@ export function normalizePackForMatch(packCode: string | null | undefined): stri
   const slashIndex = normalized.indexOf("/");
   if (slashIndex > 0) {
     normalized = normalized.slice(0, slashIndex);
+  }
+
+  normalized = normalized.toLowerCase();
+  // 晴れる屋2は強化拡張パックを末尾 p で表す（例: SM5p → CRの sm5+）
+  if (normalized.endsWith("p")) {
+    normalized = `${normalized.slice(0, -1)}+`;
   }
 
   return normalized;
@@ -149,7 +159,7 @@ export function parseHareruyaIdentity(title: string): CardIdentity | null {
 }
 
 function isM2aPack(pack: string | null | undefined): boolean {
-  return normalizePackForMatch(pack) === "M2a";
+  return normalizePackForMatch(pack) === "m2a";
 }
 
 /** マスター/モンスター以外の ○○ボールミラー（クイックボールミラー等） */
@@ -219,7 +229,9 @@ function identityCoreMatch(
   right: CardIdentity,
   options: { requireRarity: boolean },
 ): boolean {
-  if (left.baseName !== right.baseName) return false;
+  if (normalizeBaseNameForMatch(left.baseName) !== normalizeBaseNameForMatch(right.baseName)) {
+    return false;
+  }
   if (left.modelNumber !== right.modelNumber) return false;
   if (!variantsCompatible(left.variant, right.variant, left.packCode)) return false;
 
