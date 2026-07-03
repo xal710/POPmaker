@@ -1,6 +1,7 @@
 import { createServer, type Server } from "node:http";
 import { resolve } from "node:path";
 import { ensureAdminSettingsFile } from "./adminStore";
+import { startComparisonSourceWatch } from "./comparisonSourceWatch";
 import { createPopApp } from "./createApp";
 import { ensureComparisonDataFile, getProjectRoot } from "./config";
 import { ensurePopPlacementDataFile } from "./popPlacementBackup";
@@ -47,12 +48,15 @@ export async function startPopServer(options: StartPopServerOptions = {}): Promi
     throw new Error("サーバーの起動に失敗しました");
   }
 
+  const stopComparisonWatch = startComparisonSourceWatch();
+
   return {
     port: address.port,
     host,
     server,
     close: () =>
       new Promise<void>((resolveClose, reject) => {
+        stopComparisonWatch();
         server.close((error) => {
           if (error) reject(error);
           else resolveClose();

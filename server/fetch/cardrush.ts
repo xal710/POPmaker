@@ -1,13 +1,16 @@
 import { fetchText } from "./http";
+import {
+  canReuseSnapshot,
+  isCardRushSnapshotCacheEnabled,
+  loadCardRushSnapshot,
+  saveCardRushSnapshot,
+  type CardRushSnapshot,
+} from "./cardrushSnapshot";
+import type { CardRushRawRow } from "./cardrushTypes";
 
-export interface CardRushRawRow {
-  name: string;
-  pack: string | null;
-  rarity: string | null;
-  modelNumber: string | null;
-  price: number;
-  extraDifference: string | null;
-}
+export type { CardRushRawRow } from "./cardrushTypes";
+export type { CardRushSnapshot } from "./cardrushSnapshot";
+export { isCardRushSnapshotCacheEnabled } from "./cardrushSnapshot";
 
 interface NextBuyingPage {
   buyingPrices: Array<{
@@ -86,13 +89,53 @@ function extractNextData(html: string): NextBuyingPage {
   return data.props.pageProps;
 }
 
+function buildSnapshot(
+  rows: CardRushRawRow[],
+  firstPage: NextBuyingPage,
+  updatedAt: string,
+): CardRushSnapshot {
+  return {
+    updatedAt,
+    lastPage: firstPage.lastPage,
+    rowCount: rows.length,
+    fetchedAt: new Date().toISOString(),
+    rows,
+  };
+}
+
+export interface CardRushCatalogMeta {
+  updatedAt: string | null;
+  lastPage: number;
+}
+
+export async function fetchCardRushCatalogMeta(): Promise<CardRushCatalogMeta> {
+  const firstPage = await fetchCardRushPage(1);
+  return {
+    updatedAt: firstPage.updatedAt ?? null,
+    lastPage: firstPage.lastPage,
+  };
+}
+
 export async function fetchCardRushBuyPrices(
   onProgress?: (message: string) => void,
-): Promise<{ rows: CardRushRawRow[]; updatedAt: string | null }> {
+): Promise<{
+  rows: CardRushRawRow[];
+  updatedAt: string | null;
+  lastPage: number;
+  fromCache: boolean;
+}> {
   onProgress?.("カードラッシュ: 1 ページ目を取得中...");
   const firstPage = await fetchCardRushPage(1);
   const lastPage = firstPage.lastPage;
   const updatedAt = firstPage.updatedAt ?? null;
+
+  const cached = loadCardRushSnapshot();
+  if (cached && updatedAt && canReuseSnapshot({ updatedAt, lastPage }, cached)) {
+    onProgress?.(
+      `カードラッシュ: キャッシュを使用（${cached.rowCount.toLocaleString("ja-JP")}件 / CR更新 ${updatedAt}）`,
+    );
+    return { rows: cached.rows, updatedAt, lastPage, fromCache: true };
+  }
 
   const rows: CardRushRawRow[] = [];
   appendPageRows(rows, firstPage);
@@ -100,5 +143,9 @@ export async function fetchCardRushBuyPrices(
   const restRows = await fetchCardRushPages(lastPage, onProgress);
   rows.push(...restRows);
 
-  return { rows, updatedAt };
+  if (updatedAt && isCardRushSnapshotCacheEnabled()) {
+    saveCardRushSnapshot(buildSnapshot(rows, firstPage, updatedAt));
+  }
+
+  return { rows, updatedAt, lastPage, fromCache: false };
 }

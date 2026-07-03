@@ -48,6 +48,9 @@ export interface ComparisonPayload {
   excelModifiedAt: string | null;
   dataDate: string | null;
   hareruyaBuyListUpdatedAt?: Partial<Record<string, string>>;
+  /** カードラッシュ買取表の更新表示（例: 07/03 21:30） */
+  cardRushSourceUpdatedAt?: string | null;
+  cardRushLastPage?: number | null;
   items: ComparisonItem[];
   unmatchedHareruya?: HareruyaOnlyItem[];
   warning?: string;
