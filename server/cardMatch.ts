@@ -210,12 +210,20 @@ export function parseCardRushIdentity(row: CardRushRawRow): CardIdentity | null 
   };
 }
 
+function isNormalLikeVariant(variant: CardVariant): boolean {
+  return variant === "normal" || variant === "sealed";
+}
+
 function variantsCompatible(
   hareruyaVariant: CardVariant,
   cardrushVariant: CardVariant,
   hareruyaPack: string | null | undefined,
 ): boolean {
   if (hareruyaVariant === cardrushVariant) return true;
+  // 晴れる屋2に未開封区分がないため、CRの未開封行は通常と同一扱い
+  if (isNormalLikeVariant(hareruyaVariant) && isNormalLikeVariant(cardrushVariant)) {
+    return true;
+  }
   if (!isM2aPack(hareruyaPack)) return false;
   // M2a: CRのモンスターボールミラーは晴れる屋のボールミラーと同一扱い
   if (hareruyaVariant === "ボールミラー" && cardrushVariant === "モンスターボールミラー") {
@@ -275,6 +283,11 @@ function entryScore(
     hareruya.rarity === entry.identity.rarity
   ) {
     score += 5;
+  }
+
+  // 晴れる屋に未開封がないため、同一カードに開封/未開封の両行がある場合は開封側を優先
+  if (isNormalLikeVariant(hareruya.variant) && entry.identity.variant === "normal") {
+    score += 3;
   }
 
   return score;

@@ -10,6 +10,7 @@ import { FilterPanel, DEFAULT_MATCH_FILTER, DEFAULT_PRICE_FILTER } from "./compo
 import { Header, type AppView } from "./components/Header";
 
 import type { PendingPopPlacement } from "../shared/popPlacement";
+import { canUsePopPlacementOnline } from "../shared/popPlacement";
 import { PopModal } from "./components/PopModal";
 
 import { PopPlacementView } from "./components/PopPlacementView";
@@ -64,6 +65,7 @@ function App() {
 
   const { username } = useAuthUser();
   const isAdminUser = isAdministrator(username);
+  const canUsePopPlacement = canUsePopPlacementOnline(username);
   const { adminMode, toggleAdminMode } = useAdminMode(isAdminUser);
   const {
     announcement,
@@ -83,6 +85,13 @@ function App() {
 
   const [selectedItem, setSelectedItem] = useState<ComparisonItem | null>(null);
   const [pendingPlacement, setPendingPlacement] = useState<PendingPopPlacement | null>(null);
+
+  useEffect(() => {
+    if (!canUsePopPlacement && view === "popPlacement") {
+      setView("tool");
+      setPendingPlacement(null);
+    }
+  }, [canUsePopPlacement, view]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearchQuery = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
@@ -212,6 +221,8 @@ function App() {
 
         onNavigate={setView}
 
+        canUsePopPlacement={canUsePopPlacement}
+
         isAdministrator={isAdminUser}
 
         adminMode={adminMode}
@@ -250,7 +261,7 @@ function App() {
             error={tweetHistoryError}
           />
 
-        ) : view === "popPlacement" ? (
+        ) : view === "popPlacement" && canUsePopPlacement ? (
 
           <PopPlacementView
             comparisonItems={allItems}
@@ -398,7 +409,7 @@ function App() {
       <PopModal
         item={selectedItem}
         onClose={() => setSelectedItem(null)}
-        onPlacePop={handlePlacePop}
+        onPlacePop={canUsePopPlacement ? handlePlacePop : undefined}
       />
 
     </div>

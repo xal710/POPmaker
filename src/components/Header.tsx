@@ -20,6 +20,7 @@ interface HeaderProps {
   hareruyaBuyListUpdatedAt?: Partial<Record<string, string>>;
   view?: AppView;
   onNavigate?: (view: AppView) => void;
+  canUsePopPlacement?: boolean;
   isAdministrator?: boolean;
   adminMode?: boolean;
   onAdminModeToggle?: () => void;
@@ -78,6 +79,7 @@ export function Header({
   hareruyaBuyListUpdatedAt,
   view = "tool",
   onNavigate,
+  canUsePopPlacement = false,
   isAdministrator = false,
   adminMode = false,
   onAdminModeToggle,
@@ -107,14 +109,16 @@ export function Header({
           )}
           {onNavigate && isToolView && (
             <>
-              <button
-                type="button"
-                className="btn btn--secondary"
-                onClick={() => onNavigate("popPlacement")}
-                disabled={busy}
-              >
-                POP配置
-              </button>
+              {canUsePopPlacement && (
+                <button
+                  type="button"
+                  className="btn btn--secondary"
+                  onClick={() => onNavigate("popPlacement")}
+                  disabled={busy}
+                >
+                  POP配置
+                </button>
+              )}
               <button
                 type="button"
                 className="btn btn--secondary"

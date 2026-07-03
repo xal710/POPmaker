@@ -189,21 +189,61 @@ const samples = [
       extraDifference: "",
     },
   },
+  {
+    label: "prefer opened CR over sealed",
+    hareruya: "シャワーズ☆(PROMO){雷}〈022/PLAY〉[P-P]",
+    cardrush: [
+      {
+        name: "シャワーズ☆",
+        pack: "P-P",
+        rarity: "-",
+        modelNumber: "022/PLAY",
+        price: 500000,
+        extraDifference: "未開封",
+      },
+      {
+        name: "シャワーズ☆",
+        pack: "P-P",
+        rarity: "-",
+        modelNumber: "022/PLAY",
+        price: 2000000,
+        extraDifference: "",
+      },
+    ],
+    expectedPrice: 2000000,
+  },
+  {
+    label: "match CR sealed when no opened row",
+    hareruya: "シャワーズ☆(PROMO){雷}〈022/PLAY〉[P-P]",
+    cardrush: {
+      name: "シャワーズ☆",
+      pack: "P-P",
+      rarity: "-",
+      modelNumber: "022/PLAY",
+      price: 500000,
+      extraDifference: "未開封",
+    },
+    expectedPrice: 500000,
+  },
 ];
 
 let failed = 0;
 
+import type { CardRushRawRow } from "../server/fetch/cardrush";
+
+type CardRushSample = Omit<CardRushRawRow, "rarity"> & { rarity: string };
+
 for (const sample of samples) {
   const hId = parseHareruyaIdentity(sample.hareruya);
-  const index = buildCardRushMatchIndex([
-    {
-      ...sample.cardrush,
-      rarity: sample.cardrush.rarity,
-    } as import("../server/fetch/cardrush").CardRushRawRow,
-  ]);
+  const cardrushRows = (Array.isArray(sample.cardrush) ? sample.cardrush : [sample.cardrush]).map(
+    (row) => ({ ...row, rarity: row.rarity }) as CardRushRawRow,
+  );
+  const index = buildCardRushMatchIndex(cardrushRows);
   const match = hId ? findCardRushMatch(hId, index) : null;
   const shouldMatch = sample.shouldMatch !== false;
-  const ok = shouldMatch ? Boolean(match) : !match;
+  const priceOk =
+    sample.expectedPrice === undefined || match?.price === sample.expectedPrice;
+  const ok = shouldMatch ? Boolean(match) && priceOk : !match;
 
   if (!ok) {
     failed += 1;
