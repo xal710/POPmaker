@@ -12,6 +12,8 @@ export interface AccountAnnouncement {
 
 export interface AdminSettings {
   globalAnnouncement: AccountAnnouncement | null;
+  /** null のときは全アカウント向け */
+  globalAnnouncementTargets: string[] | null;
   announcementsByUser: Record<string, AccountAnnouncement>;
   debugMemo: string;
   updatedAt: string;
@@ -51,8 +53,58 @@ export function getGlobalAnnouncement(settings: AdminSettings): AccountAnnouncem
   return settings.globalAnnouncement;
 }
 
+export function isGlobalAnnouncementVisibleToUser(
+  settings: AdminSettings,
+  username: string,
+): boolean {
+  if (!getGlobalAnnouncement(settings)) return false;
+
+  const targets = settings.globalAnnouncementTargets;
+  if (targets === null || targets === undefined) return true;
+
+  return targets.includes(username);
+}
+
+export function getGlobalAnnouncementForUser(
+  settings: AdminSettings,
+  username: string,
+): AccountAnnouncement | null {
+  if (!isGlobalAnnouncementVisibleToUser(settings, username)) return null;
+  return getGlobalAnnouncement(settings);
+}
+
 export function hasGlobalAnnouncement(settings: AdminSettings): boolean {
   return getGlobalAnnouncement(settings) !== null;
+}
+
+export function normalizeAnnouncementTargets(
+  selected: string[],
+  allUsernames: string[],
+): string[] | null {
+  const unique = [...new Set(selected.filter((name) => allUsernames.includes(name)))];
+  if (unique.length === 0) return [];
+  if (unique.length === allUsernames.length) return null;
+  return unique.sort();
+}
+
+export function resolveAnnouncementTargetSelection(
+  targets: string[] | null | undefined,
+  allUsernames: string[],
+): Set<string> {
+  if (targets === null || targets === undefined) {
+    return new Set(allUsernames);
+  }
+  return new Set(targets.filter((name) => allUsernames.includes(name)));
+}
+
+export function countGlobalAnnouncementTargets(
+  settings: AdminSettings,
+  allUsernames: string[],
+): number {
+  if (!hasGlobalAnnouncement(settings)) return 0;
+  const targets = settings.globalAnnouncementTargets;
+  if (targets === null || targets === undefined) return allUsernames.length;
+  return targets.filter((username) => allUsernames.includes(username)).length;
 }
 
 export function getUserAnnouncement(
@@ -103,6 +155,18 @@ function normalizeGlobalAnnouncement(value: unknown): AccountAnnouncement | null
   return value.text.trim() ? value : null;
 }
 
+function isValidAnnouncementTargets(value: unknown): boolean {
+  if (value === null || value === undefined) return true;
+  if (!Array.isArray(value)) return false;
+  return value.every((entry) => typeof entry === "string");
+}
+
+function normalizeGlobalAnnouncementTargets(value: unknown): string[] | null {
+  if (value === null || value === undefined) return null;
+  if (!Array.isArray(value)) return null;
+  return value.filter((entry): entry is string => typeof entry === "string");
+}
+
 export function isAdminSettings(value: unknown): value is AdminSettings {
   if (!value || typeof value !== "object") return false;
   const record = value as Record<string, unknown>;
@@ -111,6 +175,7 @@ export function isAdminSettings(value: unknown): value is AdminSettings {
     (record.globalAnnouncement === null ||
       record.globalAnnouncement === undefined ||
       isAccountAnnouncement(record.globalAnnouncement)) &&
+    isValidAnnouncementTargets(record.globalAnnouncementTargets) &&
     typeof record.debugMemo === "string" &&
     typeof record.updatedAt === "string" &&
     (record.updatedBy === null || typeof record.updatedBy === "string")
@@ -145,6 +210,7 @@ function promoteDuplicateGlobalAnnouncements(
       updatedAt: activeEntries[0].updatedAt,
       updatedBy: activeEntries[0].updatedBy,
     },
+    globalAnnouncementTargets: null,
     announcementsByUser: {},
   };
 }
@@ -157,6 +223,7 @@ export function normalizeAdminSettings(
     const record = raw as AdminSettings;
     const normalized: AdminSettings = {
       globalAnnouncement: normalizeGlobalAnnouncement(record.globalAnnouncement),
+      globalAnnouncementTargets: normalizeGlobalAnnouncementTargets(record.globalAnnouncementTargets),
       announcementsByUser: record.announcementsByUser,
       debugMemo: record.debugMemo,
       updatedAt: record.updatedAt,
@@ -172,6 +239,7 @@ export function normalizeAdminSettings(
   const legacy = raw as LegacyAdminSettings;
   const announcementsByUser: Record<string, AccountAnnouncement> = {};
   let globalAnnouncement: AccountAnnouncement | null = null;
+  let globalAnnouncementTargets: string[] | null = null;
   const text = typeof legacy.announcement === "string" ? legacy.announcement.trim() : "";
   const updatedAt =
     typeof legacy.updatedAt === "string" ? legacy.updatedAt : new Date(0).toISOString();
@@ -192,6 +260,7 @@ export function normalizeAdminSettings(
 
   return {
     globalAnnouncement,
+    globalAnnouncementTargets,
     announcementsByUser,
     debugMemo: typeof legacy.debugMemo === "string" ? legacy.debugMemo : "",
     updatedAt,
@@ -202,6 +271,7 @@ export function normalizeAdminSettings(
 export function createEmptyAdminSettings(): AdminSettings {
   return {
     globalAnnouncement: null,
+    globalAnnouncementTargets: null,
     announcementsByUser: {},
     debugMemo: "",
     updatedAt: new Date(0).toISOString(),

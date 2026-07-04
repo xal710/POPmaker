@@ -13,7 +13,7 @@ interface UseAdminPanelResult {
   reload: () => Promise<void>;
   saveUserAnnouncement: (username: string, text: string) => Promise<boolean>;
   deleteUserAnnouncement: (username: string) => Promise<boolean>;
-  saveGlobalAnnouncement: (text: string) => Promise<boolean>;
+  saveGlobalAnnouncement: (text: string, targets: string[] | null) => Promise<boolean>;
   deleteGlobalAnnouncement: () => Promise<boolean>;
   saveDebugMemo: (value: string) => Promise<boolean>;
   approveApplication: (applicationId: string, canUsePopPlacement: boolean, canUseTradeFeatures: boolean) => Promise<boolean>;
@@ -90,6 +90,7 @@ export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
   const patchSettings = useCallback(
     async (patch: {
       globalAnnouncement?: string;
+      globalAnnouncementTargets?: string[] | null;
       deleteGlobalAnnouncement?: boolean;
       userAnnouncement?: { username: string; text: string };
       deleteUserAnnouncement?: string;
@@ -270,7 +271,8 @@ export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
   );
 
   const saveGlobalAnnouncement = useCallback(
-    async (text: string) => patchSettings({ globalAnnouncement: text }),
+    async (text: string, targets: string[] | null) =>
+      patchSettings({ globalAnnouncement: text, globalAnnouncementTargets: targets }),
     [patchSettings],
   );
 

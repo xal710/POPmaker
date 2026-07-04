@@ -5,6 +5,8 @@ import {
   getGlobalAnnouncement,
   hasGlobalAnnouncement,
   hasUserAnnouncement,
+  normalizeAnnouncementTargets,
+  resolveAnnouncementTargetSelection,
   type AdminAccountSummary,
   type AdminSettings,
 } from "../../shared/admin";
@@ -27,7 +29,7 @@ interface AdminToolsPanelProps {
   loading: boolean;
   saving: boolean;
   error: string | null;
-  onSaveGlobalAnnouncement: (text: string) => Promise<boolean>;
+  onSaveGlobalAnnouncement: (text: string, targets: string[] | null) => Promise<boolean>;
   onDeleteGlobalAnnouncement: () => Promise<boolean>;
   onSaveUserAnnouncement: (username: string, text: string) => Promise<boolean>;
   onDeleteUserAnnouncement: (username: string) => Promise<boolean>;
@@ -79,6 +81,9 @@ export function AdminToolsPanel({
   const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
   const [selectedProfileUsername, setSelectedProfileUsername] = useState<string | null>(null);
   const [globalAnnouncementDraft, setGlobalAnnouncementDraft] = useState("");
+  const [globalAnnouncementTargetsDraft, setGlobalAnnouncementTargetsDraft] = useState<Set<string>>(
+    new Set(),
+  );
   const [announcementDraft, setAnnouncementDraft] = useState("");
   const [debugMemoDraft, setDebugMemoDraft] = useState("");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -94,6 +99,16 @@ export function AdminToolsPanel({
   }, [settings]);
 
   const globalAnnouncementActive = settings ? hasGlobalAnnouncement(settings) : false;
+
+  const accountUsernames = useMemo(
+    () => accounts.map((account) => account.username),
+    [accounts],
+  );
+
+  const allGlobalTargetsSelected =
+    accountUsernames.length > 0 &&
+    globalAnnouncementTargetsDraft.size === accountUsernames.length;
+  const selectedGlobalTargetCount = globalAnnouncementTargetsDraft.size;
 
   useEffect(() => {
     if (selectedUsername) return;
@@ -116,7 +131,10 @@ export function AdminToolsPanel({
 
   useEffect(() => {
     setGlobalAnnouncementDraft(settings?.globalAnnouncement?.text ?? "");
-  }, [settings?.globalAnnouncement?.text]);
+    setGlobalAnnouncementTargetsDraft(
+      resolveAnnouncementTargetSelection(settings?.globalAnnouncementTargets, accountUsernames),
+    );
+  }, [settings?.globalAnnouncement?.text, settings?.globalAnnouncementTargets, accountUsernames]);
 
   useEffect(() => {
     if (!selectedUsername) {
@@ -131,9 +149,33 @@ export function AdminToolsPanel({
     ? settings?.announcementsByUser[selectedUsername] ?? null
     : null;
 
+  const toggleGlobalAnnouncementTarget = (username: string) => {
+    setGlobalAnnouncementTargetsDraft((current) => {
+      const next = new Set(current);
+      if (next.has(username)) {
+        next.delete(username);
+      } else {
+        next.add(username);
+      }
+      return next;
+    });
+  };
+
+  const selectAllGlobalTargets = () => {
+    setGlobalAnnouncementTargetsDraft(new Set(accountUsernames));
+  };
+
+  const clearAllGlobalTargets = () => {
+    setGlobalAnnouncementTargetsDraft(new Set());
+  };
+
   const handleSaveGlobalAnnouncement = async () => {
     setSaveMessage(null);
-    const ok = await onSaveGlobalAnnouncement(globalAnnouncementDraft);
+    const targets = normalizeAnnouncementTargets(
+      [...globalAnnouncementTargetsDraft],
+      accountUsernames,
+    );
+    const ok = await onSaveGlobalAnnouncement(globalAnnouncementDraft, targets);
     if (ok) {
       setSaveMessage("全体アナウンスを保存しました");
       onAnnouncementSaved?.();
@@ -329,8 +371,55 @@ export function AdminToolsPanel({
           <section className="admin-tools__card admin-tools__card--single">
             <h3 className="admin-tools__card-title">全体アナウンス</h3>
             <p className="admin-tools__hint">
-              ログインしている全アカウントの画面上部に表示されるお知らせです。
+              配信先アカウントを選び、保存すると選択したアカウントの画面上部にお知らせが表示されます。
             </p>
+
+            <div className="admin-target-picker">
+              <div className="admin-target-picker__header">
+                <p className="admin-target-picker__label">配信先</p>
+                <div className="admin-target-picker__actions">
+                  <button
+                    type="button"
+                    className="admin-target-picker__link"
+                    onClick={selectAllGlobalTargets}
+                    disabled={loading || saving || allGlobalTargetsSelected}
+                  >
+                    すべて選択
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-target-picker__link"
+                    onClick={clearAllGlobalTargets}
+                    disabled={loading || saving || selectedGlobalTargetCount === 0}
+                  >
+                    すべて解除
+                  </button>
+                </div>
+              </div>
+              <ul className="admin-target-picker__list" aria-label="全体アナウンス配信先アカウント">
+                {accounts.map((account) => {
+                  const checked = globalAnnouncementTargetsDraft.has(account.username);
+                  return (
+                    <li key={account.username}>
+                      <label className="admin-target-picker__item">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleGlobalAnnouncementTarget(account.username)}
+                          disabled={loading || saving}
+                        />
+                        <span className="admin-target-picker__name">{account.username}</span>
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="admin-target-picker__meta" role="status">
+                {allGlobalTargetsSelected
+                  ? "全アカウントに配信"
+                  : `${selectedGlobalTargetCount.toLocaleString("ja-JP")} 件のアカウントに配信`}
+              </p>
+            </div>
 
             {globalAnnouncementActive && (
               <p className="admin-tools__status admin-tools__status--inline" role="status">

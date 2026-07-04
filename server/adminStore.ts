@@ -48,6 +48,7 @@ export function readAdminSettings(accountUsernames: string[] = []): AdminSetting
   const shouldPersist =
     !isAdminSettings(raw) ||
     !("globalAnnouncement" in rawRecord) ||
+    !("globalAnnouncementTargets" in rawRecord) ||
     (isAdminSettings(raw) &&
       !getGlobalAnnouncementFromRaw(raw) &&
       normalized.globalAnnouncement !== null &&
@@ -72,6 +73,7 @@ function getGlobalAnnouncementFromRaw(raw: unknown): AccountAnnouncement | null 
 export interface SaveAdminSettingsPatch {
   debugMemo?: string;
   globalAnnouncement?: string;
+  globalAnnouncementTargets?: string[] | null;
   deleteGlobalAnnouncement?: boolean;
   userAnnouncement?: {
     username: string;
@@ -107,10 +109,18 @@ export function saveAdminSettings(
           updatedBy,
         }
       : null;
+    if (!text) {
+      next.globalAnnouncementTargets = null;
+    }
+  }
+
+  if (patch.globalAnnouncementTargets !== undefined) {
+    next.globalAnnouncementTargets = patch.globalAnnouncementTargets;
   }
 
   if (patch.deleteGlobalAnnouncement) {
     next.globalAnnouncement = null;
+    next.globalAnnouncementTargets = null;
   }
 
   if (patch.userAnnouncement) {

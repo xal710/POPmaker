@@ -6,10 +6,13 @@ import { join } from "node:path";
 import {
   createEmptyAdminSettings,
   getGlobalAnnouncement,
+  getGlobalAnnouncementForUser,
   getUserAnnouncement,
   hasGlobalAnnouncement,
   hasUserAnnouncement,
+  isGlobalAnnouncementVisibleToUser,
   normalizeAdminSettings,
+  normalizeAnnouncementTargets,
 } from "../shared/admin";
 import { readAdminSettings, saveAdminSettings } from "../server/adminStore";
 
@@ -20,6 +23,7 @@ const accounts = ["administrator", "Yousei710", "akito00", "h.mizuno"];
 
 assert.deepEqual(createEmptyAdminSettings().announcementsByUser, {});
 assert.equal(createEmptyAdminSettings().globalAnnouncement, null);
+assert.equal(createEmptyAdminSettings().globalAnnouncementTargets, null);
 
 const migrated = normalizeAdminSettings(
   {
@@ -48,11 +52,17 @@ const migratedAll = normalizeAdminSettings(
   accounts,
 );
 assert.equal(migratedAll.globalAnnouncement?.text, "全員向け");
+assert.equal(migratedAll.globalAnnouncementTargets, null);
 assert.equal(Object.keys(migratedAll.announcementsByUser).length, 0);
+
+assert.deepEqual(normalizeAnnouncementTargets(["Yousei710"], accounts), ["Yousei710"]);
+assert.equal(normalizeAnnouncementTargets(accounts, accounts), null);
+assert.deepEqual(normalizeAnnouncementTargets([], accounts), []);
 
 saveAdminSettings(
   {
     globalAnnouncement: "メンテナンスのお知らせ",
+    globalAnnouncementTargets: null,
   },
   accounts,
   "administrator",
@@ -74,6 +84,8 @@ saveAdminSettings(
 
 const settings = readAdminSettings(accounts);
 assert.equal(getGlobalAnnouncement(settings)?.text, "メンテナンスのお知らせ");
+assert.equal(isGlobalAnnouncementVisibleToUser(settings, "akito00"), true);
+assert.equal(getGlobalAnnouncementForUser(settings, "akito00")?.text, "メンテナンスのお知らせ");
 assert.equal(getUserAnnouncement(settings, "Yousei710")?.text, "馬場店向け");
 assert.equal(getUserAnnouncement(settings, "h.mizuno")?.text, "4F向け");
 assert.equal(getUserAnnouncement(settings, "akito00"), null);
@@ -81,15 +93,29 @@ assert.equal(hasGlobalAnnouncement(settings), true);
 assert.equal(hasUserAnnouncement(settings, "Yousei710"), true);
 assert.equal(hasUserAnnouncement(settings, "akito00"), false);
 
+saveAdminSettings(
+  {
+    globalAnnouncement: "一部向け",
+    globalAnnouncementTargets: ["Yousei710", "h.mizuno"],
+  },
+  accounts,
+  "administrator",
+);
+const partial = readAdminSettings(accounts);
+assert.equal(isGlobalAnnouncementVisibleToUser(partial, "Yousei710"), true);
+assert.equal(isGlobalAnnouncementVisibleToUser(partial, "akito00"), false);
+assert.equal(getGlobalAnnouncementForUser(partial, "akito00"), null);
+
 saveAdminSettings({ deleteUserAnnouncement: "Yousei710" }, accounts, "administrator");
 const afterDelete = readAdminSettings(accounts);
 assert.equal(getUserAnnouncement(afterDelete, "Yousei710"), null);
 assert.equal(getUserAnnouncement(afterDelete, "h.mizuno")?.text, "4F向け");
-assert.equal(getGlobalAnnouncement(afterDelete)?.text, "メンテナンスのお知らせ");
+assert.equal(getGlobalAnnouncement(afterDelete)?.text, "一部向け");
 
 saveAdminSettings({ deleteGlobalAnnouncement: true }, accounts, "administrator");
 const afterGlobalDelete = readAdminSettings(accounts);
 assert.equal(getGlobalAnnouncement(afterGlobalDelete), null);
+assert.equal(afterGlobalDelete.globalAnnouncementTargets, null);
 
 rmSync(dataDir, { recursive: true, force: true });
 
