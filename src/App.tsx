@@ -35,6 +35,7 @@ import type { ComparisonItem } from "./types";
 
 import {
   DEFAULT_COMPARISON_SORT,
+  getDefaultComparisonSort,
   sortComparisonItems,
   toggleComparisonSort,
   type ComparisonSortKey,
@@ -122,6 +123,11 @@ function App() {
   const [priceFilter, setPriceFilter] = useState(DEFAULT_PRICE_FILTER);
   const [sort, setSort] = useState<ComparisonSortState>(DEFAULT_COMPARISON_SORT);
   const [exportingExcel, setExportingExcel] = useState(false);
+
+  useEffect(() => {
+    if (username === null) return;
+    setSort(getDefaultComparisonSort(username));
+  }, [username]);
 
   const allItems = useMemo(() => mergeComparisonItems(data), [data]);
 
