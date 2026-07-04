@@ -21,7 +21,6 @@ import { SearchBar } from "./components/SearchBar";
 import { useCardSearch } from "./hooks/useCardSearch";
 
 import { useComparisonData } from "./hooks/useComparisonData";
-import { useAdminMode } from "./hooks/useAdminMode";
 import { useAdminPanel } from "./hooks/useAdminPanel";
 import { useAnnouncement } from "./hooks/useAnnouncement";
 import { useAuthUser } from "./hooks/useAuthUser";
@@ -77,13 +76,14 @@ function App() {
   const showTweetHistoryNav = showTweetHistoryFeature(canUseTradeFeatures);
   const showExcelExport = canExportComparisonExcel(canUseTradeFeatures);
   const showHareruyaSourceOrderSort = canUseHareruyaSourceOrderSort(canUseTradeFeatures);
-  const { adminMode, toggleAdminMode } = useAdminMode(isAdminUser);
   const {
     announcement,
     updatedAt: announcementUpdatedAt,
     reload: reloadAnnouncement,
   } = useAnnouncement();
-  const adminPanel = useAdminPanel(isAdminUser && adminMode);
+  const [view, setView] = useState<AppView>("tool");
+
+  const adminPanel = useAdminPanel(isAdminUser && view === "admin");
   usePopPlacementOnlineSync(username, canUsePopPlacement);
 
   const {
@@ -91,8 +91,6 @@ function App() {
     loading: tweetHistoryLoading,
     error: tweetHistoryError,
   } = useTweetHistory();
-
-  const [view, setView] = useState<AppView>("tool");
 
   const [selectedItem, setSelectedItem] = useState<ComparisonItem | null>(null);
   const [pendingPlacement, setPendingPlacement] = useState<PendingPopPlacement | null>(null);
@@ -109,6 +107,12 @@ function App() {
       setView("tool");
     }
   }, [showTweetHistoryNav, view]);
+
+  useEffect(() => {
+    if (!isAdminUser && view === "admin") {
+      setView("tool");
+    }
+  }, [isAdminUser, view]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearchQuery = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
@@ -264,9 +268,7 @@ function App() {
 
         isAdministrator={isAdminUser}
 
-        adminMode={adminMode}
-
-        onAdminModeToggle={toggleAdminMode}
+        onOpenAdmin={() => setView("admin")}
 
         internalComparisonMode={internalComparisonMode}
 
@@ -274,11 +276,9 @@ function App() {
 
 
 
-      <main className="app-main">
+      <main className={`app-main${view === "admin" ? " app-main--admin" : ""}`}>
 
-        <AnnouncementBanner announcement={announcement} updatedAt={announcementUpdatedAt} />
-
-        {isAdminUser && adminMode && (
+        {view === "admin" && isAdminUser ? (
           <AdminToolsPanel
             accounts={adminPanel.accounts}
             applications={adminPanel.applications}
@@ -291,12 +291,13 @@ function App() {
             onSaveDebugMemo={adminPanel.saveDebugMemo}
             onApproveApplication={adminPanel.approveApplication}
             onRejectApplication={adminPanel.rejectApplication}
-            onTogglePopPlacement={adminPanel.setPopPlacementAccess}
-            onToggleTradeFeatures={adminPanel.setTradeFeaturesAccess}
             onSaveAccountProfile={adminPanel.saveAccountProfile}
             onAnnouncementSaved={() => void reloadAnnouncement()}
           />
-        )}
+        ) : (
+          <>
+
+        <AnnouncementBanner announcement={announcement} updatedAt={announcementUpdatedAt} />
 
         {view === "tweetHistory" ? (
 
@@ -442,6 +443,10 @@ function App() {
             onPageChange={handlePageChange}
             extraSortKeys={showHareruyaSourceOrderSort ? ["hareruyaOrder"] : []}
           />
+
+        )}
+
+          </>
 
         )}
 

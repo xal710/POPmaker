@@ -2064,6 +2064,86 @@
   color: var(--text-muted);
 }
 
+.admin-tools__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-tools__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.admin-tools__tab:hover {
+  color: var(--text);
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.admin-tools__tab--active {
+  color: #1e3a8a;
+  border-bottom-color: var(--primary);
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.admin-tools__tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.admin-tools__tab-panel {
+  margin-top: 4px;
+}
+
+.admin-tools__accounts-layout,
+.admin-tools__announcements-layout {
+  display: grid;
+  gap: 14px;
+  align-items: start;
+}
+
+.admin-tools__accounts-layout {
+  grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr);
+}
+
+.admin-tools__announcements-layout {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-tools__accounts-layout .admin-tools__card--wide,
+.admin-tools__announcements-layout .admin-tools__card--wide {
+  grid-column: auto;
+}
+
+.app-main--admin {
+  max-width: 1200px;
+}
+
 .admin-tools__error {
   margin: 0 0 12px;
   color: var(--danger);
@@ -2471,6 +2551,22 @@
 @media (max-width: 768px) {
   .admin-tools__grid {
     grid-template-columns: 1fr;
+  }
+
+  .admin-tools__accounts-layout,
+  .admin-tools__announcements-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-tools__tabs {
+    gap: 4px;
+  }
+
+  .admin-tools__tab {
+    flex: 1 1 auto;
+    justify-content: center;
+    padding: 8px 10px;
+    font-size: 13px;
   }
 
   .admin-profile__grid {

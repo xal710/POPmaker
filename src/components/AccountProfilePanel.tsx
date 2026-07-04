@@ -53,7 +53,7 @@ export function AccountProfilePanel({ account, saving, onSave }: AccountProfileP
 
   if (!account) {
     return (
-      <section className="admin-tools__card admin-tools__card--wide">
+      <section className="admin-tools__card admin-profile">
         <h3 className="admin-tools__card-title">アカウント設定</h3>
         <p className="admin-tools__muted">左の一覧からアカウントを選択してください。</p>
       </section>
@@ -70,7 +70,7 @@ export function AccountProfilePanel({ account, saving, onSave }: AccountProfileP
   };
 
   return (
-    <section className="admin-tools__card admin-tools__card--wide admin-profile">
+    <section className="admin-tools__card admin-profile">
       <div className="admin-profile__header">
         <div>
           <h3 className="admin-tools__card-title">アカウント設定</h3>

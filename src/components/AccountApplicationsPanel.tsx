@@ -1,11 +1,9 @@
 import { useMemo, useState } from "react";
 
 import type { AccountApplication } from "../../shared/accountRegistration";
-import type { AdminAccountSummary } from "../../shared/admin";
 import { formatDateTime } from "../utils/format";
 
 interface AccountApplicationsPanelProps {
-  accounts: AdminAccountSummary[];
   applications: AccountApplication[];
   saving: boolean;
   onApprove: (
@@ -14,8 +12,6 @@ interface AccountApplicationsPanelProps {
     canUseTradeFeatures: boolean,
   ) => Promise<boolean>;
   onReject: (applicationId: string) => Promise<boolean>;
-  onTogglePopPlacement: (username: string, enabled: boolean) => Promise<boolean>;
-  onToggleTradeFeatures: (username: string, enabled: boolean) => Promise<boolean>;
 }
 
 function statusLabel(status: AccountApplication["status"]): string {

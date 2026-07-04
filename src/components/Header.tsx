@@ -4,7 +4,7 @@ import {
 } from "../../shared/hareruyaBuyListPages";
 import { formatDateTime } from "../utils/format";
 
-export type AppView = "tool" | "popPlacement" | "tweetHistory";
+export type AppView = "tool" | "popPlacement" | "tweetHistory" | "admin";
 
 interface HeaderProps {
   itemCount: number;
@@ -27,8 +27,7 @@ interface HeaderProps {
   onExportExcel?: () => void;
   exportingExcel?: boolean;
   isAdministrator?: boolean;
-  adminMode?: boolean;
-  onAdminModeToggle?: () => void;
+  onOpenAdmin?: () => void;
   internalComparisonMode?: boolean;
 }
 
@@ -65,6 +64,7 @@ function updatedDateHint(source: HeaderProps["dataSource"]): string {
 }
 
 function getHeaderTitle(view: AppView): string {
+  if (view === "admin") return "管理者ツール";
   if (view === "popPlacement") return "POP配置登録";
   if (view === "tweetHistory") return "POP投稿履歴";
   return "買取価格比較 POP作成ツール";
@@ -91,12 +91,12 @@ export function Header({
   onExportExcel,
   exportingExcel = false,
   isAdministrator = false,
-  adminMode = false,
-  onAdminModeToggle,
+  onOpenAdmin,
   internalComparisonMode = false,
 }: HeaderProps) {
   const busy = loading || refreshing;
   const isToolView = view === "tool";
+  const isAdminView = view === "admin";
 
   return (
     <header className="app-header">
@@ -106,15 +106,14 @@ export function Header({
           <h1 className="app-header__title">{getHeaderTitle(view)}</h1>
         </div>
         <div className="app-header__actions">
-          {isAdministrator && onAdminModeToggle && (
+          {isAdministrator && onOpenAdmin && isToolView && (
             <button
               type="button"
-              className={`btn btn--secondary${adminMode ? " btn--admin-active" : ""}`}
-              onClick={onAdminModeToggle}
+              className="btn btn--secondary"
+              onClick={onOpenAdmin}
               disabled={busy}
-              aria-pressed={adminMode}
             >
-              {adminMode ? "管理者モード ON" : "管理者モード"}
+              管理者ツール
             </button>
           )}
           {onNavigate && isToolView && (
@@ -157,7 +156,7 @@ export function Header({
               className="btn btn--primary"
               onClick={() => onNavigate("tool")}
             >
-              POP作成ツール
+              {isAdminView ? "POP作成ツールに戻る" : "POP作成ツール"}
             </button>
           )}
           {isToolView && (
