@@ -70,12 +70,13 @@ function App() {
 
     useComparisonData();
 
-  const { username, canUsePopPlacementOnline: canUsePopPlacement } = useAuthUser();
+  const { username, canUsePopPlacementOnline: canUsePopPlacement, canUseTradeFeatures } =
+    useAuthUser();
   const isAdminUser = isAdministrator(username);
-  const showPopPlacementNav = showPopPlacementFeature(username, canUsePopPlacement);
-  const showTweetHistoryNav = showTweetHistoryFeature(username);
-  const showExcelExport = canExportComparisonExcel(username);
-  const showHareruyaSourceOrderSort = canUseHareruyaSourceOrderSort(username);
+  const showPopPlacementNav = showPopPlacementFeature(canUseTradeFeatures, canUsePopPlacement);
+  const showTweetHistoryNav = showTweetHistoryFeature(canUseTradeFeatures);
+  const showExcelExport = canExportComparisonExcel(canUseTradeFeatures);
+  const showHareruyaSourceOrderSort = canUseHareruyaSourceOrderSort(canUseTradeFeatures);
   const { adminMode, toggleAdminMode } = useAdminMode(isAdminUser);
   const {
     announcement,
@@ -126,8 +127,8 @@ function App() {
 
   useEffect(() => {
     if (username === null) return;
-    setSort(getDefaultComparisonSort(username));
-  }, [username]);
+    setSort(getDefaultComparisonSort(canUseTradeFeatures));
+  }, [username, canUseTradeFeatures]);
 
   const allItems = useMemo(() => mergeComparisonItems(data), [data]);
 
@@ -285,12 +286,14 @@ function App() {
             loading={adminPanel.loading}
             saving={adminPanel.saving}
             error={adminPanel.error}
-            onSaveAnnouncement={adminPanel.saveAnnouncement}
-            onDeleteAnnouncement={adminPanel.deleteAnnouncement}
+            onSaveUserAnnouncement={adminPanel.saveUserAnnouncement}
+            onDeleteUserAnnouncement={adminPanel.deleteUserAnnouncement}
             onSaveDebugMemo={adminPanel.saveDebugMemo}
             onApproveApplication={adminPanel.approveApplication}
             onRejectApplication={adminPanel.rejectApplication}
             onTogglePopPlacement={adminPanel.setPopPlacementAccess}
+            onToggleTradeFeatures={adminPanel.setTradeFeaturesAccess}
+            onSaveAccountProfile={adminPanel.saveAccountProfile}
             onAnnouncementSaved={() => void reloadAnnouncement()}
           />
         )}

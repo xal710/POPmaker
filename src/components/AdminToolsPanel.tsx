@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 
 import {
-  normalizeAnnouncementTargets,
-  resolveAnnouncementTargetSelection,
+  hasUserAnnouncement,
   type AdminAccountSummary,
   type AdminSettings,
 } from "../../shared/admin";
 import type { AccountApplication } from "../../shared/accountRegistration";
 import { AccountApplicationsPanel } from "./AccountApplicationsPanel";
+import { AccountProfilePanel } from "./AccountProfilePanel";
 import { formatDateTime } from "../utils/format";
 
 interface AdminToolsPanelProps {
@@ -17,12 +17,26 @@ interface AdminToolsPanelProps {
   loading: boolean;
   saving: boolean;
   error: string | null;
-  onSaveAnnouncement: (announcement: string, targets: string[] | null) => Promise<boolean>;
-  onDeleteAnnouncement: () => Promise<boolean>;
+  onSaveUserAnnouncement: (username: string, text: string) => Promise<boolean>;
+  onDeleteUserAnnouncement: (username: string) => Promise<boolean>;
   onSaveDebugMemo: (value: string) => Promise<boolean>;
-  onApproveApplication: (applicationId: string, canUsePopPlacement: boolean) => Promise<boolean>;
+  onApproveApplication: (
+    applicationId: string,
+    canUsePopPlacement: boolean,
+    canUseTradeFeatures: boolean,
+  ) => Promise<boolean>;
   onRejectApplication: (applicationId: string) => Promise<boolean>;
   onTogglePopPlacement: (username: string, enabled: boolean) => Promise<boolean>;
+  onToggleTradeFeatures: (username: string, enabled: boolean) => Promise<boolean>;
+  onSaveAccountProfile: (
+    username: string,
+    patch: {
+      canUsePopPlacement: boolean;
+      canUseTradeFeatures: boolean;
+      tweetTemplateMode: import("../../shared/accountProfile").TweetTemplateMode;
+      tweetTemplateCustom: string | null;
+    },
+  ) => Promise<boolean>;
   onAnnouncementSaved?: () => void;
 }
 
@@ -33,92 +47,99 @@ export function AdminToolsPanel({
   loading,
   saving,
   error,
-  onSaveAnnouncement,
-  onDeleteAnnouncement,
+  onSaveUserAnnouncement,
+  onDeleteUserAnnouncement,
   onSaveDebugMemo,
   onApproveApplication,
   onRejectApplication,
   onTogglePopPlacement,
+  onToggleTradeFeatures,
+  onSaveAccountProfile,
   onAnnouncementSaved,
 }: AdminToolsPanelProps) {
+  const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
+  const [selectedProfileUsername, setSelectedProfileUsername] = useState<string | null>(null);
   const [announcementDraft, setAnnouncementDraft] = useState("");
-  const [announcementTargetsDraft, setAnnouncementTargetsDraft] = useState<Set<string>>(new Set());
   const [debugMemoDraft, setDebugMemoDraft] = useState("");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
-  const accountUsernames = useMemo(
-    () => accounts.map((account) => account.username),
-    [accounts],
+  useEffect(() => {
+    if (selectedUsername) return;
+    if (accounts.length > 0) {
+      setSelectedUsername(accounts[0].username);
+    }
+  }, [accounts, selectedUsername]);
+
+  useEffect(() => {
+    if (selectedProfileUsername) return;
+    if (accounts.length > 0) {
+      setSelectedProfileUsername(accounts[0].username);
+    }
+  }, [accounts, selectedProfileUsername]);
+
+  const selectedProfileAccount = useMemo(
+    () => accounts.find((account) => account.username === selectedProfileUsername) ?? null,
+    [accounts, selectedProfileUsername],
   );
 
   useEffect(() => {
-    setAnnouncementDraft(settings?.announcement ?? "");
     setDebugMemoDraft(settings?.debugMemo ?? "");
-    setAnnouncementTargetsDraft(
-      resolveAnnouncementTargetSelection(settings?.announcementTargets, accountUsernames),
-    );
-  }, [settings, accountUsernames]);
+  }, [settings?.debugMemo]);
 
-  const allTargetsSelected =
-    accountUsernames.length > 0 && announcementTargetsDraft.size === accountUsernames.length;
-  const selectedTargetCount = announcementTargetsDraft.size;
+  useEffect(() => {
+    if (!selectedUsername) {
+      setAnnouncementDraft("");
+      return;
+    }
+    setAnnouncementDraft(settings?.announcementsByUser[selectedUsername]?.text ?? "");
+  }, [settings, selectedUsername]);
 
-  const toggleAnnouncementTarget = (username: string) => {
-    setAnnouncementTargetsDraft((current) => {
-      const next = new Set(current);
-      if (next.has(username)) {
-        next.delete(username);
-      } else {
-        next.add(username);
-      }
-      return next;
-    });
-  };
+  const selectedAnnouncement = selectedUsername
+    ? settings?.announcementsByUser[selectedUsername] ?? null
+    : null;
 
-  const selectAllTargets = () => {
-    setAnnouncementTargetsDraft(new Set(accountUsernames));
-  };
-
-  const clearAllTargets = () => {
-    setAnnouncementTargetsDraft(new Set());
-  };
+  const activeAnnouncementCount = useMemo(() => {
+    if (!settings) return 0;
+    return accounts.filter((account) => hasUserAnnouncement(settings, account.username)).length;
+  }, [accounts, settings]);
 
   const handleSaveAnnouncement = async () => {
+    if (!selectedUsername) return;
+
     setSaveMessage(null);
-    const targets = normalizeAnnouncementTargets(
-      [...announcementTargetsDraft],
-      accountUsernames,
-    );
-    const ok = await onSaveAnnouncement(announcementDraft, targets);
+    const ok = await onSaveUserAnnouncement(selectedUsername, announcementDraft);
     if (ok) {
-      setSaveMessage("アナウンスを保存しました");
+      setSaveMessage(`${selectedUsername} 向けのアナウンスを保存しました`);
       onAnnouncementSaved?.();
     }
   };
 
   const handleDeleteAnnouncement = async () => {
-    const hasSavedAnnouncement = Boolean(settings?.announcement.trim());
+    if (!selectedUsername) return;
+
+    const hasSavedAnnouncement = Boolean(selectedAnnouncement?.text.trim());
     const hasDraft = Boolean(announcementDraft.trim());
     if (!hasSavedAnnouncement && !hasDraft) return;
 
     if (
       hasSavedAnnouncement &&
-      !window.confirm("保存済みのアナウンスを削除しますか？全アカウントの画面上部から消えます。")
+      !window.confirm(`${selectedUsername} 向けの保存済みアナウンスを削除しますか？`)
     ) {
       return;
     }
 
     setSaveMessage(null);
-    const ok = await onDeleteAnnouncement();
+    const ok = await onDeleteUserAnnouncement(selectedUsername);
     if (ok) {
       setAnnouncementDraft("");
-      setAnnouncementTargetsDraft(new Set(accountUsernames));
-      setSaveMessage("アナウンスを削除しました");
+      setSaveMessage(`${selectedUsername} 向けのアナウンスを削除しました`);
       onAnnouncementSaved?.();
     }
   };
 
-  const canDeleteAnnouncement = Boolean(settings?.announcement.trim() || announcementDraft.trim());
+  const canDeleteAnnouncement = Boolean(
+    selectedAnnouncement?.text.trim() || announcementDraft.trim(),
+  );
 
   const handleSaveDebugMemo = async () => {
     setSaveMessage(null);
@@ -150,77 +171,85 @@ export function AdminToolsPanel({
       <div className="admin-tools__grid">
         <section className="admin-tools__card">
           <h3 className="admin-tools__card-title">ログインアカウント一覧</h3>
+          <p className="admin-tools__hint">アカウントを選択すると、下の設定パネルで詳細を編集できます。</p>
           {loading ? (
             <p className="admin-tools__muted">読み込み中...</p>
           ) : (
-            <ul className="admin-account-list">
-              {accounts.map((account) => (
-                <li key={account.username} className="admin-account-list__item">
-                  <span className="admin-account-list__name">{account.username}</span>
-                  <span className="admin-account-list__badges">
-                    {account.isAdministrator && (
-                      <span className="admin-badge admin-badge--admin">管理者</span>
-                    )}
-                    {account.canUsePopPlacementOnline && (
-                      <span className="admin-badge admin-badge--sync">POP配置同期</span>
-                    )}
-                  </span>
-                </li>
-              ))}
+            <ul className="admin-account-list admin-account-list--selectable">
+              {accounts.map((account) => {
+                const isSelected = selectedProfileUsername === account.username;
+                return (
+                  <li key={account.username}>
+                    <button
+                      type="button"
+                      className={`admin-account-list__item admin-account-list__select${
+                        isSelected ? " admin-account-list__select--active" : ""
+                      }`}
+                      onClick={() => setSelectedProfileUsername(account.username)}
+                      aria-pressed={isSelected}
+                    >
+                      <span className="admin-account-list__name">{account.username}</span>
+                      <span className="admin-account-list__badges">
+                        {account.isAdministrator && (
+                          <span className="admin-badge admin-badge--admin">管理者</span>
+                        )}
+                        {account.canUsePopPlacementOnline && (
+                          <span className="admin-badge admin-badge--sync">POP配置</span>
+                        )}
+                        {account.canUseTradeFeatures && (
+                          <span className="admin-badge admin-badge--trade">トレード機能</span>
+                        )}
+                        {account.tweetTemplateMode === "custom" && (
+                          <span className="admin-badge admin-badge--announcement">独自テンプレ</span>
+                        )}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>
 
         <section className="admin-tools__card">
-          <h3 className="admin-tools__card-title">アカウントへのアナウンス</h3>
+          <h3 className="admin-tools__card-title">アカウント別アナウンス</h3>
           <p className="admin-tools__hint">
-            配信先アカウントを選び、保存すると選択したアカウントの画面上部にお知らせが表示されます。
+            アカウントごとに別の文面を保存できます。選択したアカウントにだけ画面上部のお知らせが表示されます。
           </p>
 
           <div className="admin-target-picker">
             <div className="admin-target-picker__header">
-              <p className="admin-target-picker__label">配信先</p>
-              <div className="admin-target-picker__actions">
-                <button
-                  type="button"
-                  className="admin-target-picker__link"
-                  onClick={selectAllTargets}
-                  disabled={loading || saving || allTargetsSelected}
-                >
-                  すべて選択
-                </button>
-                <button
-                  type="button"
-                  className="admin-target-picker__link"
-                  onClick={clearAllTargets}
-                  disabled={loading || saving || selectedTargetCount === 0}
-                >
-                  すべて解除
-                </button>
-              </div>
+              <p className="admin-target-picker__label">編集するアカウント</p>
             </div>
-            <ul className="admin-target-picker__list" aria-label="アナウンス配信先アカウント">
+            <ul className="admin-target-picker__list" aria-label="アナウンス編集対象アカウント">
               {accounts.map((account) => {
-                const checked = announcementTargetsDraft.has(account.username);
+                const isSelected = selectedUsername === account.username;
+                const isActive = settings
+                  ? hasUserAnnouncement(settings, account.username)
+                  : false;
+
                 return (
                   <li key={account.username}>
-                    <label className="admin-target-picker__item">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleAnnouncementTarget(account.username)}
-                        disabled={loading || saving}
-                      />
+                    <button
+                      type="button"
+                      className={`admin-target-picker__select${
+                        isSelected ? " admin-target-picker__select--active" : ""
+                      }`}
+                      onClick={() => setSelectedUsername(account.username)}
+                      disabled={loading || saving}
+                      aria-pressed={isSelected}
+                    >
                       <span className="admin-target-picker__name">{account.username}</span>
-                    </label>
+                      {isActive && (
+                        <span className="admin-badge admin-badge--announcement">配信中</span>
+                      )}
+                    </button>
                   </li>
                 );
               })}
             </ul>
             <p className="admin-target-picker__meta" role="status">
-              {allTargetsSelected
-                ? "全アカウントに配信"
-                : `${selectedTargetCount.toLocaleString("ja-JP")} 件のアカウントに配信`}
+              {activeAnnouncementCount.toLocaleString("ja-JP")} 件のアカウントに個別アナウンスを設定中
             </p>
           </div>
 
@@ -229,25 +258,37 @@ export function AdminToolsPanel({
             value={announcementDraft}
             onChange={(event) => setAnnouncementDraft(event.target.value)}
             rows={6}
-            placeholder="例: 本日18時よりメンテナンスを行います。"
-            disabled={loading || saving}
+            placeholder={
+              selectedUsername
+                ? `${selectedUsername} 向けのお知らせを入力`
+                : "アカウントを選択してください"
+            }
+            disabled={loading || saving || !selectedUsername}
           />
+
+          {selectedAnnouncement?.updatedAt && (
+            <p className="admin-tools__updated">
+              最終更新: {formatDateTime(new Date(selectedAnnouncement.updatedAt))}
+              {selectedAnnouncement.updatedBy ? `（${selectedAnnouncement.updatedBy}）` : ""}
+            </p>
+          )}
+
           <div className="admin-tools__actions">
             <button
               type="button"
               className="btn btn--primary"
               onClick={() => void handleSaveAnnouncement()}
-              disabled={loading || saving || selectedTargetCount === 0}
+              disabled={loading || saving || !selectedUsername}
             >
-              {saving ? "保存中..." : "アナウンスを保存"}
+              {saving ? "保存中..." : "このアカウント向けに保存"}
             </button>
             <button
               type="button"
               className="btn btn--secondary admin-tools__delete-btn"
               onClick={() => void handleDeleteAnnouncement()}
-              disabled={loading || saving || !canDeleteAnnouncement}
+              disabled={loading || saving || !selectedUsername || !canDeleteAnnouncement}
             >
-              {saving ? "処理中..." : "アナウンスを削除"}
+              {saving ? "処理中..." : "このアカウント向けを削除"}
             </button>
           </div>
         </section>
@@ -284,6 +325,12 @@ export function AdminToolsPanel({
         </section>
       </div>
 
+      <AccountProfilePanel
+        account={selectedProfileAccount}
+        saving={saving}
+        onSave={onSaveAccountProfile}
+      />
+
       <AccountApplicationsPanel
         accounts={accounts}
         applications={applications}
@@ -291,6 +338,7 @@ export function AdminToolsPanel({
         onApprove={onApproveApplication}
         onReject={onRejectApplication}
         onTogglePopPlacement={onTogglePopPlacement}
+        onToggleTradeFeatures={onToggleTradeFeatures}
       />
     </section>
   );

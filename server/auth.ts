@@ -3,10 +3,13 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Connect } from "vite";
 import { sendJson } from "./http";
 import { ADMIN_USERNAME, type AdminAccountSummary } from "../shared/admin";
+import { normalizeAccountTweetProfile } from "../shared/accountProfile";
 import {
   accountCanUsePopPlacement,
+  accountCanUseTradeFeatures,
   ensureAccountStoreFile,
   findApplicationByUsername,
+  findAccountByUsername,
   listStoredAccounts,
   verifyAccountCredentials,
 } from "./accountStore";
@@ -32,12 +35,24 @@ function isPublicApiPath(pathname: string, method: string): boolean {
 }
 
 export function listSiteAccountSummaries(): AdminAccountSummary[] {
-  return listStoredAccounts().map((account) => ({
-    username: account.username,
-    displayName: account.displayName,
-    isAdministrator: account.username === ADMIN_USERNAME,
-    canUsePopPlacementOnline: account.canUsePopPlacement,
-  }));
+  return listStoredAccounts().map((account) => {
+    const tweetProfile = normalizeAccountTweetProfile(account);
+    return {
+      username: account.username,
+      displayName: account.displayName,
+      isAdministrator: account.username === ADMIN_USERNAME,
+      canUsePopPlacementOnline: account.canUsePopPlacement,
+      canUseTradeFeatures: account.canUseTradeFeatures,
+      tweetTemplateMode: tweetProfile.tweetTemplateMode,
+      tweetTemplateCustom: tweetProfile.tweetTemplateCustom,
+    };
+  });
+}
+
+export function getAccountTweetProfileForUser(username: string) {
+  const account = findAccountByUsername(username);
+  if (!account) return normalizeAccountTweetProfile(null);
+  return normalizeAccountTweetProfile(account);
 }
 
 function safeEqual(left: string, right: string): boolean {
@@ -206,6 +221,8 @@ export function createAuthMiddleware(): Connect.NextHandleFunction {
       sendJson(res, 200, {
         username,
         canUsePopPlacementOnline: accountCanUsePopPlacement(username),
+        canUseTradeFeatures: accountCanUseTradeFeatures(username),
+        tweetProfile: getAccountTweetProfileForUser(username),
       });
       return;
     }

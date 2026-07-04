@@ -8,9 +8,14 @@ interface AccountApplicationsPanelProps {
   accounts: AdminAccountSummary[];
   applications: AccountApplication[];
   saving: boolean;
-  onApprove: (applicationId: string, canUsePopPlacement: boolean) => Promise<boolean>;
+  onApprove: (
+    applicationId: string,
+    canUsePopPlacement: boolean,
+    canUseTradeFeatures: boolean,
+  ) => Promise<boolean>;
   onReject: (applicationId: string) => Promise<boolean>;
   onTogglePopPlacement: (username: string, enabled: boolean) => Promise<boolean>;
+  onToggleTradeFeatures: (username: string, enabled: boolean) => Promise<boolean>;
 }
 
 function statusLabel(status: AccountApplication["status"]): string {
@@ -20,15 +25,14 @@ function statusLabel(status: AccountApplication["status"]): string {
 }
 
 export function AccountApplicationsPanel({
-  accounts,
   applications,
   saving,
   onApprove,
   onReject,
-  onTogglePopPlacement,
 }: AccountApplicationsPanelProps) {
   const [message, setMessage] = useState<string | null>(null);
   const [popPlacementDraft, setPopPlacementDraft] = useState<Record<string, boolean>>({});
+  const [tradeFeaturesDraft, setTradeFeaturesDraft] = useState<Record<string, boolean>>({});
 
   const pending = useMemo(
     () => applications.filter((application) => application.status === "pending"),
@@ -42,7 +46,8 @@ export function AccountApplicationsPanel({
   const handleApprove = async (applicationId: string) => {
     setMessage(null);
     const canUsePopPlacement = popPlacementDraft[applicationId] === true;
-    const ok = await onApprove(applicationId, canUsePopPlacement);
+    const canUseTradeFeatures = tradeFeaturesDraft[applicationId] === true;
+    const ok = await onApprove(applicationId, canUsePopPlacement, canUseTradeFeatures);
     setMessage(ok ? "申請を承認しました" : "承認に失敗しました");
   };
 
@@ -52,11 +57,36 @@ export function AccountApplicationsPanel({
     setMessage(ok ? "申請を却下しました" : "却下に失敗しました");
   };
 
-  const handleTogglePopPlacement = async (username: string, enabled: boolean) => {
-    setMessage(null);
-    const ok = await onTogglePopPlacement(username, enabled);
-    setMessage(ok ? "POP配置の表示設定を更新しました" : "更新に失敗しました");
-  };
+  const renderApplicationFeatureToggles = (applicationId: string) => (
+    <>
+      <label className="admin-application-list__checkbox">
+        <input
+          type="checkbox"
+          checked={popPlacementDraft[applicationId] === true}
+          onChange={(event) =>
+            setPopPlacementDraft((current) => ({
+              ...current,
+              [applicationId]: event.target.checked,
+            }))
+          }
+        />
+        POP配置
+      </label>
+      <label className="admin-application-list__checkbox">
+        <input
+          type="checkbox"
+          checked={tradeFeaturesDraft[applicationId] === true}
+          onChange={(event) =>
+            setTradeFeaturesDraft((current) => ({
+              ...current,
+              [applicationId]: event.target.checked,
+            }))
+          }
+        />
+        トレード機能
+      </label>
+    </>
+  );
 
   return (
     <>
@@ -81,19 +111,7 @@ export function AccountApplicationsPanel({
                   </span>
                 </div>
                 <div className="admin-application-list__actions">
-                  <label className="admin-application-list__checkbox">
-                    <input
-                      type="checkbox"
-                      checked={popPlacementDraft[application.id] === true}
-                      onChange={(event) =>
-                        setPopPlacementDraft((current) => ({
-                          ...current,
-                          [application.id]: event.target.checked,
-                        }))
-                      }
-                    />
-                    POP配置を表示
-                  </label>
+                  {renderApplicationFeatureToggles(application.id)}
                   <button
                     type="button"
                     className="btn btn--primary"
@@ -137,19 +155,7 @@ export function AccountApplicationsPanel({
                   )}
                 </div>
                 <div className="admin-application-list__actions">
-                  <label className="admin-application-list__checkbox">
-                    <input
-                      type="checkbox"
-                      checked={popPlacementDraft[application.id] === true}
-                      onChange={(event) =>
-                        setPopPlacementDraft((current) => ({
-                          ...current,
-                          [application.id]: event.target.checked,
-                        }))
-                      }
-                    />
-                    POP配置を表示
-                  </label>
+                  {renderApplicationFeatureToggles(application.id)}
                   <button
                     type="button"
                     className="btn btn--primary"
@@ -163,34 +169,6 @@ export function AccountApplicationsPanel({
             ))}
           </ul>
         )}
-      </section>
-
-      <section className="admin-tools__card admin-tools__card--wide">
-        <h3 className="admin-tools__card-title">POP配置の表示アカウント</h3>
-        <p className="admin-tools__hint">
-          チェックを入れたアカウントだけがPOP配置画面と同期機能を利用できます。
-        </p>
-        <ul className="admin-account-list">
-          {accounts.map((account) => (
-            <li key={account.username} className="admin-account-list__item">
-              <span className="admin-account-list__name">
-                {account.displayName ?? account.username}
-                <span className="admin-application-list__meta"> ({account.username})</span>
-              </span>
-              <label className="admin-application-list__checkbox">
-                <input
-                  type="checkbox"
-                  checked={account.canUsePopPlacementOnline}
-                  disabled={saving || account.isAdministrator}
-                  onChange={(event) =>
-                    void handleTogglePopPlacement(account.username, event.target.checked)
-                  }
-                />
-                POP配置
-              </label>
-            </li>
-          ))}
-        </ul>
       </section>
 
       {message && (

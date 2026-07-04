@@ -9,6 +9,7 @@ import {
   normalizeRegistrationInput,
 } from "../shared/accountRegistration";
 import {
+  accountCanUseTradeFeatures,
   approveAccountApplication,
   isDesiredUsernameTaken,
   rejectAccountApplication,
@@ -68,10 +69,12 @@ assert.equal(isDesiredUsernameTaken("yamada01"), true);
 
 const approved = approveAccountApplication(application.id, "administrator", {
   canUsePopPlacement: true,
+  canUseTradeFeatures: false,
 });
 assert.ok(approved);
 assert.equal(approved?.status, "approved");
 assert.ok(verifyAccountCredentials("yamada01", "pw1234"));
+assert.equal(accountCanUseTradeFeatures("yamada01"), false);
 
 rmSync(dataDir, { recursive: true, force: true });
 

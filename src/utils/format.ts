@@ -3,6 +3,10 @@ import {
   resolveHareruyaDisplayPackCode,
 } from "../../shared/hareruyaPack";
 import type { ComparisonItem } from "../types";
+import type { AccountTweetProfile, TweetTemplateId } from "../../shared/accountProfile";
+import {
+  resolveAccountTweetTemplateId,
+} from "../../shared/accountProfile";
 
 export function formatYen(value: number): string {
   return `¥${value.toLocaleString("ja-JP")}`;
@@ -144,29 +148,50 @@ const TWEET_FOOTER_KORIYAMA = `是非、#ハレツー郡山店
 ▼その他の買取情報はこちら▼
 hareruya2.com/pages/buying`;
 
-const TWEET_FOOTER_MIZUNO = `4F買取フロアでは複数のスタッフにて査定を実施しております👍
+const TWEET_FOOTER_TRADE = `4F買取フロアでは複数のスタッフにて査定を実施しております👍
 大量のお持ち込みもお待ちしております💪
 ポケカの買取といえばハレツー！
 ▼その他の買取情報はこちら▼
 http://hareruya2.com/pages/buyinghttps://www.hareruya2.com/pages/buying-list`;
 
-export type TweetTemplateId = "default" | "takadanobaba" | "koriyama" | "mizuno";
+export type { TweetTemplateId } from "../../shared/accountProfile";
 
-export function getTweetTemplateId(username: string | null | undefined): TweetTemplateId {
-  if (username === "h.mizuno") return "mizuno";
-  if (username === "k.ishigaki") return "takadanobaba";
-  if (username === "20260605") return "koriyama";
-  return "default";
+export function getTweetTemplateId(
+  username: string | null | undefined,
+  canUseTradeFeatures = false,
+  profile?: AccountTweetProfile,
+): TweetTemplateId {
+  const resolved = resolveAccountTweetTemplateId(
+    username ?? "",
+    canUseTradeFeatures,
+    profile ?? { tweetTemplateMode: "auto", tweetTemplateCustom: null },
+  );
+  return resolved === "custom" ? "default" : resolved;
 }
 
 export function buildTweetText(
   name: string,
   hareruya2: number,
   templateId: TweetTemplateId = "default",
+  customTemplate?: string | null,
 ): string {
   const cardName = formatHareruyaCardName(name);
   const price = formatYen(hareruya2);
 
+  if (customTemplate?.trim()) {
+    return customTemplate
+      .replaceAll("{cardName}", cardName)
+      .replaceAll("{price}", price);
+  }
+
+  return buildPresetTweetText(cardName, price, templateId);
+}
+
+function buildPresetTweetText(
+  cardName: string,
+  price: string,
+  templateId: TweetTemplateId,
+): string {
   if (templateId === "takadanobaba") {
     return `【買取情報】
 
@@ -187,7 +212,7 @@ ${price}
 ${TWEET_FOOTER_KORIYAMA}`;
   }
 
-  if (templateId === "mizuno") {
+  if (templateId === "trade") {
     return `【買取情報】
 
 「一言コメント」
@@ -195,7 +220,7 @@ ${TWEET_FOOTER_KORIYAMA}`;
 ${cardName}
 ${price}
 
-${TWEET_FOOTER_MIZUNO}`;
+${TWEET_FOOTER_TRADE}`;
   }
 
   return `【買取情報】
@@ -206,4 +231,18 @@ ${cardName}
 ${price}
 
 ${TWEET_FOOTER}`;
+}
+
+export function buildTweetTextForAccount(
+  name: string,
+  hareruya2: number,
+  username: string | null | undefined,
+  canUseTradeFeatures: boolean,
+  profile: AccountTweetProfile,
+): string {
+  const resolved = resolveAccountTweetTemplateId(username ?? "", canUseTradeFeatures, profile);
+  if (resolved === "custom") {
+    return buildTweetText(name, hareruya2, "default", profile.tweetTemplateCustom);
+  }
+  return buildTweetText(name, hareruya2, resolved);
 }

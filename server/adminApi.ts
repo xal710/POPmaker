@@ -1,12 +1,16 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Connect } from "vite";
 
-import { isAdministrator, isAnnouncementVisibleToUser } from "../shared/admin";
+import { isAdministrator, getUserAnnouncement } from "../shared/admin";
+import { isTweetTemplateMode, type TweetTemplateMode } from "../shared/accountProfile";
 import {
   approveAccountApplication,
   listAccountApplications,
+  listStoredAccounts,
   rejectAccountApplication,
   setAccountPopPlacementAccess,
+  setAccountTradeFeaturesAccess,
+  updateAccountProfile,
 } from "./accountStore";
 import { getAuthenticatedUsername, listSiteAccountSummaries } from "./auth";
 import { readAdminSettings, saveAdminSettings } from "./adminStore";
@@ -52,6 +56,10 @@ function requireAdministrator(
   return username;
 }
 
+function getKnownUsernames(): string[] {
+  return listStoredAccounts().map((account) => account.username);
+}
+
 export function createAdminMiddleware(): Connect.NextHandleFunction {
   return async (req: IncomingMessage, res: ServerResponse, next: Connect.NextFunction) => {
     const url = new URL(req.url ?? "/", "http://localhost");
@@ -61,11 +69,11 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
       const username = requireAuthenticatedUser(req, res);
       if (!username) return;
 
-      const settings = readAdminSettings();
-      const visible = isAnnouncementVisibleToUser(settings, username);
+      const settings = readAdminSettings(getKnownUsernames());
+      const entry = getUserAnnouncement(settings, username);
       sendJson(res, 200, {
-        announcement: visible ? settings.announcement : "",
-        updatedAt: visible ? settings.updatedAt : null,
+        announcement: entry?.text ?? "",
+        updatedAt: entry?.updatedAt ?? null,
       });
       return;
     }
@@ -76,58 +84,65 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
 
         sendJson(res, 200, {
           accounts: listSiteAccountSummaries(),
-          settings: readAdminSettings(),
+          settings: readAdminSettings(getKnownUsernames()),
           applications: listAccountApplications(),
         });
         return;
       }
 
       if (req.method === "PATCH") {
-        const username = requireAdministrator(req, res);
-        if (!username) return;
+        const adminUsername = requireAdministrator(req, res);
+        if (!adminUsername) return;
 
         try {
           const body = (await readJsonBody(req)) as {
-            announcement?: unknown;
-            announcementTargets?: unknown;
+            userAnnouncement?: unknown;
+            deleteUserAnnouncement?: unknown;
             debugMemo?: unknown;
           } | null;
 
+          const knownUsernames = getKnownUsernames();
           const patch: {
-            announcement?: string;
-            announcementTargets?: string[] | null;
             debugMemo?: string;
+            userAnnouncement?: { username: string; text: string };
+            deleteUserAnnouncement?: string;
           } = {};
 
-          const knownUsernames = new Set(
-            listSiteAccountSummaries().map((account) => account.username),
-          );
-
-          if (body && "announcement" in body) {
-            if (typeof body.announcement !== "string") {
-              sendJson(res, 400, { error: "announcement は文字列で指定してください" });
+          if (body && "userAnnouncement" in body) {
+            const value = body.userAnnouncement;
+            if (!value || typeof value !== "object") {
+              sendJson(res, 400, { error: "userAnnouncement の形式が不正です" });
               return;
             }
-            patch.announcement = body.announcement;
+
+            const record = value as Record<string, unknown>;
+            if (typeof record.username !== "string" || typeof record.text !== "string") {
+              sendJson(res, 400, { error: "userAnnouncement には username と text が必要です" });
+              return;
+            }
+
+            const username = record.username.trim();
+            if (!knownUsernames.includes(username)) {
+              sendJson(res, 400, { error: "指定したアカウントが見つかりません" });
+              return;
+            }
+
+            patch.userAnnouncement = { username, text: record.text };
           }
 
-          if (body && "announcementTargets" in body) {
-            const targets = body.announcementTargets;
-            if (targets === null) {
-              patch.announcementTargets = null;
-            } else if (!Array.isArray(targets)) {
-              sendJson(res, 400, { error: "announcementTargets は配列または null で指定してください" });
+          if (body && "deleteUserAnnouncement" in body) {
+            if (typeof body.deleteUserAnnouncement !== "string") {
+              sendJson(res, 400, { error: "deleteUserAnnouncement は文字列で指定してください" });
               return;
-            } else if (!targets.every((entry) => typeof entry === "string")) {
-              sendJson(res, 400, { error: "announcementTargets の要素は文字列で指定してください" });
-              return;
-            } else {
-              const filtered = targets
-                .map((entry) => entry.trim())
-                .filter((entry) => entry && knownUsernames.has(entry));
-              patch.announcementTargets =
-                filtered.length === knownUsernames.size ? null : [...new Set(filtered)].sort();
             }
+
+            const username = body.deleteUserAnnouncement.trim();
+            if (!knownUsernames.includes(username)) {
+              sendJson(res, 400, { error: "指定したアカウントが見つかりません" });
+              return;
+            }
+
+            patch.deleteUserAnnouncement = username;
           }
 
           if (body && "debugMemo" in body) {
@@ -139,21 +154,25 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
           }
 
           if (
-            !("announcement" in patch) &&
-            !("announcementTargets" in patch) &&
+            !("userAnnouncement" in patch) &&
+            !("deleteUserAnnouncement" in patch) &&
             !("debugMemo" in patch)
           ) {
             sendJson(res, 400, { error: "更新する項目を指定してください" });
             return;
           }
 
-          const settings = saveAdminSettings(patch, username);
+          const settings = saveAdminSettings(patch, knownUsernames, adminUsername);
           sendJson(res, 200, {
             accounts: listSiteAccountSummaries(),
             settings,
             applications: listAccountApplications(),
           });
-        } catch {
+        } catch (error) {
+          if (error instanceof Error && error.message === "INVALID_ANNOUNCEMENT_USER") {
+            sendJson(res, 400, { error: "指定したアカウントが見つかりません" });
+            return;
+          }
           sendJson(res, 400, { error: "リクエストが不正です" });
         }
         return;
@@ -171,10 +190,15 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
       if (!adminUsername) return;
 
       try {
-        const body = (await readJsonBody(req)) as { canUsePopPlacement?: unknown } | null;
+        const body = (await readJsonBody(req)) as {
+          canUsePopPlacement?: unknown;
+          canUseTradeFeatures?: unknown;
+        } | null;
         const canUsePopPlacement = body?.canUsePopPlacement === true;
+        const canUseTradeFeatures = body?.canUseTradeFeatures === true;
         const application = approveAccountApplication(applicationApproveMatch[1], adminUsername, {
           canUsePopPlacement,
+          canUseTradeFeatures,
         });
 
         if (!application) {
@@ -221,6 +245,7 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
 
       sendJson(res, 200, {
         accounts: listSiteAccountSummaries(),
+        settings: readAdminSettings(getKnownUsernames()),
         applications: listAccountApplications(),
       });
       return;
@@ -246,6 +271,114 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
 
         sendJson(res, 200, {
           accounts: listSiteAccountSummaries(),
+          settings: readAdminSettings(getKnownUsernames()),
+          applications: listAccountApplications(),
+        });
+      } catch {
+        sendJson(res, 400, { error: "更新に失敗しました" });
+      }
+      return;
+    }
+
+    const tradeFeaturesMatch = pathname.match(/^\/api\/admin\/accounts\/([^/]+)\/trade-features$/);
+    if (tradeFeaturesMatch && req.method === "PATCH") {
+      if (!requireAdministrator(req, res)) return;
+
+      try {
+        const body = (await readJsonBody(req)) as { canUseTradeFeatures?: unknown } | null;
+        if (typeof body?.canUseTradeFeatures !== "boolean") {
+          sendJson(res, 400, { error: "canUseTradeFeatures は boolean で指定してください" });
+          return;
+        }
+
+        const username = decodeURIComponent(tradeFeaturesMatch[1]);
+        const account = setAccountTradeFeaturesAccess(username, body.canUseTradeFeatures);
+        if (!account) {
+          sendJson(res, 404, { error: "アカウントが見つからないか、変更できません" });
+          return;
+        }
+
+        sendJson(res, 200, {
+          accounts: listSiteAccountSummaries(),
+          settings: readAdminSettings(getKnownUsernames()),
+          applications: listAccountApplications(),
+        });
+      } catch {
+        sendJson(res, 400, { error: "更新に失敗しました" });
+      }
+      return;
+    }
+
+    const profileMatch = pathname.match(/^\/api\/admin\/accounts\/([^/]+)\/profile$/);
+    if (profileMatch && req.method === "PATCH") {
+      if (!requireAdministrator(req, res)) return;
+
+      try {
+        const body = (await readJsonBody(req)) as {
+          canUsePopPlacement?: unknown;
+          canUseTradeFeatures?: unknown;
+          tweetTemplateMode?: unknown;
+          tweetTemplateCustom?: unknown;
+        } | null;
+
+        const username = decodeURIComponent(profileMatch[1]);
+        const patch: {
+          canUsePopPlacement?: boolean;
+          canUseTradeFeatures?: boolean;
+          tweetTemplateMode?: TweetTemplateMode;
+          tweetTemplateCustom?: string | null;
+        } = {};
+
+        if (body && "canUsePopPlacement" in body) {
+          if (typeof body.canUsePopPlacement !== "boolean") {
+            sendJson(res, 400, { error: "canUsePopPlacement は boolean で指定してください" });
+            return;
+          }
+          patch.canUsePopPlacement = body.canUsePopPlacement;
+        }
+
+        if (body && "canUseTradeFeatures" in body) {
+          if (typeof body.canUseTradeFeatures !== "boolean") {
+            sendJson(res, 400, { error: "canUseTradeFeatures は boolean で指定してください" });
+            return;
+          }
+          patch.canUseTradeFeatures = body.canUseTradeFeatures;
+        }
+
+        if (body && "tweetTemplateMode" in body) {
+          if (typeof body.tweetTemplateMode !== "string") {
+            sendJson(res, 400, { error: "tweetTemplateMode は文字列で指定してください" });
+            return;
+          }
+          if (!isTweetTemplateMode(body.tweetTemplateMode)) {
+            sendJson(res, 400, { error: "tweetTemplateMode が不正です" });
+            return;
+          }
+          patch.tweetTemplateMode = body.tweetTemplateMode;
+        }
+
+        if (body && "tweetTemplateCustom" in body) {
+          if (body.tweetTemplateCustom !== null && typeof body.tweetTemplateCustom !== "string") {
+            sendJson(res, 400, { error: "tweetTemplateCustom は文字列または null で指定してください" });
+            return;
+          }
+          patch.tweetTemplateCustom = body.tweetTemplateCustom;
+        }
+
+        if (Object.keys(patch).length === 0) {
+          sendJson(res, 400, { error: "更新する項目を指定してください" });
+          return;
+        }
+
+        const account = updateAccountProfile(username, patch);
+        if (!account) {
+          sendJson(res, 404, { error: "アカウントが見つからないか、変更できません" });
+          return;
+        }
+
+        sendJson(res, 200, {
+          accounts: listSiteAccountSummaries(),
+          settings: readAdminSettings(getKnownUsernames()),
           applications: listAccountApplications(),
         });
       } catch {

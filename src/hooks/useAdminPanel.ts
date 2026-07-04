@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
 
 import type { AccountApplication } from "../../shared/accountRegistration";
 import type { AdminAccountSummary, AdminSettings, AdminSettingsResponse } from "../../shared/admin";
@@ -11,23 +11,35 @@ interface UseAdminPanelResult {
   saving: boolean;
   error: string | null;
   reload: () => Promise<void>;
-  saveAnnouncement: (announcement: string, targets: string[] | null) => Promise<boolean>;
-  deleteAnnouncement: () => Promise<boolean>;
+  saveUserAnnouncement: (username: string, text: string) => Promise<boolean>;
+  deleteUserAnnouncement: (username: string) => Promise<boolean>;
   saveDebugMemo: (value: string) => Promise<boolean>;
-  approveApplication: (applicationId: string, canUsePopPlacement: boolean) => Promise<boolean>;
+  approveApplication: (applicationId: string, canUsePopPlacement: boolean, canUseTradeFeatures: boolean) => Promise<boolean>;
   rejectApplication: (applicationId: string) => Promise<boolean>;
   setPopPlacementAccess: (username: string, enabled: boolean) => Promise<boolean>;
+  setTradeFeaturesAccess: (username: string, enabled: boolean) => Promise<boolean>;
+  saveAccountProfile: (
+    username: string,
+    patch: {
+      canUsePopPlacement: boolean;
+      canUseTradeFeatures: boolean;
+      tweetTemplateMode: import("../../shared/accountProfile").TweetTemplateMode;
+      tweetTemplateCustom: string | null;
+    },
+  ) => Promise<boolean>;
 }
 
 function applyAdminResponse(
   data: AdminSettingsResponse,
   setAccounts: (accounts: AdminAccountSummary[]) => void,
   setApplications: (applications: AccountApplication[]) => void,
-  setSettings: (settings: AdminSettings | null) => void,
+  setSettings: Dispatch<SetStateAction<AdminSettings | null>>,
 ): void {
   setAccounts(Array.isArray(data.accounts) ? data.accounts : []);
   setApplications(Array.isArray(data.applications) ? data.applications : []);
-  setSettings(data.settings ?? null);
+  if (data.settings !== undefined) {
+    setSettings(data.settings);
+  }
 }
 
 export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
@@ -75,8 +87,8 @@ export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
 
   const patchSettings = useCallback(
     async (patch: {
-      announcement?: string;
-      announcementTargets?: string[] | null;
+      userAnnouncement?: { username: string; text: string };
+      deleteUserAnnouncement?: string;
       debugMemo?: string;
     }) => {
       setSaving(true);
@@ -138,9 +150,10 @@ export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
   );
 
   const approveApplication = useCallback(
-    async (applicationId: string, canUsePopPlacement: boolean) =>
+    async (applicationId: string, canUsePopPlacement: boolean, canUseTradeFeatures: boolean) =>
       postApplicationAction(`/api/admin/account-applications/${encodeURIComponent(applicationId)}/approve`, {
         canUsePopPlacement,
+        canUseTradeFeatures,
       }),
     [postApplicationAction],
   );
@@ -181,14 +194,85 @@ export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
     }
   }, []);
 
-  const saveAnnouncement = useCallback(
-    async (announcement: string, targets: string[] | null) =>
-      patchSettings({ announcement, announcementTargets: targets }),
+  const setTradeFeaturesAccess = useCallback(async (username: string, enabled: boolean) => {
+    setSaving(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `/api/admin/accounts/${encodeURIComponent(username)}/trade-features`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ canUseTradeFeatures: enabled }),
+        },
+      );
+
+      if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error || "更新に失敗しました");
+      }
+
+      const data = (await response.json()) as AdminSettingsResponse;
+      applyAdminResponse(data, setAccounts, setApplications, setSettings);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "更新に失敗しました");
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }, []);
+
+  const saveAccountProfile = useCallback(
+    async (
+      username: string,
+      patch: {
+        canUsePopPlacement: boolean;
+        canUseTradeFeatures: boolean;
+        tweetTemplateMode: import("../../shared/accountProfile").TweetTemplateMode;
+        tweetTemplateCustom: string | null;
+      },
+    ) => {
+      setSaving(true);
+      setError(null);
+
+      try {
+        const response = await fetch(
+          `/api/admin/accounts/${encodeURIComponent(username)}/profile`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(patch),
+          },
+        );
+
+        if (!response.ok) {
+          const data = (await response.json().catch(() => ({}))) as { error?: string };
+          throw new Error(data.error || "保存に失敗しました");
+        }
+
+        const data = (await response.json()) as AdminSettingsResponse;
+        applyAdminResponse(data, setAccounts, setApplications, setSettings);
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "保存に失敗しました");
+        return false;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [],
+  );
+
+  const saveUserAnnouncement = useCallback(
+    async (username: string, text: string) =>
+      patchSettings({ userAnnouncement: { username, text } }),
     [patchSettings],
   );
 
-  const deleteAnnouncement = useCallback(
-    async () => patchSettings({ announcement: "", announcementTargets: null }),
+  const deleteUserAnnouncement = useCallback(
+    async (username: string) => patchSettings({ deleteUserAnnouncement: username }),
     [patchSettings],
   );
 
@@ -205,11 +289,13 @@ export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
     saving,
     error,
     reload,
-    saveAnnouncement,
-    deleteAnnouncement,
+    saveUserAnnouncement,
+    deleteUserAnnouncement,
     saveDebugMemo,
     approveApplication,
     rejectApplication,
     setPopPlacementAccess,
+    setTradeFeaturesAccess,
+    saveAccountProfile,
   };
 }

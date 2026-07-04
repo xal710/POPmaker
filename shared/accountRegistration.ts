@@ -1,3 +1,5 @@
+import type { TweetTemplateMode } from "./accountProfile";
+
 export const ACCOUNT_POSITIONS = ["社員", "アルバイトリーダー", "アルバイト"] as const;
 
 export type AccountPosition = (typeof ACCOUNT_POSITIONS)[number];
@@ -27,6 +29,9 @@ export interface StoredSiteAccount {
   store: string | null;
   position: AccountPosition;
   canUsePopPlacement: boolean;
+  canUseTradeFeatures: boolean;
+  tweetTemplateMode: TweetTemplateMode;
+  tweetTemplateCustom: string | null;
   applicationId: string | null;
   createdAt: string;
 }

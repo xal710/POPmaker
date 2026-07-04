@@ -9,7 +9,7 @@ import type { ComparisonItem } from "../types";
 
 import { copyImageBlob, copyImageElement, downloadBlob } from "../utils/clipboard";
 import { printPopImageBlob } from "../utils/printPopImage";
-import { buildTweetText, formatHareruyaBuyListName, getTweetTemplateId, parsePriceInput } from "../utils/format";
+import { buildTweetTextForAccount, formatHareruyaBuyListName, parsePriceInput } from "../utils/format";
 import { countTweetCharacters, formatTweetCharCount, TWEET_MAX_LENGTH } from "../utils/tweetCount";
 
 type CopyField = "pop" | "tweet" | "cardName";
@@ -21,8 +21,7 @@ interface PopModalProps {
 }
 
 export function PopModal({ item, onClose, onPlacePop }: PopModalProps) {
-  const { username } = useAuthUser();
-  const tweetTemplateId = getTweetTemplateId(username);
+  const { username, canUseTradeFeatures, tweetProfile } = useAuthUser();
   const [copiedField, setCopiedField] = useState<CopyField | null>(null);
   const [tweetDraft, setTweetDraft] = useState("");
   const [priceInput, setPriceInput] = useState("");
@@ -88,8 +87,10 @@ export function PopModal({ item, onClose, onPlacePop }: PopModalProps) {
     setPriceInput(String(item.hareruya2));
     setAppliedPriceYen(item.hareruya2);
     setPriceError(null);
-    setTweetDraft(buildTweetText(sourceName, item.hareruya2, tweetTemplateId));
-  }, [item, productTitle, tweetTemplateId]);
+    setTweetDraft(
+      buildTweetTextForAccount(sourceName, item.hareruya2, username, canUseTradeFeatures, tweetProfile),
+    );
+  }, [item, productTitle, username, canUseTradeFeatures, tweetProfile]);
 
   const tweetCharCount = useMemo(() => countTweetCharacters(tweetDraft), [tweetDraft]);
   const tweetCharCountLabel = useMemo(() => formatTweetCharCount(tweetCharCount), [tweetCharCount]);
@@ -176,7 +177,9 @@ export function PopModal({ item, onClose, onPlacePop }: PopModalProps) {
     setPriceInput(String(parsed));
 
     const sourceName = productTitle ?? item.name;
-    setTweetDraft(buildTweetText(sourceName, parsed, tweetTemplateId));
+    setTweetDraft(
+      buildTweetTextForAccount(sourceName, parsed, username, canUseTradeFeatures, tweetProfile),
+    );
   };
 
   return (

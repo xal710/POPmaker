@@ -1,29 +1,35 @@
-export const MIZUNO_USERNAME = "h.mizuno";
+/** トレード機能: Excelエクスポート・晴れる屋2取得順・専用テンプレート等 */
 
-export function isMizunoAccount(username: string | null | undefined): boolean {
-  return username === MIZUNO_USERNAME;
+export function canUseTradeFeatures(enabled: boolean): boolean {
+  return enabled;
 }
 
-/** Excelエクスポート（絞り込み・並び替え済みリスト） */
-export function canExportComparisonExcel(username: string | null | undefined): boolean {
-  return isMizunoAccount(username);
+export function canExportComparisonExcel(canUseTradeFeatures: boolean): boolean {
+  return canUseTradeFeatures;
 }
 
-/** 晴れる屋2取得順の並び替え */
-export function canUseHareruyaSourceOrderSort(username: string | null | undefined): boolean {
-  return isMizunoAccount(username);
+export function canUseHareruyaSourceOrderSort(canUseTradeFeatures: boolean): boolean {
+  return canUseTradeFeatures;
 }
 
-/** ツイート履歴ナビ・画面 */
-export function showTweetHistoryFeature(username: string | null | undefined): boolean {
-  return !isMizunoAccount(username);
+/** トレード機能利用時はツイート履歴を非表示 */
+export function showTweetHistoryFeature(canUseTradeFeatures: boolean): boolean {
+  return !canUseTradeFeatures;
 }
 
-/** POP配置ナビ・画面（canUsePopPlacement と併用） */
+/** POP配置はトレード機能と併用しない */
 export function showPopPlacementFeature(
-  username: string | null | undefined,
+  canUseTradeFeatures: boolean,
   canUsePopPlacement: boolean,
 ): boolean {
   if (!canUsePopPlacement) return false;
-  return !isMizunoAccount(username);
+  return !canUseTradeFeatures;
+}
+
+export function usesTradeDefaultSort(canUseTradeFeatures: boolean): boolean {
+  return canUseTradeFeatures;
+}
+
+export function usesTradeTweetTemplate(canUseTradeFeatures: boolean): boolean {
+  return canUseTradeFeatures;
 }

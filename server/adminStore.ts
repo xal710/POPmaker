@@ -1,7 +1,13 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import type { AdminSettings } from "../shared/admin";
+import {
+  createEmptyAdminSettings,
+  isAdminSettings,
+  normalizeAdminSettings,
+  type AccountAnnouncement,
+  type AdminSettings,
+} from "../shared/admin";
 import { getDataDir } from "./config";
 
 const ADMIN_SETTINGS_FILENAME = "admin-settings.json";
@@ -10,76 +16,102 @@ function getAdminSettingsPath(): string {
   return resolve(getDataDir(), ADMIN_SETTINGS_FILENAME);
 }
 
-function defaultSettings(): AdminSettings {
-  return {
-    announcement: "",
-    announcementTargets: null,
-    debugMemo: "",
-    updatedAt: new Date(0).toISOString(),
-    updatedBy: null,
-  };
-}
-
-function isValidAnnouncementTargets(value: unknown): boolean {
-  if (value === null || value === undefined) return true;
-  if (!Array.isArray(value)) return false;
-  return value.every((entry) => typeof entry === "string");
-}
-
-function isValidSettings(value: unknown): value is AdminSettings {
-  if (!value || typeof value !== "object") return false;
-  const record = value as Record<string, unknown>;
-  return (
-    typeof record.announcement === "string" &&
-    isValidAnnouncementTargets(record.announcementTargets) &&
-    typeof record.debugMemo === "string" &&
-    typeof record.updatedAt === "string" &&
-    (record.updatedBy === null || typeof record.updatedBy === "string")
-  );
-}
-
-export function readAdminSettings(): AdminSettings {
+function readRawAdminSettings(): unknown {
   const path = getAdminSettingsPath();
-  if (!existsSync(path)) return defaultSettings();
+  if (!existsSync(path)) return null;
 
   try {
-    const parsed = JSON.parse(readFileSync(path, "utf-8")) as unknown;
-    if (!isValidSettings(parsed)) return defaultSettings();
-    return {
-      ...parsed,
-      announcementTargets: parsed.announcementTargets ?? null,
-    };
+    return JSON.parse(readFileSync(path, "utf-8")) as unknown;
   } catch {
-    return defaultSettings();
+    return null;
   }
 }
 
+function writeAdminSettings(settings: AdminSettings): AdminSettings {
+  const path = getAdminSettingsPath();
+  mkdirSync(getDataDir(), { recursive: true });
+  writeFileSync(path, JSON.stringify(settings, null, 2), "utf-8");
+  return settings;
+}
+
+export function readAdminSettings(accountUsernames: string[] = []): AdminSettings {
+  const raw = readRawAdminSettings();
+  if (!raw) return createEmptyAdminSettings();
+
+  const normalized = normalizeAdminSettings(raw, accountUsernames);
+  if (isAdminSettings(raw)) {
+    return normalized;
+  }
+
+  if (accountUsernames.length > 0) {
+    return writeAdminSettings(normalized);
+  }
+
+  return normalized;
+}
+
+export interface SaveAdminSettingsPatch {
+  debugMemo?: string;
+  userAnnouncement?: {
+    username: string;
+    text: string;
+  };
+  deleteUserAnnouncement?: string;
+}
+
 export function saveAdminSettings(
-  patch: Partial<Pick<AdminSettings, "announcement" | "announcementTargets" | "debugMemo">>,
+  patch: SaveAdminSettingsPatch,
+  accountUsernames: string[],
   updatedBy: string,
 ): AdminSettings {
-  const current = readAdminSettings();
+  const current = readAdminSettings(accountUsernames);
+  const now = new Date().toISOString();
   const next: AdminSettings = {
-    announcement: patch.announcement ?? current.announcement,
-    announcementTargets:
-      patch.announcementTargets !== undefined
-        ? patch.announcementTargets
-        : current.announcementTargets,
-    debugMemo: patch.debugMemo ?? current.debugMemo,
-    updatedAt: new Date().toISOString(),
+    ...current,
+    announcementsByUser: { ...current.announcementsByUser },
+    updatedAt: now,
     updatedBy,
   };
 
-  const path = getAdminSettingsPath();
-  mkdirSync(getDataDir(), { recursive: true });
-  writeFileSync(path, JSON.stringify(next, null, 2), "utf-8");
-  return next;
+  if (patch.debugMemo !== undefined) {
+    next.debugMemo = patch.debugMemo;
+  }
+
+  if (patch.userAnnouncement) {
+    const username = patch.userAnnouncement.username.trim();
+    const text = patch.userAnnouncement.text.trim();
+
+    if (!username || !accountUsernames.includes(username)) {
+      throw new Error("INVALID_ANNOUNCEMENT_USER");
+    }
+
+    if (text) {
+      next.announcementsByUser[username] = {
+        text,
+        updatedAt: now,
+        updatedBy,
+      };
+    } else {
+      delete next.announcementsByUser[username];
+    }
+  }
+
+  if (patch.deleteUserAnnouncement) {
+    const username = patch.deleteUserAnnouncement.trim();
+    if (!username || !accountUsernames.includes(username)) {
+      throw new Error("INVALID_ANNOUNCEMENT_USER");
+    }
+    delete next.announcementsByUser[username];
+  }
+
+  return writeAdminSettings(next);
 }
 
 export function ensureAdminSettingsFile(): void {
   const path = getAdminSettingsPath();
   if (existsSync(path)) return;
 
-  mkdirSync(getDataDir(), { recursive: true });
-  writeFileSync(path, JSON.stringify(defaultSettings(), null, 2), "utf-8");
+  writeAdminSettings(createEmptyAdminSettings());
 }
+
+export type { AccountAnnouncement };

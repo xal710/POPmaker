@@ -9,6 +9,11 @@ import type {
   StoredSiteAccount,
 } from "../shared/accountRegistration";
 import { ADMIN_USERNAME } from "../shared/admin";
+import {
+  DEFAULT_ACCOUNT_TWEET_PROFILE,
+  normalizeAccountTweetProfile,
+  type TweetTemplateMode,
+} from "../shared/accountProfile";
 import { getDataDir } from "./config";
 import { hashPassword, verifyPassword } from "./password";
 
@@ -29,8 +34,13 @@ function defaultLegacyPopPlacementUsernames(): Set<string> {
   return new Set(["administrator", "Yousei710", "akito00"]);
 }
 
+function defaultLegacyTradeFeatureUsernames(): Set<string> {
+  return new Set(["h.mizuno"]);
+}
+
 function getLegacySeedAccounts(): Array<Omit<StoredSiteAccount, "applicationId" | "createdAt">> {
   const popUsers = defaultLegacyPopPlacementUsernames();
+  const tradeUsers = defaultLegacyTradeFeatureUsernames();
   const seeds = [
     { username: "administrator", password: process.env.ACCOUNT_ADMINISTRATOR_PASSWORD ?? "as214117" },
     { username: "Yousei710", password: process.env.ACCOUNT_YOUSEI710_PASSWORD ?? "as214117" },
@@ -48,6 +58,9 @@ function getLegacySeedAccounts(): Array<Omit<StoredSiteAccount, "applicationId" 
     store: null,
     position: "社員" as const,
     canUsePopPlacement: popUsers.has(seed.username),
+    canUseTradeFeatures: tradeUsers.has(seed.username),
+    tweetTemplateMode: DEFAULT_ACCOUNT_TWEET_PROFILE.tweetTemplateMode,
+    tweetTemplateCustom: DEFAULT_ACCOUNT_TWEET_PROFILE.tweetTemplateCustom,
     applicationId: null,
     createdAt: now,
   }));
@@ -77,9 +90,23 @@ function readStoreFromDisk(): AccountStoreData {
   }
 }
 
+function normalizeStoredAccount(account: StoredSiteAccount): StoredSiteAccount {
+  const tweetProfile = normalizeAccountTweetProfile(account);
+  return {
+    ...account,
+    canUseTradeFeatures: account.canUseTradeFeatures ?? false,
+    tweetTemplateMode: tweetProfile.tweetTemplateMode,
+    tweetTemplateCustom: tweetProfile.tweetTemplateCustom,
+  };
+}
+
 function loadStore(): AccountStoreData {
   if (!memoryCache) {
-    memoryCache = readStoreFromDisk();
+    const data = readStoreFromDisk();
+    memoryCache = {
+      accounts: data.accounts.map(normalizeStoredAccount),
+      applications: data.applications,
+    };
   }
   return memoryCache;
 }
@@ -94,13 +121,31 @@ function saveStore(data: AccountStoreData): void {
 function mergeMissingSeedAccounts(): void {
   const store = loadStore();
   const existing = new Set(store.accounts.map((account) => account.username));
+  const seedsByUsername = new Map(
+    getLegacySeedAccounts().map((seed) => [seed.username, seed]),
+  );
   let changed = false;
 
-  for (const seed of getLegacySeedAccounts()) {
+  for (const seed of seedsByUsername.values()) {
     if (existing.has(seed.username)) continue;
     store.accounts.push(seed);
     changed = true;
   }
+
+  store.accounts = store.accounts.map((account) => {
+    const seed = seedsByUsername.get(account.username);
+    let next = account;
+
+    if (account.canUseTradeFeatures === undefined) {
+      next = {
+        ...next,
+        canUseTradeFeatures: seed?.canUseTradeFeatures ?? false,
+      };
+      changed = true;
+    }
+
+    return next;
+  });
 
   if (changed) {
     saveStore(store);
@@ -158,6 +203,11 @@ export function accountCanUsePopPlacement(username: string): boolean {
   return account?.canUsePopPlacement === true;
 }
 
+export function accountCanUseTradeFeatures(username: string): boolean {
+  const account = findAccountByUsername(username);
+  return account?.canUseTradeFeatures === true;
+}
+
 export function submitAccountApplication(input: AccountRegistrationInput): AccountApplication {
   if (isDesiredUsernameTaken(input.desiredUsername)) {
     throw new Error("USERNAME_TAKEN");
@@ -212,7 +262,7 @@ export function rejectAccountApplication(id: string, rejectedBy: string): Accoun
 export function approveAccountApplication(
   id: string,
   approvedBy: string,
-  options?: { canUsePopPlacement?: boolean },
+  options?: { canUsePopPlacement?: boolean; canUseTradeFeatures?: boolean },
 ): AccountApplication | null {
   const store = loadStore();
   const application = store.applications.find((entry) => entry.id === id);
@@ -231,6 +281,9 @@ export function approveAccountApplication(
     store: application.store,
     position: application.position,
     canUsePopPlacement: options?.canUsePopPlacement ?? false,
+    canUseTradeFeatures: options?.canUseTradeFeatures ?? false,
+    tweetTemplateMode: DEFAULT_ACCOUNT_TWEET_PROFILE.tweetTemplateMode,
+    tweetTemplateCustom: DEFAULT_ACCOUNT_TWEET_PROFILE.tweetTemplateCustom,
     applicationId: application.id,
     createdAt: now,
   };
@@ -265,9 +318,82 @@ export function setAccountPopPlacementAccess(
   const index = store.accounts.findIndex((account) => account.username === username);
   if (index < 0) return null;
 
-  store.accounts[index] = { ...store.accounts[index], canUsePopPlacement };
+  store.accounts[index] = {
+    ...store.accounts[index],
+    canUsePopPlacement,
+    canUseTradeFeatures: canUsePopPlacement
+      ? false
+      : store.accounts[index].canUseTradeFeatures,
+  };
   saveStore(store);
   return store.accounts[index];
+}
+
+export function setAccountTradeFeaturesAccess(
+  username: string,
+  canUseTradeFeatures: boolean,
+): StoredSiteAccount | null {
+  const store = loadStore();
+  const index = store.accounts.findIndex((account) => account.username === username);
+  if (index < 0) return null;
+
+  const account = store.accounts[index];
+  store.accounts[index] = {
+    ...account,
+    canUseTradeFeatures,
+    canUsePopPlacement: canUseTradeFeatures ? false : account.canUsePopPlacement,
+  };
+  saveStore(store);
+  return store.accounts[index];
+}
+
+export interface AccountProfilePatch {
+  canUsePopPlacement?: boolean;
+  canUseTradeFeatures?: boolean;
+  tweetTemplateMode?: TweetTemplateMode;
+  tweetTemplateCustom?: string | null;
+}
+
+export function updateAccountProfile(
+  username: string,
+  patch: AccountProfilePatch,
+): StoredSiteAccount | null {
+  const store = loadStore();
+  const index = store.accounts.findIndex((account) => account.username === username);
+  if (index < 0) return null;
+
+  const current = store.accounts[index];
+  let next: StoredSiteAccount = { ...current };
+
+  if (patch.canUsePopPlacement !== undefined) {
+    if (username === ADMIN_USERNAME && !patch.canUsePopPlacement) {
+      return null;
+    }
+    next.canUsePopPlacement = patch.canUsePopPlacement;
+    if (patch.canUsePopPlacement) {
+      next.canUseTradeFeatures = false;
+    }
+  }
+
+  if (patch.canUseTradeFeatures !== undefined) {
+    next.canUseTradeFeatures = patch.canUseTradeFeatures;
+    if (patch.canUseTradeFeatures) {
+      next.canUsePopPlacement = false;
+    }
+  }
+
+  if (patch.tweetTemplateMode !== undefined) {
+    next.tweetTemplateMode = patch.tweetTemplateMode;
+  }
+
+  if (patch.tweetTemplateCustom !== undefined) {
+    next.tweetTemplateCustom = patch.tweetTemplateCustom;
+  }
+
+  next = normalizeStoredAccount(next);
+  store.accounts[index] = next;
+  saveStore(store);
+  return next;
 }
 
 export function listApplicationsByStatus(

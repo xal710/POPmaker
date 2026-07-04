@@ -1,5 +1,5 @@
 import type { ComparisonItem } from "../types";
-import { isMizunoAccount } from "../../shared/accountFeatures";
+import { usesTradeDefaultSort } from "../../shared/accountFeatures";
 
 export type ComparisonSortKey = "cardrush" | "hareruya2" | "diff" | "hareruyaOrder";
 export type SortDirection = "asc" | "desc";
@@ -14,15 +14,17 @@ export const DEFAULT_COMPARISON_SORT: ComparisonSortState = {
   direction: "desc",
 };
 
-export const MIZUNO_DEFAULT_COMPARISON_SORT: ComparisonSortState = {
+export const TRADE_DEFAULT_COMPARISON_SORT: ComparisonSortState = {
   key: "hareruyaOrder",
   direction: "asc",
 };
 
 export function getDefaultComparisonSort(
-  username: string | null | undefined,
+  canUseTradeFeatures: boolean,
 ): ComparisonSortState {
-  return isMizunoAccount(username) ? MIZUNO_DEFAULT_COMPARISON_SORT : DEFAULT_COMPARISON_SORT;
+  return usesTradeDefaultSort(canUseTradeFeatures)
+    ? TRADE_DEFAULT_COMPARISON_SORT
+    : DEFAULT_COMPARISON_SORT;
 }
 
 export const COMPARISON_SORT_LABELS: Record<ComparisonSortKey, string> = {
