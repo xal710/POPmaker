@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Connect } from "vite";
 
-import { isAdministrator, getUserAnnouncement } from "../shared/admin";
+import { isAdministrator, getGlobalAnnouncement, getUserAnnouncement } from "../shared/admin";
 import { isTweetTemplateMode, type TweetTemplateMode } from "../shared/accountProfile";
 import {
   approveAccountApplication,
@@ -70,10 +70,13 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
       if (!username) return;
 
       const settings = readAdminSettings(getKnownUsernames());
-      const entry = getUserAnnouncement(settings, username);
+      const globalEntry = getGlobalAnnouncement(settings);
+      const userEntry = getUserAnnouncement(settings, username);
       sendJson(res, 200, {
-        announcement: entry?.text ?? "",
-        updatedAt: entry?.updatedAt ?? null,
+        globalAnnouncement: globalEntry?.text ?? "",
+        globalUpdatedAt: globalEntry?.updatedAt ?? null,
+        userAnnouncement: userEntry?.text ?? "",
+        userUpdatedAt: userEntry?.updatedAt ?? null,
       });
       return;
     }
@@ -96,6 +99,8 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
 
         try {
           const body = (await readJsonBody(req)) as {
+            globalAnnouncement?: unknown;
+            deleteGlobalAnnouncement?: unknown;
             userAnnouncement?: unknown;
             deleteUserAnnouncement?: unknown;
             debugMemo?: unknown;
@@ -104,9 +109,27 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
           const knownUsernames = getKnownUsernames();
           const patch: {
             debugMemo?: string;
+            globalAnnouncement?: string;
+            deleteGlobalAnnouncement?: boolean;
             userAnnouncement?: { username: string; text: string };
             deleteUserAnnouncement?: string;
           } = {};
+
+          if (body && "globalAnnouncement" in body) {
+            if (typeof body.globalAnnouncement !== "string") {
+              sendJson(res, 400, { error: "globalAnnouncement は文字列で指定してください" });
+              return;
+            }
+            patch.globalAnnouncement = body.globalAnnouncement;
+          }
+
+          if (body && "deleteGlobalAnnouncement" in body) {
+            if (body.deleteGlobalAnnouncement !== true) {
+              sendJson(res, 400, { error: "deleteGlobalAnnouncement は true で指定してください" });
+              return;
+            }
+            patch.deleteGlobalAnnouncement = true;
+          }
 
           if (body && "userAnnouncement" in body) {
             const value = body.userAnnouncement;
@@ -154,6 +177,8 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
           }
 
           if (
+            !("globalAnnouncement" in patch) &&
+            !("deleteGlobalAnnouncement" in patch) &&
             !("userAnnouncement" in patch) &&
             !("deleteUserAnnouncement" in patch) &&
             !("debugMemo" in patch)

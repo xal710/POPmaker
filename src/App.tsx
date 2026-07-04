@@ -77,8 +77,10 @@ function App() {
   const showExcelExport = canExportComparisonExcel(canUseTradeFeatures);
   const showHareruyaSourceOrderSort = canUseHareruyaSourceOrderSort(canUseTradeFeatures);
   const {
-    announcement,
-    updatedAt: announcementUpdatedAt,
+    globalAnnouncement,
+    globalUpdatedAt,
+    userAnnouncement,
+    userUpdatedAt,
     reload: reloadAnnouncement,
   } = useAnnouncement();
   const [view, setView] = useState<AppView>("tool");
@@ -288,6 +290,8 @@ function App() {
             error={adminPanel.error}
             onSaveUserAnnouncement={adminPanel.saveUserAnnouncement}
             onDeleteUserAnnouncement={adminPanel.deleteUserAnnouncement}
+            onSaveGlobalAnnouncement={adminPanel.saveGlobalAnnouncement}
+            onDeleteGlobalAnnouncement={adminPanel.deleteGlobalAnnouncement}
             onSaveDebugMemo={adminPanel.saveDebugMemo}
             onApproveApplication={adminPanel.approveApplication}
             onRejectApplication={adminPanel.rejectApplication}
@@ -297,7 +301,20 @@ function App() {
         ) : (
           <>
 
-        <AnnouncementBanner announcement={announcement} updatedAt={announcementUpdatedAt} />
+        <div className="announcement-stack">
+          <AnnouncementBanner
+            label="全体のお知らせ"
+            announcement={globalAnnouncement}
+            updatedAt={globalUpdatedAt}
+            variant="global"
+          />
+          <AnnouncementBanner
+            label="あなた向けのお知らせ"
+            announcement={userAnnouncement}
+            updatedAt={userUpdatedAt}
+            variant="user"
+          />
+        </div>
 
         {view === "tweetHistory" ? (
 

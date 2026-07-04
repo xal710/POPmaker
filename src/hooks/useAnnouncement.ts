@@ -3,8 +3,10 @@ import { useCallback, useEffect, useState } from "react";
 import type { AdminAnnouncementResponse } from "../../shared/admin";
 
 export function useAnnouncement() {
-  const [announcement, setAnnouncement] = useState("");
-  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [globalAnnouncement, setGlobalAnnouncement] = useState("");
+  const [globalUpdatedAt, setGlobalUpdatedAt] = useState<string | null>(null);
+  const [userAnnouncement, setUserAnnouncement] = useState("");
+  const [userUpdatedAt, setUserUpdatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
@@ -12,17 +14,27 @@ export function useAnnouncement() {
     try {
       const response = await fetch(`/api/admin/announcement?t=${Date.now()}`);
       if (!response.ok) {
-        setAnnouncement("");
-        setUpdatedAt(null);
+        setGlobalAnnouncement("");
+        setGlobalUpdatedAt(null);
+        setUserAnnouncement("");
+        setUserUpdatedAt(null);
         return;
       }
 
       const data = (await response.json()) as AdminAnnouncementResponse;
-      setAnnouncement(typeof data.announcement === "string" ? data.announcement : "");
-      setUpdatedAt(typeof data.updatedAt === "string" ? data.updatedAt : null);
+      setGlobalAnnouncement(
+        typeof data.globalAnnouncement === "string" ? data.globalAnnouncement : "",
+      );
+      setGlobalUpdatedAt(
+        typeof data.globalUpdatedAt === "string" ? data.globalUpdatedAt : null,
+      );
+      setUserAnnouncement(typeof data.userAnnouncement === "string" ? data.userAnnouncement : "");
+      setUserUpdatedAt(typeof data.userUpdatedAt === "string" ? data.userUpdatedAt : null);
     } catch {
-      setAnnouncement("");
-      setUpdatedAt(null);
+      setGlobalAnnouncement("");
+      setGlobalUpdatedAt(null);
+      setUserAnnouncement("");
+      setUserUpdatedAt(null);
     } finally {
       setLoading(false);
     }
@@ -33,8 +45,10 @@ export function useAnnouncement() {
   }, [reload]);
 
   return {
-    announcement,
-    updatedAt,
+    globalAnnouncement,
+    globalUpdatedAt,
+    userAnnouncement,
+    userUpdatedAt,
     loading,
     reload,
   };

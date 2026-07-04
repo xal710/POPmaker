@@ -13,6 +13,8 @@ interface UseAdminPanelResult {
   reload: () => Promise<void>;
   saveUserAnnouncement: (username: string, text: string) => Promise<boolean>;
   deleteUserAnnouncement: (username: string) => Promise<boolean>;
+  saveGlobalAnnouncement: (text: string) => Promise<boolean>;
+  deleteGlobalAnnouncement: () => Promise<boolean>;
   saveDebugMemo: (value: string) => Promise<boolean>;
   approveApplication: (applicationId: string, canUsePopPlacement: boolean, canUseTradeFeatures: boolean) => Promise<boolean>;
   rejectApplication: (applicationId: string) => Promise<boolean>;
@@ -87,6 +89,8 @@ export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
 
   const patchSettings = useCallback(
     async (patch: {
+      globalAnnouncement?: string;
+      deleteGlobalAnnouncement?: boolean;
       userAnnouncement?: { username: string; text: string };
       deleteUserAnnouncement?: string;
       debugMemo?: string;
@@ -265,6 +269,16 @@ export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
     [],
   );
 
+  const saveGlobalAnnouncement = useCallback(
+    async (text: string) => patchSettings({ globalAnnouncement: text }),
+    [patchSettings],
+  );
+
+  const deleteGlobalAnnouncement = useCallback(
+    async () => patchSettings({ deleteGlobalAnnouncement: true }),
+    [patchSettings],
+  );
+
   const saveUserAnnouncement = useCallback(
     async (username: string, text: string) =>
       patchSettings({ userAnnouncement: { username, text } }),
@@ -291,6 +305,8 @@ export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
     reload,
     saveUserAnnouncement,
     deleteUserAnnouncement,
+    saveGlobalAnnouncement,
+    deleteGlobalAnnouncement,
     saveDebugMemo,
     approveApplication,
     rejectApplication,

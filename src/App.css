@@ -2012,6 +2012,25 @@
   border: 1px solid #bfdbfe;
 }
 
+.announcement-banner--user {
+  background: #fff7ed;
+  border-color: #fdba74;
+}
+
+.announcement-banner--user .announcement-banner__label {
+  background: #ea580c;
+}
+
+.announcement-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.announcement-stack:empty {
+  display: none;
+}
+
 .announcement-banner__label {
   flex-shrink: 0;
   padding: 4px 10px;
@@ -2155,6 +2174,14 @@
   color: #1d4ed8;
   font-size: 13px;
   font-weight: 600;
+}
+
+.admin-tools__status--inline {
+  margin: 0 0 10px;
+}
+
+.admin-tools__card--single {
+  max-width: 760px;
 }
 
 .admin-tools__grid {

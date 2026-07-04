@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 
 import {
+  countActiveUserAnnouncements,
+  getGlobalAnnouncement,
+  hasGlobalAnnouncement,
   hasUserAnnouncement,
   type AdminAccountSummary,
   type AdminSettings,
@@ -10,7 +13,12 @@ import { AccountApplicationsPanel } from "./AccountApplicationsPanel";
 import { AccountProfilePanel } from "./AccountProfilePanel";
 import { formatDateTime } from "../utils/format";
 
-export type AdminToolsTab = "accounts" | "announcements" | "applications";
+export type AdminToolsTab =
+  | "accounts"
+  | "globalAnnouncement"
+  | "userAnnouncements"
+  | "debugMemo"
+  | "applications";
 
 interface AdminToolsPanelProps {
   accounts: AdminAccountSummary[];
@@ -19,6 +27,8 @@ interface AdminToolsPanelProps {
   loading: boolean;
   saving: boolean;
   error: string | null;
+  onSaveGlobalAnnouncement: (text: string) => Promise<boolean>;
+  onDeleteGlobalAnnouncement: () => Promise<boolean>;
   onSaveUserAnnouncement: (username: string, text: string) => Promise<boolean>;
   onDeleteUserAnnouncement: (username: string) => Promise<boolean>;
   onSaveDebugMemo: (value: string) => Promise<boolean>;
@@ -42,7 +52,9 @@ interface AdminToolsPanelProps {
 
 const ADMIN_TAB_LABELS: Record<AdminToolsTab, string> = {
   accounts: "アカウント",
-  announcements: "アナウンス・メモ",
+  globalAnnouncement: "全体アナウンス",
+  userAnnouncements: "個別アナウンス",
+  debugMemo: "デバッグメモ",
   applications: "アカウント申請",
 };
 
@@ -53,6 +65,8 @@ export function AdminToolsPanel({
   loading,
   saving,
   error,
+  onSaveGlobalAnnouncement,
+  onDeleteGlobalAnnouncement,
   onSaveUserAnnouncement,
   onDeleteUserAnnouncement,
   onSaveDebugMemo,
@@ -64,6 +78,7 @@ export function AdminToolsPanel({
   const [activeTab, setActiveTab] = useState<AdminToolsTab>("accounts");
   const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
   const [selectedProfileUsername, setSelectedProfileUsername] = useState<string | null>(null);
+  const [globalAnnouncementDraft, setGlobalAnnouncementDraft] = useState("");
   const [announcementDraft, setAnnouncementDraft] = useState("");
   const [debugMemoDraft, setDebugMemoDraft] = useState("");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -73,10 +88,12 @@ export function AdminToolsPanel({
     [applications],
   );
 
-  const activeAnnouncementCount = useMemo(() => {
+  const activeUserAnnouncementCount = useMemo(() => {
     if (!settings) return 0;
-    return accounts.filter((account) => hasUserAnnouncement(settings, account.username)).length;
-  }, [accounts, settings]);
+    return countActiveUserAnnouncements(settings);
+  }, [settings]);
+
+  const globalAnnouncementActive = settings ? hasGlobalAnnouncement(settings) : false;
 
   useEffect(() => {
     if (selectedUsername) return;
@@ -98,6 +115,10 @@ export function AdminToolsPanel({
   }, [settings?.debugMemo]);
 
   useEffect(() => {
+    setGlobalAnnouncementDraft(settings?.globalAnnouncement?.text ?? "");
+  }, [settings?.globalAnnouncement?.text]);
+
+  useEffect(() => {
     if (!selectedUsername) {
       setAnnouncementDraft("");
       return;
@@ -105,22 +126,54 @@ export function AdminToolsPanel({
     setAnnouncementDraft(settings?.announcementsByUser[selectedUsername]?.text ?? "");
   }, [settings, selectedUsername]);
 
+  const savedGlobalAnnouncement = settings ? getGlobalAnnouncement(settings) : null;
   const selectedAnnouncement = selectedUsername
     ? settings?.announcementsByUser[selectedUsername] ?? null
     : null;
 
-  const handleSaveAnnouncement = async () => {
+  const handleSaveGlobalAnnouncement = async () => {
+    setSaveMessage(null);
+    const ok = await onSaveGlobalAnnouncement(globalAnnouncementDraft);
+    if (ok) {
+      setSaveMessage("全体アナウンスを保存しました");
+      onAnnouncementSaved?.();
+    }
+  };
+
+  const handleDeleteGlobalAnnouncement = async () => {
+    const hasSaved = Boolean(savedGlobalAnnouncement?.text.trim());
+    const hasDraft = Boolean(globalAnnouncementDraft.trim());
+    if (!hasSaved && !hasDraft) return;
+
+    if (hasSaved && !window.confirm("保存済みの全体アナウンスを削除しますか？")) {
+      return;
+    }
+
+    setSaveMessage(null);
+    const ok = await onDeleteGlobalAnnouncement();
+    if (ok) {
+      setGlobalAnnouncementDraft("");
+      setSaveMessage("全体アナウンスを削除しました");
+      onAnnouncementSaved?.();
+    }
+  };
+
+  const canDeleteGlobalAnnouncement = Boolean(
+    savedGlobalAnnouncement?.text.trim() || globalAnnouncementDraft.trim(),
+  );
+
+  const handleSaveUserAnnouncement = async () => {
     if (!selectedUsername) return;
 
     setSaveMessage(null);
     const ok = await onSaveUserAnnouncement(selectedUsername, announcementDraft);
     if (ok) {
-      setSaveMessage(`${selectedUsername} 向けのアナウンスを保存しました`);
+      setSaveMessage(`${selectedUsername} 向けの個別アナウンスを保存しました`);
       onAnnouncementSaved?.();
     }
   };
 
-  const handleDeleteAnnouncement = async () => {
+  const handleDeleteUserAnnouncement = async () => {
     if (!selectedUsername) return;
 
     const hasSavedAnnouncement = Boolean(selectedAnnouncement?.text.trim());
@@ -129,7 +182,7 @@ export function AdminToolsPanel({
 
     if (
       hasSavedAnnouncement &&
-      !window.confirm(`${selectedUsername} 向けの保存済みアナウンスを削除しますか？`)
+      !window.confirm(`${selectedUsername} 向けの保存済み個別アナウンスを削除しますか？`)
     ) {
       return;
     }
@@ -138,12 +191,12 @@ export function AdminToolsPanel({
     const ok = await onDeleteUserAnnouncement(selectedUsername);
     if (ok) {
       setAnnouncementDraft("");
-      setSaveMessage(`${selectedUsername} 向けのアナウンスを削除しました`);
+      setSaveMessage(`${selectedUsername} 向けの個別アナウンスを削除しました`);
       onAnnouncementSaved?.();
     }
   };
 
-  const canDeleteAnnouncement = Boolean(
+  const canDeleteUserAnnouncement = Boolean(
     selectedAnnouncement?.text.trim() || announcementDraft.trim(),
   );
 
@@ -155,7 +208,10 @@ export function AdminToolsPanel({
 
   const getTabBadge = (tab: AdminToolsTab): number | null => {
     if (tab === "applications" && pendingApplicationCount > 0) return pendingApplicationCount;
-    if (tab === "announcements" && activeAnnouncementCount > 0) return activeAnnouncementCount;
+    if (tab === "userAnnouncements" && activeUserAnnouncementCount > 0) {
+      return activeUserAnnouncementCount;
+    }
+    if (tab === "globalAnnouncement" && globalAnnouncementActive) return 1;
     return null;
   };
 
@@ -263,127 +319,194 @@ export function AdminToolsPanel({
         </div>
       )}
 
-      {activeTab === "announcements" && (
+      {activeTab === "globalAnnouncement" && (
         <div
-          id="admin-panel-announcements"
+          id="admin-panel-globalAnnouncement"
           role="tabpanel"
-          aria-labelledby="admin-tab-announcements"
+          aria-labelledby="admin-tab-globalAnnouncement"
           className="admin-tools__tab-panel"
         >
-          <div className="admin-tools__announcements-layout">
-            <section className="admin-tools__card">
-              <h3 className="admin-tools__card-title">アカウント別アナウンス</h3>
-              <p className="admin-tools__hint">
-                選択したアカウントの画面上部にだけ、個別のお知らせを表示できます。
+          <section className="admin-tools__card admin-tools__card--single">
+            <h3 className="admin-tools__card-title">全体アナウンス</h3>
+            <p className="admin-tools__hint">
+              ログインしている全アカウントの画面上部に表示されるお知らせです。
+            </p>
+
+            {globalAnnouncementActive && (
+              <p className="admin-tools__status admin-tools__status--inline" role="status">
+                現在配信中
               </p>
+            )}
 
-              <div className="admin-target-picker">
-                <div className="admin-target-picker__header">
-                  <p className="admin-target-picker__label">編集するアカウント</p>
-                </div>
-                <ul className="admin-target-picker__list" aria-label="アナウンス編集対象アカウント">
-                  {accounts.map((account) => {
-                    const isSelected = selectedUsername === account.username;
-                    const isActive = settings
-                      ? hasUserAnnouncement(settings, account.username)
-                      : false;
+            <textarea
+              className="admin-tools__textarea"
+              value={globalAnnouncementDraft}
+              onChange={(event) => setGlobalAnnouncementDraft(event.target.value)}
+              rows={10}
+              placeholder="全員向けのお知らせを入力"
+              disabled={loading || saving}
+            />
 
-                    return (
-                      <li key={account.username}>
-                        <button
-                          type="button"
-                          className={`admin-target-picker__select${
-                            isSelected ? " admin-target-picker__select--active" : ""
-                          }`}
-                          onClick={() => setSelectedUsername(account.username)}
-                          disabled={loading || saving}
-                          aria-pressed={isSelected}
-                        >
-                          <span className="admin-target-picker__name">{account.username}</span>
-                          {isActive && (
-                            <span className="admin-badge admin-badge--announcement">配信中</span>
-                          )}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-                <p className="admin-target-picker__meta" role="status">
-                  {activeAnnouncementCount.toLocaleString("ja-JP")} 件のアカウントに個別アナウンスを設定中
-                </p>
-              </div>
-
-              <textarea
-                className="admin-tools__textarea"
-                value={announcementDraft}
-                onChange={(event) => setAnnouncementDraft(event.target.value)}
-                rows={8}
-                placeholder={
-                  selectedUsername
-                    ? `${selectedUsername} 向けのお知らせを入力`
-                    : "アカウントを選択してください"
-                }
-                disabled={loading || saving || !selectedUsername}
-              />
-
-              {selectedAnnouncement?.updatedAt && (
-                <p className="admin-tools__updated">
-                  最終更新: {formatDateTime(new Date(selectedAnnouncement.updatedAt))}
-                  {selectedAnnouncement.updatedBy ? `（${selectedAnnouncement.updatedBy}）` : ""}
-                </p>
-              )}
-
-              <div className="admin-tools__actions">
-                <button
-                  type="button"
-                  className="btn btn--primary"
-                  onClick={() => void handleSaveAnnouncement()}
-                  disabled={loading || saving || !selectedUsername}
-                >
-                  {saving ? "保存中..." : "このアカウント向けに保存"}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn--secondary admin-tools__delete-btn"
-                  onClick={() => void handleDeleteAnnouncement()}
-                  disabled={loading || saving || !selectedUsername || !canDeleteAnnouncement}
-                >
-                  {saving ? "処理中..." : "このアカウント向けを削除"}
-                </button>
-              </div>
-            </section>
-
-            <section className="admin-tools__card">
-              <h3 className="admin-tools__card-title">管理者用デバッグメモ</h3>
-              <p className="admin-tools__hint">
-                管理者のみが閲覧・編集できます。運用メモや調査メモに使えます。
+            {savedGlobalAnnouncement?.updatedAt && (
+              <p className="admin-tools__updated">
+                最終更新: {formatDateTime(new Date(savedGlobalAnnouncement.updatedAt))}
+                {savedGlobalAnnouncement.updatedBy
+                  ? `（${savedGlobalAnnouncement.updatedBy}）`
+                  : ""}
               </p>
-              <textarea
-                className="admin-tools__textarea admin-tools__textarea--mono"
-                value={debugMemoDraft}
-                onChange={(event) => setDebugMemoDraft(event.target.value)}
-                rows={14}
-                placeholder="デバッグ情報、調査メモ、TODO など"
+            )}
+
+            <div className="admin-tools__actions">
+              <button
+                type="button"
+                className="btn btn--primary"
+                onClick={() => void handleSaveGlobalAnnouncement()}
                 disabled={loading || saving}
-              />
-              <div className="admin-tools__actions">
-                <button
-                  type="button"
-                  className="btn btn--secondary"
-                  onClick={() => void handleSaveDebugMemo()}
-                  disabled={loading || saving}
-                >
-                  {saving ? "保存中..." : "デバッグメモを保存"}
-                </button>
-                {settings?.updatedAt && (
-                  <span className="admin-tools__updated">
-                    最終更新: {formatDateTime(new Date(settings.updatedAt))}
-                    {settings.updatedBy ? `（${settings.updatedBy}）` : ""}
-                  </span>
-                )}
+              >
+                {saving ? "保存中..." : "全体アナウンスを保存"}
+              </button>
+              <button
+                type="button"
+                className="btn btn--secondary admin-tools__delete-btn"
+                onClick={() => void handleDeleteGlobalAnnouncement()}
+                disabled={loading || saving || !canDeleteGlobalAnnouncement}
+              >
+                {saving ? "処理中..." : "全体アナウンスを削除"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {activeTab === "userAnnouncements" && (
+        <div
+          id="admin-panel-userAnnouncements"
+          role="tabpanel"
+          aria-labelledby="admin-tab-userAnnouncements"
+          className="admin-tools__tab-panel"
+        >
+          <section className="admin-tools__card admin-tools__card--single">
+            <h3 className="admin-tools__card-title">個別アナウンス</h3>
+            <p className="admin-tools__hint">
+              選択したアカウントだけに追加で表示されるお知らせです。全体アナウンスとは別に表示されます。
+            </p>
+
+            <div className="admin-target-picker">
+              <div className="admin-target-picker__header">
+                <p className="admin-target-picker__label">編集するアカウント</p>
               </div>
-            </section>
-          </div>
+              <ul className="admin-target-picker__list" aria-label="個別アナウンス編集対象アカウント">
+                {accounts.map((account) => {
+                  const isSelected = selectedUsername === account.username;
+                  const isActive = settings
+                    ? hasUserAnnouncement(settings, account.username)
+                    : false;
+
+                  return (
+                    <li key={account.username}>
+                      <button
+                        type="button"
+                        className={`admin-target-picker__select${
+                          isSelected ? " admin-target-picker__select--active" : ""
+                        }`}
+                        onClick={() => setSelectedUsername(account.username)}
+                        disabled={loading || saving}
+                        aria-pressed={isSelected}
+                      >
+                        <span className="admin-target-picker__name">{account.username}</span>
+                        {isActive && (
+                          <span className="admin-badge admin-badge--announcement">配信中</span>
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="admin-target-picker__meta" role="status">
+                {activeUserAnnouncementCount.toLocaleString("ja-JP")}{" "}
+                件のアカウントに個別アナウンスを設定中
+              </p>
+            </div>
+
+            <textarea
+              className="admin-tools__textarea"
+              value={announcementDraft}
+              onChange={(event) => setAnnouncementDraft(event.target.value)}
+              rows={10}
+              placeholder={
+                selectedUsername
+                  ? `${selectedUsername} 向けの個別お知らせを入力`
+                  : "アカウントを選択してください"
+              }
+              disabled={loading || saving || !selectedUsername}
+            />
+
+            {selectedAnnouncement?.updatedAt && (
+              <p className="admin-tools__updated">
+                最終更新: {formatDateTime(new Date(selectedAnnouncement.updatedAt))}
+                {selectedAnnouncement.updatedBy ? `（${selectedAnnouncement.updatedBy}）` : ""}
+              </p>
+            )}
+
+            <div className="admin-tools__actions">
+              <button
+                type="button"
+                className="btn btn--primary"
+                onClick={() => void handleSaveUserAnnouncement()}
+                disabled={loading || saving || !selectedUsername}
+              >
+                {saving ? "保存中..." : "このアカウント向けに保存"}
+              </button>
+              <button
+                type="button"
+                className="btn btn--secondary admin-tools__delete-btn"
+                onClick={() => void handleDeleteUserAnnouncement()}
+                disabled={loading || saving || !selectedUsername || !canDeleteUserAnnouncement}
+              >
+                {saving ? "処理中..." : "このアカウント向けを削除"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {activeTab === "debugMemo" && (
+        <div
+          id="admin-panel-debugMemo"
+          role="tabpanel"
+          aria-labelledby="admin-tab-debugMemo"
+          className="admin-tools__tab-panel"
+        >
+          <section className="admin-tools__card admin-tools__card--single">
+            <h3 className="admin-tools__card-title">管理者用デバッグメモ</h3>
+            <p className="admin-tools__hint">
+              管理者のみが閲覧・編集できます。運用メモや調査メモに使えます。
+            </p>
+            <textarea
+              className="admin-tools__textarea admin-tools__textarea--mono"
+              value={debugMemoDraft}
+              onChange={(event) => setDebugMemoDraft(event.target.value)}
+              rows={18}
+              placeholder="デバッグ情報、調査メモ、TODO など"
+              disabled={loading || saving}
+            />
+            <div className="admin-tools__actions">
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={() => void handleSaveDebugMemo()}
+                disabled={loading || saving}
+              >
+                {saving ? "保存中..." : "デバッグメモを保存"}
+              </button>
+              {settings?.updatedAt && (
+                <span className="admin-tools__updated">
+                  最終更新: {formatDateTime(new Date(settings.updatedAt))}
+                  {settings.updatedBy ? `（${settings.updatedBy}）` : ""}
+                </span>
+              )}
+            </div>
+          </section>
         </div>
       )}
 

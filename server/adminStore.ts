@@ -39,19 +39,40 @@ export function readAdminSettings(accountUsernames: string[] = []): AdminSetting
   if (!raw) return createEmptyAdminSettings();
 
   const normalized = normalizeAdminSettings(raw, accountUsernames);
-  if (isAdminSettings(raw)) {
+
+  if (accountUsernames.length === 0) {
     return normalized;
   }
 
-  if (accountUsernames.length > 0) {
+  const rawRecord = raw as Record<string, unknown>;
+  const shouldPersist =
+    !isAdminSettings(raw) ||
+    !("globalAnnouncement" in rawRecord) ||
+    (isAdminSettings(raw) &&
+      !getGlobalAnnouncementFromRaw(raw) &&
+      normalized.globalAnnouncement !== null &&
+      Object.keys(normalized.announcementsByUser).length === 0 &&
+      Object.keys((raw as AdminSettings).announcementsByUser).length > 0);
+
+  if (shouldPersist) {
     return writeAdminSettings(normalized);
   }
 
   return normalized;
 }
 
+function getGlobalAnnouncementFromRaw(raw: unknown): AccountAnnouncement | null {
+  if (!raw || typeof raw !== "object") return null;
+  const record = raw as Record<string, unknown>;
+  if (!record.globalAnnouncement || typeof record.globalAnnouncement !== "object") return null;
+  const announcement = record.globalAnnouncement as AccountAnnouncement;
+  return announcement.text?.trim() ? announcement : null;
+}
+
 export interface SaveAdminSettingsPatch {
   debugMemo?: string;
+  globalAnnouncement?: string;
+  deleteGlobalAnnouncement?: boolean;
   userAnnouncement?: {
     username: string;
     text: string;
@@ -75,6 +96,21 @@ export function saveAdminSettings(
 
   if (patch.debugMemo !== undefined) {
     next.debugMemo = patch.debugMemo;
+  }
+
+  if (patch.globalAnnouncement !== undefined) {
+    const text = patch.globalAnnouncement.trim();
+    next.globalAnnouncement = text
+      ? {
+          text,
+          updatedAt: now,
+          updatedBy,
+        }
+      : null;
+  }
+
+  if (patch.deleteGlobalAnnouncement) {
+    next.globalAnnouncement = null;
   }
 
   if (patch.userAnnouncement) {
