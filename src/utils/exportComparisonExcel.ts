@@ -14,11 +14,12 @@ function buildExportFilename(date = new Date()): string {
 
 export function exportComparisonExcel(items: ComparisonItem[]): string {
   const rows: unknown[][] = [
-    ["カード名(晴れる屋2準拠)", "晴れる屋２の価格", "カードラッシュの価格"],
+    ["カード名(晴れる屋2準拠)", "晴れる屋２の価格", "カードラッシュの価格", "差額"],
     ...items.map((item) => [
       getComparisonListCardName(item),
       item.hareruya2,
       item.cardrush ?? "",
+      item.cardrush !== null ? item.hareruya2 - item.cardrush : "",
     ]),
   ];
 
