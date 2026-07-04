@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import connect, { type Connect } from "connect";
 import serveStatic from "serve-static";
 import { createAdminMiddleware } from "./adminApi";
+import { createAccountRegistrationMiddleware } from "./accountRegistrationApi";
 import { createAuthMiddleware } from "./auth";
 import { createCardImageMiddleware } from "./cardImageApi";
 import { createComparisonMiddleware } from "./comparisonApi";
@@ -24,6 +25,7 @@ export function createPopApp(options: CreatePopAppOptions): Connect.Server {
   const app = connect();
 
   if (enableAuth) {
+    app.use(createAccountRegistrationMiddleware());
     app.use(createAuthMiddleware());
   }
 

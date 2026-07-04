@@ -15,13 +15,17 @@ export interface AdminSettings {
 
 export interface AdminAccountSummary {
   username: string;
+  displayName?: string;
   isAdministrator: boolean;
   canUsePopPlacementOnline: boolean;
 }
 
+import type { AccountApplication } from "./accountRegistration";
+
 export interface AdminSettingsResponse {
   accounts: AdminAccountSummary[];
   settings: AdminSettings;
+  applications?: AccountApplication[];
 }
 
 export interface AdminAnnouncementResponse {

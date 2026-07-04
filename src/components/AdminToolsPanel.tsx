@@ -6,10 +6,13 @@ import {
   type AdminAccountSummary,
   type AdminSettings,
 } from "../../shared/admin";
+import type { AccountApplication } from "../../shared/accountRegistration";
+import { AccountApplicationsPanel } from "./AccountApplicationsPanel";
 import { formatDateTime } from "../utils/format";
 
 interface AdminToolsPanelProps {
   accounts: AdminAccountSummary[];
+  applications: AccountApplication[];
   settings: AdminSettings | null;
   loading: boolean;
   saving: boolean;
@@ -17,11 +20,15 @@ interface AdminToolsPanelProps {
   onSaveAnnouncement: (announcement: string, targets: string[] | null) => Promise<boolean>;
   onDeleteAnnouncement: () => Promise<boolean>;
   onSaveDebugMemo: (value: string) => Promise<boolean>;
+  onApproveApplication: (applicationId: string, canUsePopPlacement: boolean) => Promise<boolean>;
+  onRejectApplication: (applicationId: string) => Promise<boolean>;
+  onTogglePopPlacement: (username: string, enabled: boolean) => Promise<boolean>;
   onAnnouncementSaved?: () => void;
 }
 
 export function AdminToolsPanel({
   accounts,
+  applications,
   settings,
   loading,
   saving,
@@ -29,6 +36,9 @@ export function AdminToolsPanel({
   onSaveAnnouncement,
   onDeleteAnnouncement,
   onSaveDebugMemo,
+  onApproveApplication,
+  onRejectApplication,
+  onTogglePopPlacement,
   onAnnouncementSaved,
 }: AdminToolsPanelProps) {
   const [announcementDraft, setAnnouncementDraft] = useState("");
@@ -273,6 +283,15 @@ export function AdminToolsPanel({
           </div>
         </section>
       </div>
+
+      <AccountApplicationsPanel
+        accounts={accounts}
+        applications={applications}
+        saving={saving}
+        onApprove={onApproveApplication}
+        onReject={onRejectApplication}
+        onTogglePopPlacement={onTogglePopPlacement}
+      />
     </section>
   );
 }

@@ -29,14 +29,45 @@ export function getPopAgeBorderLevel(placedAt: string | undefined): PopAgeBorder
   return null;
 }
 
+function findComparisonItemMatch(
+  items: ComparisonItem[],
+  assignment: Pick<StoredWallSlotPop, "cardName" | "sourceName">,
+): ComparisonItem | undefined {
+  return (
+    items.find((entry) => entry.name === assignment.cardName) ??
+    items.find((entry) => entry.name === assignment.sourceName) ??
+    items.find(
+      (entry) =>
+        entry.hareruyaTitle === assignment.sourceName ||
+        entry.hareruyaTitle === assignment.cardName,
+    )
+  );
+}
+
 export function findComparisonItemPrice(
   items: ComparisonItem[],
   assignment: Pick<StoredWallSlotPop, "cardName" | "sourceName">,
 ): number | null {
-  const item =
-    items.find((entry) => entry.name === assignment.cardName) ??
-    items.find((entry) => entry.name === assignment.sourceName);
-  return item?.hareruya2 ?? null;
+  return findComparisonItemMatch(items, assignment)?.hareruya2 ?? null;
+}
+
+export function findComparisonItemForAssignment(
+  items: ComparisonItem[],
+  assignment: StoredWallSlotPop,
+): ComparisonItem {
+  const found = findComparisonItemMatch(items, assignment);
+  if (found) return found;
+
+  return {
+    id: -1,
+    name: assignment.cardName,
+    hareruyaTitle:
+      assignment.sourceName !== assignment.cardName ? assignment.sourceName : undefined,
+    hareruya2: assignment.placedPriceYen ?? assignment.priceYen,
+    cardrush: null,
+    diff: null,
+    matched: false,
+  };
 }
 
 export function hasPopPriceMismatch(

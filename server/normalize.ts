@@ -240,21 +240,38 @@ export interface HareruyaPriceEntry {
   rawName: string;
   sellPrice: number;
   seriesName: string;
+  /** 晴れる屋2 API取得配列での初出順（0始まり） */
+  sourceOrder: number;
 }
 
 export function normalizeHareruyaRows(
   rows: RawPriceRow[],
 ): Map<string, HareruyaPriceEntry> {
   const map = new Map<string, HareruyaPriceEntry>();
+  let sourceOrder = 0;
 
   for (const row of rows) {
     const key = normalizeHareruyaName(row.name);
+    if (map.has(key)) {
+      const existing = map.get(key)!;
+      map.set(key, {
+        ...existing,
+        price: row.price,
+        series: row.series,
+        rawName: row.name,
+        sellPrice: row.sellPrice ?? 0,
+        seriesName: row.seriesName ?? "",
+      });
+      continue;
+    }
+
     map.set(key, {
       price: row.price,
       series: row.series,
       rawName: row.name,
       sellPrice: row.sellPrice ?? 0,
       seriesName: row.seriesName ?? "",
+      sourceOrder: sourceOrder++,
     });
   }
 

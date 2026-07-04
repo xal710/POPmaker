@@ -1,20 +1,22 @@
 import { useEffect } from "react";
 
-import { canUsePopPlacementOnline } from "../../shared/popPlacement";
 import { startAppVersionWatcher } from "../utils/appVersion";
 import {
   bindPopPlacementOnlineSync,
   restorePopPlacementOnDeploy,
 } from "../utils/popPlacementSync";
 
-export function usePopPlacementOnlineSync(username: string | null | undefined): void {
+export function usePopPlacementOnlineSync(
+  username: string | null | undefined,
+  canUsePopPlacement: boolean,
+): void {
   useEffect(() => {
-    if (!canUsePopPlacementOnline(username)) return;
+    if (!username || !canUsePopPlacement) return;
     return bindPopPlacementOnlineSync(username);
-  }, [username]);
+  }, [username, canUsePopPlacement]);
 
   useEffect(() => {
-    if (!canUsePopPlacementOnline(username)) return;
+    if (!username || !canUsePopPlacement) return;
 
     return startAppVersionWatcher(async () => {}, {
       isRefreshing: () => false,
@@ -22,5 +24,5 @@ export function usePopPlacementOnlineSync(username: string | null | undefined): 
         void restorePopPlacementOnDeploy();
       },
     });
-  }, [username]);
+  }, [username, canUsePopPlacement]);
 }

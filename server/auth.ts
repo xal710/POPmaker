@@ -3,35 +3,40 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Connect } from "vite";
 import { sendJson } from "./http";
 import { ADMIN_USERNAME, type AdminAccountSummary } from "../shared/admin";
-import { canUsePopPlacementOnline } from "../shared/popPlacement";
+import {
+  accountCanUsePopPlacement,
+  ensureAccountStoreFile,
+  findApplicationByUsername,
+  listStoredAccounts,
+  verifyAccountCredentials,
+} from "./accountStore";
+import { LOGIN_PAGE_HTML, REGISTER_PAGE_HTML } from "./authPages";
 
 const AUTH_COOKIE = "pop_auth";
 const COOKIE_MAX_AGE_SEC = 60 * 60 * 24 * 30;
-const REGISTER_URL = "https://forms.gle/ZXUcXjMJgXqVH9uB8";
 
 /** 変更すると既存のログイン Cookie がすべて無効になります */
 const AUTH_VERSION = process.env.AUTH_VERSION ?? "2";
 
-interface SiteAccount {
-  username: string;
-  password: string;
-}
+const PUBLIC_API_PATHS = new Set([
+  "/api/auth/login",
+  "/api/auth/register",
+  "/api/auth/register/check",
+]);
 
-function getSiteAccounts(): SiteAccount[] {
-  return [
-    { username: "administrator", password: process.env.ACCOUNT_ADMINISTRATOR_PASSWORD ?? "as214117" },
-    { username: "Yousei710", password: process.env.ACCOUNT_YOUSEI710_PASSWORD ?? "as214117" },
-    { username: "akito00", password: process.env.ACCOUNT_AKITO00_PASSWORD ?? "12390248" },
-    { username: "k.ishigaki", password: process.env.ACCOUNT_K_ISHIGAKI_PASSWORD ?? "ka1214" },
-    { username: "20260605", password: process.env.ACCOUNT_20260605_PASSWORD ?? "kouki0306" },
-  ];
+function isPublicApiPath(pathname: string, method: string): boolean {
+  if (pathname === "/api/auth/login" && method === "POST") return true;
+  if (pathname === "/api/auth/register" && method === "POST") return true;
+  if (pathname === "/api/auth/register/check" && method === "GET") return true;
+  return PUBLIC_API_PATHS.has(pathname);
 }
 
 export function listSiteAccountSummaries(): AdminAccountSummary[] {
-  return getSiteAccounts().map((account) => ({
+  return listStoredAccounts().map((account) => ({
     username: account.username,
+    displayName: account.displayName,
     isAdministrator: account.username === ADMIN_USERNAME,
-    canUsePopPlacementOnline: canUsePopPlacementOnline(account.username),
+    canUsePopPlacementOnline: account.canUsePopPlacement,
   }));
 }
 
@@ -78,15 +83,11 @@ function setAuthCookie(res: ServerResponse, req: IncomingMessage, username: stri
   );
 }
 
-function isAuthenticated(req: IncomingMessage): boolean {
-  return getAuthenticatedUsername(req) !== null;
-}
-
 export function getAuthenticatedUsername(req: IncomingMessage): string | null {
   const token = parseCookies(req)[AUTH_COOKIE];
   if (!token) return null;
 
-  for (const account of getSiteAccounts()) {
+  for (const account of listStoredAccounts()) {
     const expected = createAuthToken(account.username);
     if (token.length !== expected.length) continue;
     if (safeEqual(token, expected)) return account.username;
@@ -95,17 +96,28 @@ export function getAuthenticatedUsername(req: IncomingMessage): string | null {
   return null;
 }
 
+function resolveLoginError(username: string, password: string): string {
+  const trimmedUsername = username.trim();
+  const account = verifyAccountCredentials(trimmedUsername, password);
+  if (account) return "";
+
+  const application = findApplicationByUsername(trimmedUsername);
+  if (application?.status === "pending") {
+    return "承認待ちです。管理者の許可後にログインできます。";
+  }
+  if (application?.status === "rejected") {
+    return "申請は却下されています。管理者にお問い合わせください。";
+  }
+
+  return "アカウント名またはパスワードが正しくありません";
+}
+
 function verifyCredentials(username: string, password: string): string | null {
   const trimmedUsername = username.trim();
   if (!trimmedUsername || !password) return null;
 
-  for (const account of getSiteAccounts()) {
-    if (safeEqual(trimmedUsername, account.username) && safeEqual(password, account.password)) {
-      return account.username;
-    }
-  }
-
-  return null;
+  const account = verifyAccountCredentials(trimmedUsername, password);
+  return account ? account.username : null;
 }
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
@@ -139,239 +151,66 @@ function sendLoginPage(res: ServerResponse): void {
   res.end(LOGIN_PAGE_HTML);
 }
 
-const LOGIN_PAGE_HTML = `<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="robots" content="noindex, nofollow">
-  <title>ログイン - POP作成ツール</title>
-  <style>
-    :root {
-      color-scheme: light;
-      --bg: #f4f6f8;
-      --surface: #ffffff;
-      --border: #e2e8f0;
-      --text: #0f172a;
-      --text-muted: #64748b;
-      --primary: #2563eb;
-      --primary-hover: #1d4ed8;
-      --danger: #dc2626;
-      --radius-md: 12px;
-      --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
-      --font: "Noto Sans JP", system-ui, -apple-system, sans-serif;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 24px;
-      background: var(--bg);
-      font-family: var(--font);
-      color: var(--text);
-    }
-
-    .login-card {
-      width: min(100%, 360px);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      box-shadow: var(--shadow-md);
-      padding: 28px 24px;
-    }
-
-    h1 {
-      margin: 0 0 8px;
-      font-size: 20px;
-      font-weight: 700;
-    }
-
-    p {
-      margin: 0 0 20px;
-      font-size: 14px;
-      color: var(--text-muted);
-      line-height: 1.6;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 8px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-muted);
-    }
-
-    .field {
-      margin-bottom: 14px;
-    }
-
-    input {
-      width: 100%;
-      padding: 12px 14px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 16px;
-      font-family: inherit;
-    }
-
-    input:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
-    }
-
-    button,
-    .register-link {
-      width: 100%;
-      margin-top: 16px;
-      padding: 12px 16px;
-      border-radius: 8px;
-      font-size: 15px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      text-align: center;
-      text-decoration: none;
-      display: inline-block;
-    }
-
-    button[type="submit"] {
-      border: none;
-      background: var(--primary);
-      color: #fff;
-    }
-
-    button[type="submit"]:hover:not(:disabled) {
-      background: var(--primary-hover);
-    }
-
-    button[type="submit"]:disabled {
-      opacity: 0.7;
-      cursor: wait;
-    }
-
-    .register-link {
-      margin-top: 10px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
-    }
-
-    .register-link:hover {
-      border-color: var(--primary);
-      color: var(--primary);
-    }
-
-    .error {
-      margin-top: 12px;
-      font-size: 13px;
-      color: var(--danger);
-      min-height: 1.2em;
-    }
-  </style>
-</head>
-<body>
-  <div class="login-card">
-    <h1>POP作成ツール</h1>
-    <p>アカウント名とパスワードを入力してください。</p>
-    <form id="login-form">
-      <div class="field">
-        <label for="username">アカウント名</label>
-        <input id="username" name="username" type="text" autocomplete="username" required autofocus>
-      </div>
-      <div class="field">
-        <label for="password">パスワード</label>
-        <input id="password" name="password" type="password" autocomplete="current-password" required>
-      </div>
-      <button type="submit" id="submit">ログイン</button>
-      <p class="error" id="error" role="alert" aria-live="polite"></p>
-    </form>
-    <a class="register-link" href="${REGISTER_URL}" target="_blank" rel="noopener noreferrer">
-      アカウント登録
-    </a>
-  </div>
-  <script>
-    const form = document.getElementById("login-form");
-    const usernameInput = document.getElementById("username");
-    const passwordInput = document.getElementById("password");
-    const submitButton = document.getElementById("submit");
-    const errorEl = document.getElementById("error");
-
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      errorEl.textContent = "";
-      submitButton.disabled = true;
-      submitButton.textContent = "確認中...";
-
-      try {
-        const response = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            username: usernameInput.value,
-            password: passwordInput.value,
-          }),
-        });
-
-        if (response.ok) {
-          window.location.replace("/");
-          return;
-        }
-
-        const data = await response.json().catch(() => ({}));
-        errorEl.textContent = data.error || "ログインに失敗しました";
-      } catch {
-        errorEl.textContent = "通信に失敗しました";
-      } finally {
-        submitButton.disabled = false;
-        submitButton.textContent = "ログイン";
-      }
-    });
-  </script>
-</body>
-</html>`;
+function sendRegisterPage(res: ServerResponse): void {
+  res.statusCode = 200;
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.setHeader("Cache-Control", "no-store");
+  res.end(REGISTER_PAGE_HTML);
+}
 
 export function createAuthMiddleware(): Connect.NextHandleFunction {
+  ensureAccountStoreFile();
+
   return async (req, res, next) => {
     const url = new URL(req.url ?? "/", "http://localhost");
     const pathname = url.pathname;
+    const method = req.method ?? "GET";
 
-    if (pathname === "/api/auth/login" && req.method === "POST") {
-      try {
-        const body = (await readJsonBody(req)) as { username?: string; password?: string } | null;
-        const username = typeof body?.username === "string" ? body.username : "";
-        const password = typeof body?.password === "string" ? body.password : "";
-        const authenticatedUsername = verifyCredentials(username, password);
-
-        if (!authenticatedUsername) {
-          sendJson(res, 401, { error: "アカウント名またはパスワードが正しくありません" });
-          return;
-        }
-
-        setAuthCookie(res, req, authenticatedUsername);
-        sendJson(res, 200, { ok: true });
-      } catch {
-        sendJson(res, 400, { error: "リクエストが不正です" });
-      }
+    if (pathname === "/register" && method === "GET") {
+      sendRegisterPage(res);
       return;
     }
 
-    if (pathname === "/api/auth/me" && req.method === "GET") {
+    if (isPublicApiPath(pathname, method)) {
+      if (pathname === "/api/auth/login" && method === "POST") {
+        try {
+          const body = (await readJsonBody(req)) as { username?: string; password?: string } | null;
+          const username = typeof body?.username === "string" ? body.username : "";
+          const password = typeof body?.password === "string" ? body.password : "";
+          const authenticatedUsername = verifyCredentials(username, password);
+
+          if (!authenticatedUsername) {
+            sendJson(res, 401, { error: resolveLoginError(username, password) });
+            return;
+          }
+
+          setAuthCookie(res, req, authenticatedUsername);
+          sendJson(res, 200, { ok: true });
+        } catch {
+          sendJson(res, 400, { error: "リクエストが不正です" });
+        }
+        return;
+      }
+
+      next();
+      return;
+    }
+
+    if (pathname === "/api/auth/me" && method === "GET") {
       const username = getAuthenticatedUsername(req);
       if (!username) {
         sendJson(res, 401, { error: "Unauthorized" });
         return;
       }
 
-      sendJson(res, 200, { username });
+      sendJson(res, 200, {
+        username,
+        canUsePopPlacementOnline: accountCanUsePopPlacement(username),
+      });
       return;
     }
 
-    if (isAuthenticated(req)) {
+    if (getAuthenticatedUsername(req)) {
       next();
       return;
     }
@@ -391,3 +230,5 @@ export function createAuthMiddleware(): Connect.NextHandleFunction {
     res.end("Unauthorized");
   };
 }
+
+export { accountCanUsePopPlacement };

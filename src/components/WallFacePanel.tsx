@@ -19,6 +19,7 @@ import {
 } from "../utils/popPlacementStorage";
 import {
   createStoredWallSlotPop,
+  findComparisonItemForAssignment,
   findComparisonItemPrice,
   getWallSlotIndicatorClassNames,
 } from "../utils/popPlacementIndicators";
@@ -49,6 +50,7 @@ interface WallFacePanelProps {
   comparisonItems: ComparisonItem[];
   pendingPlacement: PendingPopPlacement | null;
   onPendingPlacementConsumed: () => void;
+  onOpenPopPreview: (item: ComparisonItem) => void;
   onBack: () => void;
 }
 
@@ -81,6 +83,7 @@ export function WallFacePanel({
   comparisonItems,
   pendingPlacement,
   onPendingPlacementConsumed,
+  onOpenPopPreview,
   onBack,
 }: WallFacePanelProps) {
   const [slots, setSlots] = useState<PopPlacementSlot[]>([]);
@@ -414,6 +417,14 @@ export function WallFacePanel({
 
     if (saving || dragOverlay) return;
 
+    const assignment = assignments[slotId];
+    if (assignment) {
+      setError(null);
+      setSelectedSlotId(slotId);
+      onOpenPopPreview(findComparisonItemForAssignment(comparisonItems, assignment));
+      return;
+    }
+
     setError(null);
     setSelectedSlotId((current) => (current === slotId ? null : slotId));
   };
@@ -525,7 +536,7 @@ export function WallFacePanel({
       <p className="wall-face__note">
         {isPlacementMode
           ? "配置したい青い四角をクリックするとPOPが挿入されます。"
-          : "配置済みのPOPはドラッグで移動できます。クリックで選択、Backspace（スマホは長押し）で削除。"}
+          : "配置済みのPOPをクリックするとPOP作成プレビューが開きます。ドラッグで移動、Backspace（スマホは長押し）で削除。"}
       </p>
 
       <ul className="wall-face__indicator-legend" aria-label="POP表示の凡例">
@@ -633,7 +644,7 @@ export function WallFacePanel({
         </p>
       ) : selectedAssignment && !dragOverlay ? (
         <p className="pop-placement__hint" role="status">
-          選択中: {formatPopCopyName(selectedAssignment.sourceName)} — ドラッグで移動 / Backspace で削除（スマホは長押し）
+          選択中: {formatPopCopyName(selectedAssignment.sourceName)} — クリックでプレビュー / ドラッグで移動 / Backspace で削除（スマホは長押し）
         </p>
       ) : (
         <p className="pop-placement__hint">

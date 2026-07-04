@@ -21,6 +21,11 @@ interface HeaderProps {
   view?: AppView;
   onNavigate?: (view: AppView) => void;
   canUsePopPlacement?: boolean;
+  showPopPlacementNav?: boolean;
+  showTweetHistoryNav?: boolean;
+  showExcelExport?: boolean;
+  onExportExcel?: () => void;
+  exportingExcel?: boolean;
   isAdministrator?: boolean;
   adminMode?: boolean;
   onAdminModeToggle?: () => void;
@@ -80,6 +85,11 @@ export function Header({
   view = "tool",
   onNavigate,
   canUsePopPlacement = false,
+  showPopPlacementNav = canUsePopPlacement,
+  showTweetHistoryNav = true,
+  showExcelExport = false,
+  onExportExcel,
+  exportingExcel = false,
   isAdministrator = false,
   adminMode = false,
   onAdminModeToggle,
@@ -109,7 +119,7 @@ export function Header({
           )}
           {onNavigate && isToolView && (
             <>
-              {canUsePopPlacement && (
+              {showPopPlacementNav && (
                 <button
                   type="button"
                   className="btn btn--secondary"
@@ -119,14 +129,26 @@ export function Header({
                   POP配置
                 </button>
               )}
-              <button
-                type="button"
-                className="btn btn--secondary"
-                onClick={() => onNavigate("tweetHistory")}
-                disabled={busy}
-              >
-                ツイート履歴
-              </button>
+              {showTweetHistoryNav && (
+                <button
+                  type="button"
+                  className="btn btn--secondary"
+                  onClick={() => onNavigate("tweetHistory")}
+                  disabled={busy}
+                >
+                  ツイート履歴
+                </button>
+              )}
+              {showExcelExport && onExportExcel && (
+                <button
+                  type="button"
+                  className="btn btn--secondary"
+                  onClick={onExportExcel}
+                  disabled={busy || exportingExcel}
+                >
+                  {exportingExcel ? "エクスポート中..." : "Excelエクスポート"}
+                </button>
+              )}
             </>
           )}
           {onNavigate && !isToolView && (

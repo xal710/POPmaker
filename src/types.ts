@@ -11,6 +11,8 @@ export interface ComparisonItem {
   hareruyaSellPrice?: number;
   hareruyaSeriesName?: string;
   officialBuyListVisible?: boolean;
+  /** 晴れる屋2 API取得配列での初出順（0始まり） */
+  hareruyaSourceOrder?: number;
 }
 
 export interface HareruyaOnlyItem {
@@ -23,6 +25,8 @@ export interface HareruyaOnlyItem {
   hareruyaSellPrice?: number;
   hareruyaSeriesName?: string;
   officialBuyListVisible?: boolean;
+  /** 晴れる屋2 API取得配列での初出順（0始まり） */
+  hareruyaSourceOrder?: number;
 }
 
 export interface ComparisonData {

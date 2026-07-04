@@ -144,9 +144,16 @@ const TWEET_FOOTER_KORIYAMA = `是非、#ハレツー郡山店
 ▼その他の買取情報はこちら▼
 hareruya2.com/pages/buying`;
 
-export type TweetTemplateId = "default" | "takadanobaba" | "koriyama";
+const TWEET_FOOTER_MIZUNO = `4F買取フロアでは複数のスタッフにて査定を実施しております👍
+大量のお持ち込みもお待ちしております💪
+ポケカの買取といえばハレツー！
+▼その他の買取情報はこちら▼
+http://hareruya2.com/pages/buyinghttps://www.hareruya2.com/pages/buying-list`;
+
+export type TweetTemplateId = "default" | "takadanobaba" | "koriyama" | "mizuno";
 
 export function getTweetTemplateId(username: string | null | undefined): TweetTemplateId {
+  if (username === "h.mizuno") return "mizuno";
   if (username === "k.ishigaki") return "takadanobaba";
   if (username === "20260605") return "koriyama";
   return "default";
@@ -178,6 +185,17 @@ ${cardName}
 ${price}
 
 ${TWEET_FOOTER_KORIYAMA}`;
+  }
+
+  if (templateId === "mizuno") {
+    return `【買取情報】
+
+「一言コメント」
+
+${cardName}
+${price}
+
+${TWEET_FOOTER_MIZUNO}`;
   }
 
   return `【買取情報】

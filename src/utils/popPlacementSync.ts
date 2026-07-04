@@ -1,5 +1,4 @@
 import {
-  canUsePopPlacementOnline,
   POP_PLACEMENT_LAYOUT_VERSION,
   type PopPlacementAssignmentStore,
   type PopPlacementPayload,
@@ -128,7 +127,7 @@ export function schedulePopPlacementSync(): void {
 }
 
 export function bindPopPlacementOnlineSync(username: string | null | undefined): () => void {
-  if (!canUsePopPlacementOnline(username)) {
+  if (!username) {
     return () => {};
   }
 

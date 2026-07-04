@@ -2,6 +2,12 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Connect } from "vite";
 
 import { isAdministrator, isAnnouncementVisibleToUser } from "../shared/admin";
+import {
+  approveAccountApplication,
+  listAccountApplications,
+  rejectAccountApplication,
+  setAccountPopPlacementAccess,
+} from "./accountStore";
 import { getAuthenticatedUsername, listSiteAccountSummaries } from "./auth";
 import { readAdminSettings, saveAdminSettings } from "./adminStore";
 import { sendJson } from "./http";
@@ -71,6 +77,7 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
         sendJson(res, 200, {
           accounts: listSiteAccountSummaries(),
           settings: readAdminSettings(),
+          applications: listAccountApplications(),
         });
         return;
       }
@@ -144,6 +151,7 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
           sendJson(res, 200, {
             accounts: listSiteAccountSummaries(),
             settings,
+            applications: listAccountApplications(),
           });
         } catch {
           sendJson(res, 400, { error: "リクエストが不正です" });
@@ -152,6 +160,97 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
       }
 
       sendJson(res, 405, { error: "Method Not Allowed" });
+      return;
+    }
+
+    const applicationApproveMatch = pathname.match(
+      /^\/api\/admin\/account-applications\/([^/]+)\/approve$/,
+    );
+    if (applicationApproveMatch && req.method === "POST") {
+      const adminUsername = requireAdministrator(req, res);
+      if (!adminUsername) return;
+
+      try {
+        const body = (await readJsonBody(req)) as { canUsePopPlacement?: unknown } | null;
+        const canUsePopPlacement = body?.canUsePopPlacement === true;
+        const application = approveAccountApplication(applicationApproveMatch[1], adminUsername, {
+          canUsePopPlacement,
+        });
+
+        if (!application) {
+          sendJson(res, 404, { error: "申請が見つからないか、承認できない状態です" });
+          return;
+        }
+
+        sendJson(res, 200, {
+          accounts: listSiteAccountSummaries(),
+          applications: listAccountApplications(),
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message === "USERNAME_ALREADY_ACTIVE") {
+          sendJson(res, 409, { error: "同じIDのアカウントが既に存在します" });
+          return;
+        }
+        sendJson(res, 400, { error: "承認に失敗しました" });
+      }
+      return;
+    }
+
+    const applicationRejectMatch = pathname.match(
+      /^\/api\/admin\/account-applications\/([^/]+)\/reject$/,
+    );
+    if (applicationRejectMatch && req.method === "POST") {
+      const adminUsername = requireAdministrator(req, res);
+      if (!adminUsername) return;
+
+      const application = rejectAccountApplication(applicationRejectMatch[1], adminUsername);
+      if (!application) {
+        sendJson(res, 404, { error: "申請が見つからないか、却下できない状態です" });
+        return;
+      }
+
+      sendJson(res, 200, {
+        accounts: listSiteAccountSummaries(),
+        applications: listAccountApplications(),
+      });
+      return;
+    }
+
+    if (pathname === "/api/admin/account-applications" && req.method === "GET") {
+      if (!requireAdministrator(req, res)) return;
+
+      sendJson(res, 200, {
+        accounts: listSiteAccountSummaries(),
+        applications: listAccountApplications(),
+      });
+      return;
+    }
+
+    const popPlacementMatch = pathname.match(/^\/api\/admin\/accounts\/([^/]+)\/pop-placement$/);
+    if (popPlacementMatch && req.method === "PATCH") {
+      if (!requireAdministrator(req, res)) return;
+
+      try {
+        const body = (await readJsonBody(req)) as { canUsePopPlacement?: unknown } | null;
+        if (typeof body?.canUsePopPlacement !== "boolean") {
+          sendJson(res, 400, { error: "canUsePopPlacement は boolean で指定してください" });
+          return;
+        }
+
+        const username = decodeURIComponent(popPlacementMatch[1]);
+        const account = setAccountPopPlacementAccess(username, body.canUsePopPlacement);
+        if (!account) {
+          sendJson(res, 404, { error: "アカウントが見つからないか、変更できません" });
+          return;
+        }
+
+        sendJson(res, 200, {
+          accounts: listSiteAccountSummaries(),
+          applications: listAccountApplications(),
+        });
+      } catch {
+        sendJson(res, 400, { error: "更新に失敗しました" });
+      }
       return;
     }
 

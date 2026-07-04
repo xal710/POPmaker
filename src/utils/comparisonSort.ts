@@ -1,6 +1,6 @@
 import type { ComparisonItem } from "../types";
 
-export type ComparisonSortKey = "cardrush" | "hareruya2" | "diff";
+export type ComparisonSortKey = "cardrush" | "hareruya2" | "diff" | "hareruyaOrder";
 export type SortDirection = "asc" | "desc";
 
 export interface ComparisonSortState {
@@ -17,9 +17,14 @@ export const COMPARISON_SORT_LABELS: Record<ComparisonSortKey, string> = {
   cardrush: "カードラッシュ",
   hareruya2: "晴れる屋2",
   diff: "差額",
+  hareruyaOrder: "晴れる屋2取得順",
 };
 
 function sortValue(item: ComparisonItem, key: ComparisonSortKey): number {
+  if (key === "hareruyaOrder") {
+    return item.hareruyaSourceOrder ?? Number.POSITIVE_INFINITY;
+  }
+
   const value = item[key];
   if (value === null) return Number.NEGATIVE_INFINITY;
   return value;
@@ -50,7 +55,7 @@ export function toggleComparisonSort(
     };
   }
 
-  return { key, direction: "desc" };
+  return { key, direction: key === "hareruyaOrder" ? "asc" : "desc" };
 }
 
 export function getComparisonSortArrow(

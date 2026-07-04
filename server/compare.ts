@@ -20,6 +20,8 @@ export interface HareruyaOnlyItem {
   hareruyaSellPrice?: number;
   hareruyaSeriesName?: string;
   officialBuyListVisible?: boolean;
+  /** 晴れる屋2 API取得配列での初出順（0始まり） */
+  hareruyaSourceOrder?: number;
 }
 
 export interface ComparisonBuildResult {
@@ -78,6 +80,7 @@ export function buildComparisonResult(
         hareruyaTitle: entry.rawName,
         rarity: identity.rarity ?? undefined,
         hareruya2: entry.price,
+        hareruyaSourceOrder: entry.sourceOrder,
         series: resolveItemSeries(displayName, entry.series) ?? undefined,
         ...buyListMeta,
       });
@@ -92,6 +95,7 @@ export function buildComparisonResult(
       cardrush: match.price,
       hareruya2: entry.price,
       diff: entry.price - match.price,
+      hareruyaSourceOrder: entry.sourceOrder,
       series: resolveItemSeries(displayName, entry.series),
       matched: true,
       ...buyListMeta,

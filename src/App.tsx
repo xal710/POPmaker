@@ -10,7 +10,6 @@ import { FilterPanel, DEFAULT_MATCH_FILTER, DEFAULT_PRICE_FILTER } from "./compo
 import { Header, type AppView } from "./components/Header";
 
 import type { PendingPopPlacement } from "../shared/popPlacement";
-import { canUsePopPlacementOnline } from "../shared/popPlacement";
 import { PopModal } from "./components/PopModal";
 
 import { PopPlacementView } from "./components/PopPlacementView";
@@ -41,6 +40,7 @@ import {
   type ComparisonSortKey,
   type ComparisonSortState,
 } from "./utils/comparisonSort";
+import { exportComparisonExcel } from "./utils/exportComparisonExcel";
 import { applyPriceFilter, isPriceFilterActive } from "./utils/priceFilter";
 import { mergeComparisonItems } from "./utils/comparisonItems";
 import { applyMatchFilter, isMatchFilterActive } from "./utils/matchFilter";
@@ -51,6 +51,12 @@ import {
 import { filterBySeries, type SeriesFilter as SeriesFilterValue } from "./utils/series";
 
 import { isAdministrator } from "../shared/admin";
+import {
+  canExportComparisonExcel,
+  canUseHareruyaSourceOrderSort,
+  showPopPlacementFeature,
+  showTweetHistoryFeature,
+} from "../shared/accountFeatures";
 
 import "./App.css";
 
@@ -63,9 +69,12 @@ function App() {
 
     useComparisonData();
 
-  const { username } = useAuthUser();
+  const { username, canUsePopPlacementOnline: canUsePopPlacement } = useAuthUser();
   const isAdminUser = isAdministrator(username);
-  const canUsePopPlacement = canUsePopPlacementOnline(username);
+  const showPopPlacementNav = showPopPlacementFeature(username, canUsePopPlacement);
+  const showTweetHistoryNav = showTweetHistoryFeature(username);
+  const showExcelExport = canExportComparisonExcel(username);
+  const showHareruyaSourceOrderSort = canUseHareruyaSourceOrderSort(username);
   const { adminMode, toggleAdminMode } = useAdminMode(isAdminUser);
   const {
     announcement,
@@ -73,7 +82,7 @@ function App() {
     reload: reloadAnnouncement,
   } = useAnnouncement();
   const adminPanel = useAdminPanel(isAdminUser && adminMode);
-  usePopPlacementOnlineSync(username);
+  usePopPlacementOnlineSync(username, canUsePopPlacement);
 
   const {
     entries: tweetHistoryEntries,
@@ -87,11 +96,17 @@ function App() {
   const [pendingPlacement, setPendingPlacement] = useState<PendingPopPlacement | null>(null);
 
   useEffect(() => {
-    if (!canUsePopPlacement && view === "popPlacement") {
+    if (!showPopPlacementNav && view === "popPlacement") {
       setView("tool");
       setPendingPlacement(null);
     }
-  }, [canUsePopPlacement, view]);
+  }, [showPopPlacementNav, view]);
+
+  useEffect(() => {
+    if (!showTweetHistoryNav && view === "tweetHistory") {
+      setView("tool");
+    }
+  }, [showTweetHistoryNav, view]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearchQuery = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
@@ -106,6 +121,7 @@ function App() {
 
   const [priceFilter, setPriceFilter] = useState(DEFAULT_PRICE_FILTER);
   const [sort, setSort] = useState<ComparisonSortState>(DEFAULT_COMPARISON_SORT);
+  const [exportingExcel, setExportingExcel] = useState(false);
 
   const allItems = useMemo(() => mergeComparisonItems(data), [data]);
 
@@ -160,6 +176,17 @@ function App() {
     setSelectedItem(null);
     setView("popPlacement");
   }, []);
+
+  const handleExportExcel = useCallback(() => {
+    if (listSource.length === 0) return;
+
+    setExportingExcel(true);
+    try {
+      exportComparisonExcel(listSource);
+    } finally {
+      window.setTimeout(() => setExportingExcel(false), 300);
+    }
+  }, [listSource]);
 
   const handlePageChange = useCallback((page: number) => {
     setListPage(page);
@@ -222,6 +249,11 @@ function App() {
         onNavigate={setView}
 
         canUsePopPlacement={canUsePopPlacement}
+        showPopPlacementNav={showPopPlacementNav}
+        showTweetHistoryNav={showTweetHistoryNav}
+        showExcelExport={showExcelExport}
+        onExportExcel={handleExportExcel}
+        exportingExcel={exportingExcel}
 
         isAdministrator={isAdminUser}
 
@@ -242,6 +274,7 @@ function App() {
         {isAdminUser && adminMode && (
           <AdminToolsPanel
             accounts={adminPanel.accounts}
+            applications={adminPanel.applications}
             settings={adminPanel.settings}
             loading={adminPanel.loading}
             saving={adminPanel.saving}
@@ -249,6 +282,9 @@ function App() {
             onSaveAnnouncement={adminPanel.saveAnnouncement}
             onDeleteAnnouncement={adminPanel.deleteAnnouncement}
             onSaveDebugMemo={adminPanel.saveDebugMemo}
+            onApproveApplication={adminPanel.approveApplication}
+            onRejectApplication={adminPanel.rejectApplication}
+            onTogglePopPlacement={adminPanel.setPopPlacementAccess}
             onAnnouncementSaved={() => void reloadAnnouncement()}
           />
         )}
@@ -261,13 +297,14 @@ function App() {
             error={tweetHistoryError}
           />
 
-        ) : view === "popPlacement" && canUsePopPlacement ? (
+        ) : view === "popPlacement" && showPopPlacementNav ? (
 
           <PopPlacementView
             comparisonItems={allItems}
             pendingPlacement={pendingPlacement}
             onPendingPlacementConsumed={() => setPendingPlacement(null)}
             onCancelPendingPlacement={() => setPendingPlacement(null)}
+            onOpenPopPreview={handleSelectItem}
           />
 
         ) : (
@@ -394,6 +431,7 @@ function App() {
             onSortChange={handleSortChange}
             onSelect={handleSelectItem}
             onPageChange={handlePageChange}
+            extraSortKeys={showHareruyaSourceOrderSort ? ["hareruyaOrder"] : []}
           />
 
         )}
@@ -409,7 +447,7 @@ function App() {
       <PopModal
         item={selectedItem}
         onClose={() => setSelectedItem(null)}
-        onPlacePop={canUsePopPlacement ? handlePlacePop : undefined}
+        onPlacePop={showPopPlacementNav ? handlePlacePop : undefined}
       />
 
     </div>

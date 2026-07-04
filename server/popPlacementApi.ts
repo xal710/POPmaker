@@ -1,14 +1,13 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Connect } from "vite";
 
+import { accountCanUsePopPlacement, getAuthenticatedUsername } from "./auth";
+import { sendJson } from "./http";
 import {
-  canUsePopPlacementOnline,
   POP_PLACEMENT_LAYOUT_VERSION,
   type PopPlacementAssignmentStore,
   type PopPlacementPayload,
 } from "../shared/popPlacement";
-import { getAuthenticatedUsername } from "./auth";
-import { sendJson } from "./http";
 import {
   readPopPlacementPayload,
   savePopPlacementAssignments,
@@ -37,7 +36,7 @@ function requireOnlinePopPlacementUser(
     return null;
   }
 
-  if (!canUsePopPlacementOnline(username)) {
+  if (!accountCanUsePopPlacement(username)) {
     sendJson(res, 403, { error: "POP配置のオンライン同期は利用できません" });
     return null;
   }

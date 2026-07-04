@@ -2,6 +2,8 @@ import { resolve } from "node:path";
 import { writeFileSync } from "node:fs";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { createAdminMiddleware } from "./server/adminApi";
+import { createAccountRegistrationMiddleware } from "./server/accountRegistrationApi";
 import { createAuthMiddleware } from "./server/auth";
 import { createCardImageMiddleware } from "./server/cardImageApi";
 import { createComparisonMiddleware } from "./server/comparisonApi";
@@ -29,16 +31,20 @@ export default defineConfig({
     {
       name: "pop-tool-api",
       configureServer(server) {
+        server.middlewares.use(createAccountRegistrationMiddleware());
         server.middlewares.use(createAuthMiddleware());
         server.middlewares.use(createComparisonMiddleware());
         server.middlewares.use(createCardImageMiddleware());
+        server.middlewares.use(createAdminMiddleware());
         server.middlewares.use(createTweetHistoryMiddleware());
         server.middlewares.use(createPopPlacementMiddleware());
       },
       configurePreviewServer(server) {
+        server.middlewares.use(createAccountRegistrationMiddleware());
         server.middlewares.use(createAuthMiddleware());
         server.middlewares.use(createComparisonMiddleware());
         server.middlewares.use(createCardImageMiddleware());
+        server.middlewares.use(createAdminMiddleware());
         server.middlewares.use(createTweetHistoryMiddleware());
         server.middlewares.use(createPopPlacementMiddleware());
       },

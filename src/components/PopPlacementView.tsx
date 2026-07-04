@@ -61,6 +61,7 @@ interface PopPlacementViewProps {
   pendingPlacement: PendingPopPlacement | null;
   onPendingPlacementConsumed: () => void;
   onCancelPendingPlacement: () => void;
+  onOpenPopPreview: (item: ComparisonItem) => void;
 }
 
 export function PopPlacementView({
@@ -68,6 +69,7 @@ export function PopPlacementView({
   pendingPlacement,
   onPendingPlacementConsumed,
   onCancelPendingPlacement,
+  onOpenPopPreview,
 }: PopPlacementViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
@@ -288,6 +290,7 @@ export function PopPlacementView({
           comparisonItems={comparisonItems}
           pendingPlacement={pendingPlacement}
           onPendingPlacementConsumed={onPendingPlacementConsumed}
+          onOpenPopPreview={onOpenPopPreview}
           onBack={() => setSelectedZone(null)}
         />
       ) : (

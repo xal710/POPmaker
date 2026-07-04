@@ -8,7 +8,7 @@ import {
 } from "../utils/comparisonSort";
 import { ComparisonRow } from "./ComparisonRow";
 
-const SORT_KEYS: ComparisonSortKey[] = ["cardrush", "hareruya2", "diff"];
+const BASE_SORT_KEYS: ComparisonSortKey[] = ["cardrush", "hareruya2", "diff"];
 
 interface ComparisonListProps {
   items: ComparisonItem[];
@@ -19,6 +19,7 @@ interface ComparisonListProps {
   onSortChange: (key: ComparisonSortKey) => void;
   onSelect: (item: ComparisonItem) => void;
   onPageChange: (page: number) => void;
+  extraSortKeys?: ComparisonSortKey[];
 }
 
 export const ComparisonList = memo(function ComparisonList({
@@ -30,7 +31,9 @@ export const ComparisonList = memo(function ComparisonList({
   onSortChange,
   onSelect,
   onPageChange,
+  extraSortKeys = [],
 }: ComparisonListProps) {
+  const sortKeys = [...BASE_SORT_KEYS, ...extraSortKeys];
   if (totalCount === 0) {
     return (
       <div className="empty-state">
@@ -51,7 +54,7 @@ export const ComparisonList = memo(function ComparisonList({
         <div className="comparison-list__header-body">
           <span className="comparison-list__header-label">カード名 / 買取価格</span>
           <div className="comparison-list__sort" role="group" aria-label="並べ替え">
-            {SORT_KEYS.map((key) => {
+            {sortKeys.map((key) => {
               const isActive = sort.key === key;
               const label = COMPARISON_SORT_LABELS[key];
               const arrow = getComparisonSortArrow(sort, key);
