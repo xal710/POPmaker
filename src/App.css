@@ -2012,15 +2012,6 @@
   border: 1px solid #bfdbfe;
 }
 
-.announcement-banner--user {
-  background: #fff7ed;
-  border-color: #fdba74;
-}
-
-.announcement-banner--user .announcement-banner__label {
-  background: #ea580c;
-}
-
 .announcement-stack {
   display: flex;
   flex-direction: column;

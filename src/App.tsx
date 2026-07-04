@@ -306,13 +306,11 @@ function App() {
             label="全体のお知らせ"
             announcement={globalAnnouncement}
             updatedAt={globalUpdatedAt}
-            variant="global"
           />
           <AnnouncementBanner
-            label="あなた向けのお知らせ"
+            label="お知らせ"
             announcement={userAnnouncement}
             updatedAt={userUpdatedAt}
-            variant="user"
           />
         </div>
 

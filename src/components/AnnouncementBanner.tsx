@@ -4,14 +4,12 @@ interface AnnouncementBannerProps {
   label?: string;
   announcement: string;
   updatedAt: string | null;
-  variant?: "global" | "user";
 }
 
 export function AnnouncementBanner({
   label = "お知らせ",
   announcement,
   updatedAt,
-  variant = "global",
 }: AnnouncementBannerProps) {
   const trimmed = announcement.trim();
   if (!trimmed) return null;
@@ -19,11 +17,7 @@ export function AnnouncementBanner({
   const updatedLabel = updatedAt ? formatDateTime(new Date(updatedAt)) : null;
 
   return (
-    <section
-      className={`announcement-banner announcement-banner--${variant}`}
-      role="status"
-      aria-label={label}
-    >
+    <section className="announcement-banner" role="status" aria-label={label}>
       <div className="announcement-banner__label">{label}</div>
       <div className="announcement-banner__body">
         <p className="announcement-banner__text">{trimmed}</p>
