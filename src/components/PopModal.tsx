@@ -10,6 +10,7 @@ import type { ComparisonItem } from "../types";
 import { copyImageBlob, copyImageElement, downloadBlob } from "../utils/clipboard";
 import { printPopImageBlob } from "../utils/printPopImage";
 import { buildTweetTextForAccount, formatHareruyaBuyListName, parsePriceInput } from "../utils/format";
+import { openTwitterComposeTabAfterCopy } from "../utils/twitterCompose";
 import { countTweetCharacters, formatTweetCharCount, TWEET_MAX_LENGTH } from "../utils/tweetCount";
 
 type CopyField = "pop" | "tweet" | "cardName";
@@ -30,6 +31,8 @@ export function PopModal({ item, onClose, onPlacePop }: PopModalProps) {
   const [popCopying, setPopCopying] = useState(false);
   const [popCopyError, setPopCopyError] = useState<string | null>(null);
   const [popPrintError, setPopPrintError] = useState<string | null>(null);
+  const [tweetOpening, setTweetOpening] = useState(false);
+  const [tweetStatus, setTweetStatus] = useState<string | null>(null);
   const popPrintingRef = useRef(false);
   const popImageRef = useRef<HTMLImageElement>(null);
 
@@ -78,6 +81,8 @@ export function PopModal({ item, onClose, onPlacePop }: PopModalProps) {
     setPopCopying(false);
     setPopCopyError(null);
     setPopPrintError(null);
+    setTweetOpening(false);
+    setTweetStatus(null);
     popPrintingRef.current = false;
   }, [item]);
 
@@ -119,17 +124,7 @@ export function PopModal({ item, onClose, onPlacePop }: PopModalProps) {
     setPopCopyError(null);
 
     try {
-      const image = popImageRef.current;
-      if (image) {
-        try {
-          await copyImageElement(image);
-        } catch {
-          await copyImageBlob(popImageState.blob);
-        }
-      } else {
-        await copyImageBlob(popImageState.blob);
-      }
-
+      await copyPopImageToClipboard();
       setCopiedField("pop");
       window.setTimeout(() => setCopiedField(null), 2000);
     } catch (error) {
@@ -138,6 +133,24 @@ export function PopModal({ item, onClose, onPlacePop }: PopModalProps) {
     } finally {
       setPopCopying(false);
     }
+  };
+
+  const copyPopImageToClipboard = async () => {
+    if (popImageState.status !== "success") {
+      throw new Error("POP画像の準備ができていません");
+    }
+
+    const image = popImageRef.current;
+    if (image) {
+      try {
+        await copyImageElement(image);
+        return;
+      } catch {
+        // blob URL 等で canvas 化できない場合は blob を直接コピー
+      }
+    }
+
+    await copyImageBlob(popImageState.blob);
   };
 
   const handleSavePopImage = () => {
@@ -162,6 +175,30 @@ export function PopModal({ item, onClose, onPlacePop }: PopModalProps) {
   };
 
   const canPrintPop = cardImageState.status === "success" && popImageState.status === "success";
+  const canOpenTweet =
+    Boolean(tweetDraft.trim()) &&
+    !isTweetOverLimit &&
+    popImageState.status === "success";
+
+  const handleOpenTweet = async () => {
+    if (!canOpenTweet || tweetOpening || popImageState.status !== "success") return;
+
+    setTweetOpening(true);
+    setTweetStatus(null);
+
+    try {
+      const result = await openTwitterComposeTabAfterCopy(tweetDraft, copyPopImageToClipboard);
+
+      if (!result.opened) {
+        setTweetStatus(result.error ?? "処理に失敗しました");
+        return;
+      }
+
+      setTweetStatus("POP画像をコピーしました。Xの投稿画面で Ctrl+V（Macは ⌘V）で貼り付けてください");
+    } finally {
+      setTweetOpening(false);
+    }
+  };
 
   const handleApplyPriceToPop = () => {
     if (!item) return;
@@ -373,6 +410,15 @@ export function PopModal({ item, onClose, onPlacePop }: PopModalProps) {
                 {tweetCharCountLabel}
               </span>
             </div>
+            {tweetStatus ? (
+              <p className="pop-text-block__tweet-status" role="status">
+                {tweetStatus}
+              </p>
+            ) : (
+              <p className="pop-text-block__tweet-status pop-text-block__tweet-status--hint">
+                POP画像をコピーしてから、Xの投稿画面を開きます
+              </p>
+            )}
           </div>
         </div>
 
@@ -396,8 +442,13 @@ export function PopModal({ item, onClose, onPlacePop }: PopModalProps) {
           ) : (
             <span aria-hidden="true" />
           )}
-          <button type="button" className="btn btn--primary" onClick={onClose}>
-            閉じる
+          <button
+            type="button"
+            className="btn btn--primary"
+            onClick={() => void handleOpenTweet()}
+            disabled={!canOpenTweet || tweetOpening}
+          >
+            {tweetOpening ? "コピー中..." : "ツイート"}
           </button>
         </footer>
       </div>

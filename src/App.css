@@ -930,6 +930,17 @@
   margin-top: 0;
 }
 
+.pop-text-block__tweet-status {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.pop-text-block__tweet-status--hint {
+  opacity: 0.9;
+}
+
 .pop-text-block__char-count {
   font-size: 13px;
   font-weight: 600;

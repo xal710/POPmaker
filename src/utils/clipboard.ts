@@ -39,7 +39,14 @@ export async function copyImageBlob(blob: Blob): Promise<void> {
     throw new Error("このブラウザでは画像のコピーに対応していません");
   }
 
-  await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+  const pngBlob = blob.type === "image/png" ? blob : new Blob([blob], { type: "image/png" });
+
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": pngBlob })]);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "画像のコピーに失敗しました";
+    throw new Error(message);
+  }
 }
 
 export async function copyImageFromUrl(imageUrl: string): Promise<void> {
