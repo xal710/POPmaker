@@ -16,6 +16,7 @@ const cardrushRows = [
     modelNumber: "025/165",
     price: 80,
     extraDifference: "",
+    ochaProductId: 1001,
   },
   {
     name: "リーリエのピッピex",
@@ -24,6 +25,7 @@ const cardrushRows = [
     modelNumber: "287/742",
     price: 30,
     extraDifference: "ノーマル仕様",
+    ochaProductId: 1002,
   },
 ] as import("../server/fetch/cardrush").CardRushRawRow[];
 

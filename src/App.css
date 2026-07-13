@@ -291,6 +291,29 @@
   contain-intrinsic-size: auto 88px;
 }
 
+.comparison-row--with-sell {
+  contain-intrinsic-size: auto 132px;
+}
+
+.comparison-row__price-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.comparison-row__price-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.comparison-row__price-group-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
 .comparison-list__pagination {
   display: flex;
   flex-direction: column;
@@ -431,6 +454,16 @@
 .price-chip--hareruya {
   background: var(--hareruya-soft);
   color: var(--hareruya);
+}
+
+.price-chip--hareruya-sell {
+  background: color-mix(in srgb, var(--hareruya) 12%, white);
+  color: var(--hareruya);
+}
+
+.price-chip--rush-sell {
+  background: color-mix(in srgb, var(--rush) 12%, white);
+  color: var(--rush);
 }
 
 .price-chip--diff-positive {

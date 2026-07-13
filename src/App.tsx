@@ -55,6 +55,7 @@ import {
   canExportComparisonExcel,
   canUseHareruyaSourceOrderSort,
   showPopPlacementFeature,
+  showSellPriceComparison,
   showTweetHistoryFeature,
 } from "../shared/accountFeatures";
 
@@ -76,6 +77,7 @@ function App() {
   const showTweetHistoryNav = showTweetHistoryFeature(canUseTradeFeatures);
   const showExcelExport = canExportComparisonExcel(canUseTradeFeatures);
   const showHareruyaSourceOrderSort = canUseHareruyaSourceOrderSort(canUseTradeFeatures);
+  const showSellPrices = showSellPriceComparison(canUseTradeFeatures);
   const {
     globalAnnouncement,
     globalUpdatedAt,
@@ -457,6 +459,7 @@ function App() {
             onSelect={handleSelectItem}
             onPageChange={handlePageChange}
             extraSortKeys={showHareruyaSourceOrderSort ? ["hareruyaOrder"] : []}
+            showSellPrices={showSellPrices}
           />
 
         )}

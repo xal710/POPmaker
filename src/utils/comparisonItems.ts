@@ -24,6 +24,8 @@ export function mergeComparisonItems(data: ComparisonData | null): ComparisonIte
     hareruyaSeriesName: item.hareruyaSeriesName,
     officialBuyListVisible: item.officialBuyListVisible,
     hareruyaSourceOrder: item.hareruyaSourceOrder,
+    cardrushOchaProductId: item.cardrushOchaProductId,
+    cardrushSellPrice: item.cardrushSellPrice,
   }));
 
   const unmatched: ComparisonItem[] = (data.unmatchedHareruya ?? []).map((item, index) => ({

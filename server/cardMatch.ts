@@ -42,6 +42,7 @@ export interface CardRushMatchEntry {
   identity: CardIdentity;
   price: number;
   priceSlot: "normal" | "mirror" | "other";
+  ochaProductId: number | null;
 }
 
 function isRarityToken(value: string): boolean {
@@ -342,6 +343,7 @@ export function buildCardRushMatchIndex(rows: CardRushRawRow[]): Map<string, Car
       identity,
       price: row.price,
       priceSlot: detectCardRushVariant(row),
+      ochaProductId: row.ochaProductId,
     };
 
     const bucket = byModel.get(identity.modelNumber) ?? [];

@@ -1,4 +1,4 @@
-import type { ComparisonItem } from "./excel";
+import type { ComparisonItem, HareruyaOnlyItem } from "./excel";
 import { isOfficialBuyListVisible } from "../shared/hareruyaBuyListFilter";
 import {
   buildCardRushMatchIndex,
@@ -10,19 +10,7 @@ import type { CardRushRawRow } from "./fetch/cardrush";
 import type { HareruyaPriceEntry } from "./normalize";
 import { resolveItemSeries } from "./series";
 
-export interface HareruyaOnlyItem {
-  id: number;
-  name: string;
-  hareruya2: number;
-  series?: ComparisonItem["series"];
-  hareruyaTitle?: string;
-  rarity?: string;
-  hareruyaSellPrice?: number;
-  hareruyaSeriesName?: string;
-  officialBuyListVisible?: boolean;
-  /** 晴れる屋2 API取得配列での初出順（0始まり） */
-  hareruyaSourceOrder?: number;
-}
+export type { ComparisonItem, HareruyaOnlyItem } from "./excel";
 
 export interface ComparisonBuildResult {
   items: ComparisonItem[];
@@ -98,6 +86,7 @@ export function buildComparisonResult(
       hareruyaSourceOrder: entry.sourceOrder,
       series: resolveItemSeries(displayName, entry.series),
       matched: true,
+      cardrushOchaProductId: match.ochaProductId ?? undefined,
       ...buyListMeta,
     });
   }

@@ -1,8 +1,10 @@
 import { buildComparisonResult } from "./compare";
 import { saveComparisonSourceWatchState } from "./comparisonSourceWatch";
 import { persistComparisonPayload } from "./comparisonBackup";
+import { enrichComparisonWithCardRushSellPrices } from "./enrichCardRushSell";
 import type { ComparisonPayload } from "./excel";
 import { fetchCardRushBuyPrices } from "./fetch/cardrush";
+import { clearCardRushSellPriceCache } from "./fetch/cardrushSell";
 import { fetchHareruyaBuyPrices } from "./fetch/hareruya";
 import { normalizeHareruyaRows } from "./normalize";
 
@@ -65,10 +67,16 @@ export async function refreshComparisonFromWeb(): Promise<ComparisonPayload> {
       updateProgress({ message: "価格を突合・比較しています..." });
 
       const hareruyaMap = normalizeHareruyaRows(hareruyaResult.rows);
-      const { items, unmatchedHareruya } = buildComparisonResult(
+      const { items: comparedItems, unmatchedHareruya } = buildComparisonResult(
         hareruyaMap,
         cardrushResult.rows,
       );
+
+      clearCardRushSellPriceCache();
+      updateProgress({ message: "カードラッシュの販売価格を取得しています..." });
+      const items = await enrichComparisonWithCardRushSellPrices(comparedItems, (message) => {
+        updateProgress({ message });
+      });
 
       if (items.length === 0 && unmatchedHareruya.length === 0) {
         throw new Error("比較できるカードが見つかりませんでした。名称マッチングを確認してください。");

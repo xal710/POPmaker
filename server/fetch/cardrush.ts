@@ -20,6 +20,7 @@ interface NextBuyingPage {
     model_number: string | null;
     amount: number;
     extra_difference: string | null;
+    ocha_product?: { id?: number | null } | null;
   }>;
   lastPage: number;
   updatedAt?: string;
@@ -37,6 +38,10 @@ function appendPageRows(rows: CardRushRawRow[], pageData: NextBuyingPage): void 
       modelNumber: item.model_number,
       price: item.amount,
       extraDifference: item.extra_difference,
+      ochaProductId:
+        typeof item.ocha_product?.id === "number" && item.ocha_product.id > 0
+          ? item.ocha_product.id
+          : null,
     });
   }
 }
@@ -130,7 +135,16 @@ export async function fetchCardRushBuyPrices(
   const updatedAt = firstPage.updatedAt ?? null;
 
   const cached = loadCardRushSnapshot();
-  if (cached && updatedAt && canReuseSnapshot({ updatedAt, lastPage }, cached)) {
+  const cachedHasOchaIds =
+    cached != null &&
+    cached.rows.length > 0 &&
+    cached.rows.every((row) => "ochaProductId" in row);
+  if (
+    cached &&
+    updatedAt &&
+    cachedHasOchaIds &&
+    canReuseSnapshot({ updatedAt, lastPage }, cached)
+  ) {
     onProgress?.(
       `カードラッシュ: キャッシュを使用（${cached.rowCount.toLocaleString("ja-JP")}件 / CR更新 ${updatedAt}）`,
     );

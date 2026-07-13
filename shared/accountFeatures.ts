@@ -30,6 +30,7 @@ export function usesTradeDefaultSort(canUseTradeFeatures: boolean): boolean {
   return canUseTradeFeatures;
 }
 
-export function usesTradeTweetTemplate(canUseTradeFeatures: boolean): boolean {
+/** トレード機能: 買取・販売価格比較の拡張表示 */
+export function showSellPriceComparison(canUseTradeFeatures: boolean): boolean {
   return canUseTradeFeatures;
 }

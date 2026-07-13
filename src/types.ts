@@ -13,6 +13,8 @@ export interface ComparisonItem {
   officialBuyListVisible?: boolean;
   /** 晴れる屋2 API取得配列での初出順（0始まり） */
   hareruyaSourceOrder?: number;
+  cardrushOchaProductId?: number;
+  cardrushSellPrice?: number | null;
 }
 
 export interface HareruyaOnlyItem {

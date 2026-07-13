@@ -29,6 +29,10 @@ export interface ComparisonItem {
   officialBuyListVisible?: boolean;
   /** 晴れる屋2 API取得配列での初出順（0始まり） */
   hareruyaSourceOrder?: number;
+  /** マッチしたCR買取行の ocha_product ID */
+  cardrushOchaProductId?: number;
+  /** カードラッシュ通販の販売価格（未取得・在庫なしは null） */
+  cardrushSellPrice?: number | null;
 }
 
 export interface HareruyaOnlyItem {

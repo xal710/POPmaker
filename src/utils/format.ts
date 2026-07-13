@@ -38,9 +38,27 @@ export function formatDiff(diff: number | null): string {
   return `${sign}${formatYen(diff)}`;
 }
 
-export function formatOptionalYen(value: number | null): string {
-  if (value === null) return "—";
+export function formatOptionalYen(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "—";
   return formatYen(value);
+}
+
+export function computeHareruyaSellMinusCardrushBuy(item: {
+  hareruyaSellPrice?: number;
+  cardrush: number | null;
+}): number | null {
+  if (item.hareruyaSellPrice == null || item.cardrush == null) return null;
+  return item.hareruyaSellPrice - item.cardrush;
+}
+
+export function computeHareruyaSellMinusCardrushSell(item: {
+  hareruyaSellPrice?: number;
+  cardrushSellPrice?: number | null;
+}): number | null {
+  if (item.hareruyaSellPrice == null || item.cardrushSellPrice == null || item.cardrushSellPrice === undefined) {
+    return null;
+  }
+  return item.hareruyaSellPrice - item.cardrushSellPrice;
 }
 
 /** 金額入力欄の文字列を円単位の数値に変換 */

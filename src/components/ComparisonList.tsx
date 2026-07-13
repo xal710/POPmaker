@@ -20,6 +20,7 @@ interface ComparisonListProps {
   onSelect: (item: ComparisonItem) => void;
   onPageChange: (page: number) => void;
   extraSortKeys?: ComparisonSortKey[];
+  showSellPrices?: boolean;
 }
 
 export const ComparisonList = memo(function ComparisonList({
@@ -32,6 +33,7 @@ export const ComparisonList = memo(function ComparisonList({
   onSelect,
   onPageChange,
   extraSortKeys = [],
+  showSellPrices = false,
 }: ComparisonListProps) {
   const sortKeys = [...BASE_SORT_KEYS, ...extraSortKeys];
   if (totalCount === 0) {
@@ -52,7 +54,9 @@ export const ComparisonList = memo(function ComparisonList({
       <div className="comparison-list__header">
         <span className="comparison-list__header-rank">順位</span>
         <div className="comparison-list__header-body">
-          <span className="comparison-list__header-label">カード名 / 買取価格</span>
+          <span className="comparison-list__header-label">
+            {showSellPrices ? "カード名 / 買取・販売価格" : "カード名 / 買取価格"}
+          </span>
           <div className="comparison-list__sort" role="group" aria-label="並べ替え">
             {sortKeys.map((key) => {
               const isActive = sort.key === key;
@@ -88,6 +92,7 @@ export const ComparisonList = memo(function ComparisonList({
             item={item}
             rank={rankOffset + index + 1}
             onSelect={onSelect}
+            showSellPrices={showSellPrices}
           />
         ))}
       </div>
