@@ -8,6 +8,13 @@ import {
   type PriceFilterState,
 } from "../utils/priceFilter";
 import {
+  CARDRUSH_SELL_FILTER_LABELS,
+  countCardrushSellComparison,
+  DEFAULT_CARDRUSH_SELL_FILTER,
+  isCardrushSellFilterActive,
+  type CardrushSellFilter,
+} from "../utils/cardrushSellFilter";
+import {
   applyMatchFilter,
   countByMatchFilter,
   DEFAULT_MATCH_FILTER,
@@ -38,6 +45,9 @@ interface FilterPanelProps {
   onPriceFilterChange: (value: PriceFilterState) => void;
   onClear: () => void;
   filteredCount: number;
+  showCardrushSellFilter?: boolean;
+  cardrushSellFilter?: CardrushSellFilter;
+  onCardrushSellFilterChange?: (value: CardrushSellFilter) => void;
 }
 
 const DIFF_SIGN_OPTIONS: { value: DiffSignFilter; label: string }[] = [
@@ -114,6 +124,9 @@ export function FilterPanel({
   onPriceFilterChange,
   onClear,
   filteredCount,
+  showCardrushSellFilter = false,
+  cardrushSellFilter = DEFAULT_CARDRUSH_SELL_FILTER,
+  onCardrushSellFilterChange,
 }: FilterPanelProps) {
   const panelId = useId();
   const seriesSource = useMemo(
@@ -130,10 +143,16 @@ export function FilterPanel({
   );
   const seriesActive = seriesFilter !== "all";
   const matchActive = isMatchFilterActive(matchFilter);
+  const cardrushSellActive = isCardrushSellFilterActive(cardrushSellFilter);
+  const cardrushSellCounts = useMemo(
+    () => (open && showCardrushSellFilter ? countCardrushSellComparison(items) : null),
+    [open, items, showCardrushSellFilter],
+  );
   const priceActive = isPriceFilterActive(priceFilter);
   const activeCount =
     (internalComparisonMode ? 1 : 0) +
     (matchActive ? 1 : 0) +
+    (cardrushSellActive ? 1 : 0) +
     (seriesActive ? 1 : 0) +
     countActivePriceFilters(priceFilter);
 
@@ -234,6 +253,45 @@ export function FilterPanel({
               </p>
             )}
           </div>
+
+          {showCardrushSellFilter && onCardrushSellFilterChange && (
+            <div className="filter-panel__section">
+              <h3 className="filter-panel__title">CR販売価格</h3>
+              <div className="series-filter__buttons" role="group" aria-label="CR販売価格で絞り込み">
+                {(Object.keys(CARDRUSH_SELL_FILTER_LABELS) as CardrushSellFilter[]).map((value) => {
+                  const count =
+                    value === "withSell"
+                      ? (cardrushSellCounts?.withSellPriceCount ?? 0)
+                      : (cardrushSellCounts?.targetCount ?? 0);
+
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`series-filter__btn${
+                        cardrushSellFilter === value ? " series-filter__btn--active" : ""
+                      }`}
+                      onClick={() => onCardrushSellFilterChange(value)}
+                      aria-pressed={cardrushSellFilter === value}
+                    >
+                      {CARDRUSH_SELL_FILTER_LABELS[value]}
+                      <span className="series-filter__count">{count.toLocaleString("ja-JP")}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="price-filter__hint">
+                「CR販売比較可」は、カードラッシュの販売価格が取得できている比較済みカードだけを表示します。
+                {cardrushSellCounts && (
+                  <>
+                    {" "}
+                    現在 {cardrushSellCounts.withSellPriceCount.toLocaleString("ja-JP")}/
+                    {cardrushSellCounts.targetCount.toLocaleString("ja-JP")} 件。
+                  </>
+                )}
+              </p>
+            </div>
+          )}
 
           <div className="filter-panel__section">
             <h3 className="filter-panel__title">シリーズ</h3>

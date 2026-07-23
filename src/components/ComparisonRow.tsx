@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, type ReactNode } from "react";
 
 import type { ComparisonItem } from "../types";
 import {
@@ -9,12 +9,46 @@ import {
   getComparisonListCardName,
   getDiffTone,
 } from "../utils/format";
+import { buildTradePriceSourceLinks } from "../../shared/priceSourceLinks";
 
 interface ComparisonRowProps {
   item: ComparisonItem;
   rank: number;
   onSelect: (item: ComparisonItem) => void;
   showSellPrices?: boolean;
+  linkPriceSources?: boolean;
+}
+
+interface PriceChipProps {
+  className: string;
+  label: string;
+  value: ReactNode;
+  href?: string | null;
+}
+
+function PriceChip({ className, label, value, href }: PriceChipProps) {
+  const content = (
+    <>
+      <span className="price-chip__label">{label}</span>
+      <span className="price-chip__value">{value}</span>
+    </>
+  );
+
+  if (href) {
+    return (
+      <a
+        className={`${className} price-chip--link`}
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(event) => event.stopPropagation()}
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return <div className={className}>{content}</div>;
 }
 
 export const ComparisonRow = memo(function ComparisonRow({
@@ -22,9 +56,11 @@ export const ComparisonRow = memo(function ComparisonRow({
   rank,
   onSelect,
   showSellPrices = false,
+  linkPriceSources = false,
 }: ComparisonRowProps) {
   const sellMinusBuy = computeHareruyaSellMinusCardrushBuy(item);
   const sellMinusSell = computeHareruyaSellMinusCardrushSell(item);
+  const sourceLinks = linkPriceSources ? buildTradePriceSourceLinks(item) : null;
 
   return (
     <article className={`comparison-row${showSellPrices ? " comparison-row--with-sell" : ""}`}>
@@ -42,52 +78,57 @@ export const ComparisonRow = memo(function ComparisonRow({
           <div className="comparison-row__price-group">
             <span className="comparison-row__price-group-label">買取</span>
             <div className="comparison-row__prices">
-              <div className={`price-chip price-chip--rush${!item.matched ? " price-chip--muted" : ""}`}>
-                <span className="price-chip__label">CR</span>
-                <span className="price-chip__value">{formatOptionalYen(item.cardrush)}</span>
-              </div>
-              <div className="price-chip price-chip--hareruya">
-                <span className="price-chip__label">H2</span>
-                <span className="price-chip__value">{formatOptionalYen(item.hareruya2)}</span>
-              </div>
-              <div
+              <PriceChip
+                className={`price-chip price-chip--rush${!item.matched ? " price-chip--muted" : ""}`}
+                label="カードラッシュ"
+                value={formatOptionalYen(item.cardrush)}
+                href={sourceLinks?.cardrushBuy}
+              />
+              <PriceChip
+                className="price-chip price-chip--hareruya"
+                label="晴れる屋2"
+                value={formatOptionalYen(item.hareruya2)}
+                href={sourceLinks?.hareruyaBuy}
+              />
+              <PriceChip
                 className={`price-chip price-chip--diff price-chip--diff-${getDiffTone(item.diff)}${
                   !item.matched ? " price-chip--muted" : ""
                 }`}
-              >
-                <span className="price-chip__label">差額</span>
-                <span className="price-chip__value">{formatDiff(item.diff)}</span>
-              </div>
+                label="差額"
+                value={formatDiff(item.diff)}
+              />
             </div>
           </div>
           {showSellPrices && (
             <div className="comparison-row__price-group">
               <span className="comparison-row__price-group-label">販売</span>
               <div className="comparison-row__prices">
-                <div className={`price-chip price-chip--rush-sell${!item.matched ? " price-chip--muted" : ""}`}>
-                  <span className="price-chip__label">CR</span>
-                  <span className="price-chip__value">{formatOptionalYen(item.cardrushSellPrice)}</span>
-                </div>
-                <div className="price-chip price-chip--hareruya-sell">
-                  <span className="price-chip__label">H2</span>
-                  <span className="price-chip__value">{formatOptionalYen(item.hareruyaSellPrice)}</span>
-                </div>
-                <div
+                <PriceChip
+                  className={`price-chip price-chip--rush-sell${!item.matched ? " price-chip--muted" : ""}`}
+                  label="カードラッシュ"
+                  value={formatOptionalYen(item.cardrushSellPrice)}
+                  href={sourceLinks?.cardrushSell}
+                />
+                <PriceChip
+                  className="price-chip price-chip--hareruya-sell"
+                  label="晴れる屋2"
+                  value={formatOptionalYen(item.hareruyaSellPrice)}
+                  href={sourceLinks?.hareruyaSell}
+                />
+                <PriceChip
                   className={`price-chip price-chip--diff price-chip--diff-${getDiffTone(sellMinusSell)}${
                     !item.matched ? " price-chip--muted" : ""
                   }`}
-                >
-                  <span className="price-chip__label">販売差</span>
-                  <span className="price-chip__value">{formatDiff(sellMinusSell)}</span>
-                </div>
-                <div
+                  label="販売差"
+                  value={formatDiff(sellMinusSell)}
+                />
+                <PriceChip
                   className={`price-chip price-chip--diff price-chip--diff-${getDiffTone(sellMinusBuy)}${
                     !item.matched ? " price-chip--muted" : ""
                   }`}
-                >
-                  <span className="price-chip__label">仕入差</span>
-                  <span className="price-chip__value">{formatDiff(sellMinusBuy)}</span>
-                </div>
+                  label="仕入差"
+                  value={formatDiff(sellMinusBuy)}
+                />
               </div>
             </div>
           )}

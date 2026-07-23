@@ -29,6 +29,10 @@ interface HeaderProps {
   isAdministrator?: boolean;
   onOpenAdmin?: () => void;
   internalComparisonMode?: boolean;
+  showCardrushSellStats?: boolean;
+  cardrushSellProcessed?: number;
+  cardrushSellTotal?: number;
+  cardrushSellWithPrice?: number;
 }
 
 function formatDataDate(value: string | null | undefined): string {
@@ -93,6 +97,10 @@ export function Header({
   isAdministrator = false,
   onOpenAdmin,
   internalComparisonMode = false,
+  showCardrushSellStats = false,
+  cardrushSellProcessed = 0,
+  cardrushSellTotal = 0,
+  cardrushSellWithPrice = 0,
 }: HeaderProps) {
   const busy = loading || refreshing;
   const isToolView = view === "tool";
@@ -199,6 +207,24 @@ export function Header({
             <span className="meta-pill" title="この端末が比較データを読み込んだ日時">
               読込: <strong>{lastFetchedAt ? formatDateTime(lastFetchedAt) : "—"}</strong>
             </span>
+            {showCardrushSellStats && cardrushSellTotal > 0 && (
+              <span
+                className="meta-pill meta-pill--trade"
+                title="カードラッシュ販売価格の取得状況（比較済みカードが対象）"
+              >
+                CR販売:{" "}
+                <strong>
+                  価格あり {cardrushSellWithPrice.toLocaleString("ja-JP")}/
+                  {cardrushSellTotal.toLocaleString("ja-JP")}
+                </strong>
+                件
+                {cardrushSellProcessed < cardrushSellTotal && (
+                  <span className="meta-pill__sub">
+                    （取得済 {cardrushSellProcessed.toLocaleString("ja-JP")}件）
+                  </span>
+                )}
+              </span>
+            )}
           </div>
 
           <div className="app-header__buylist-dates" aria-label="晴れる屋2 買取表の更新日">

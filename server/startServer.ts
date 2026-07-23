@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { ensureAdminSettingsFile } from "./adminStore";
 import { ensureAccountStoreFile } from "./accountStore";
 import { startComparisonSourceWatch } from "./comparisonSourceWatch";
+import { startDailyRefreshSchedule } from "./dailyRefreshSchedule";
 import { createPopApp } from "./createApp";
 import { ensureComparisonDataFile, getProjectRoot } from "./config";
 import { ensurePopPlacementDataFile } from "./popPlacementBackup";
@@ -51,6 +52,7 @@ export async function startPopServer(options: StartPopServerOptions = {}): Promi
   }
 
   const stopComparisonWatch = startComparisonSourceWatch();
+  const stopDailyRefresh = startDailyRefreshSchedule();
 
   return {
     port: address.port,
@@ -59,6 +61,7 @@ export async function startPopServer(options: StartPopServerOptions = {}): Promi
     close: () =>
       new Promise<void>((resolveClose, reject) => {
         stopComparisonWatch();
+        stopDailyRefresh();
         server.close((error) => {
           if (error) reject(error);
           else resolveClose();

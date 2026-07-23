@@ -11,6 +11,7 @@ import { Header, type AppView } from "./components/Header";
 
 import type { PendingPopPlacement } from "../shared/popPlacement";
 import { PopModal } from "./components/PopModal";
+import { TradeCardModal } from "./components/TradeCardModal";
 
 import { PopPlacementView } from "./components/PopPlacementView";
 
@@ -45,6 +46,13 @@ import { applyPriceFilter, isPriceFilterActive } from "./utils/priceFilter";
 import { mergeComparisonItems } from "./utils/comparisonItems";
 import { applyMatchFilter, isMatchFilterActive } from "./utils/matchFilter";
 import {
+  applyCardrushSellFilter,
+  countCardrushSellComparison,
+  DEFAULT_CARDRUSH_SELL_FILTER,
+  isCardrushSellFilterActive,
+  type CardrushSellFilter,
+} from "./utils/cardrushSellFilter";
+import {
   filterToOfficialBuyList,
 } from "./utils/officialBuyListFilter";
 
@@ -66,8 +74,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 function App() {
 
-  const { data, loading, refreshing, error, warning, progressMessage, lastFetchedAt, refresh } =
-
+  const { data, loading, refreshing, error, warning, progressMessage, cardrushSellStats, lastFetchedAt, refresh } =
     useComparisonData();
 
   const { username, canUsePopPlacementOnline: canUsePopPlacement, canUseTradeFeatures } =
@@ -125,6 +132,9 @@ function App() {
   const [filterOpen, setFilterOpen] = useState(false);
 
   const [matchFilter, setMatchFilter] = useState(DEFAULT_MATCH_FILTER);
+  const [cardrushSellFilter, setCardrushSellFilter] = useState<CardrushSellFilter>(
+    DEFAULT_CARDRUSH_SELL_FILTER,
+  );
   const [internalComparisonMode, setInternalComparisonMode] = useState(false);
 
   const [seriesFilter, setSeriesFilter] = useState<SeriesFilterValue>("all");
@@ -149,9 +159,12 @@ function App() {
 
   const filteredItems = useMemo(() => {
     const byMatch = applyMatchFilter(catalogItems, matchFilter);
-    const byPrice = applyPriceFilter(byMatch, priceFilter);
+    const byCardrushSell = showSellPrices
+      ? applyCardrushSellFilter(byMatch, cardrushSellFilter)
+      : byMatch;
+    const byPrice = applyPriceFilter(byCardrushSell, priceFilter);
     return filterBySeries(byPrice, seriesFilter);
-  }, [catalogItems, matchFilter, priceFilter, seriesFilter]);
+  }, [catalogItems, matchFilter, cardrushSellFilter, priceFilter, seriesFilter, showSellPrices]);
 
 
 
@@ -168,7 +181,7 @@ function App() {
 
   useEffect(() => {
     setListPage(1);
-  }, [debouncedSearchQuery, matchFilter, internalComparisonMode, seriesFilter, priceFilter, sort]);
+  }, [debouncedSearchQuery, matchFilter, cardrushSellFilter, internalComparisonMode, seriesFilter, priceFilter, sort]);
 
   const handleSortChange = useCallback((key: ComparisonSortKey) => {
     setSort((current) => toggleComparisonSort(current, key));
@@ -211,12 +224,14 @@ function App() {
 
 
   const isMatchFiltered = isMatchFilterActive(matchFilter);
+  const isCardrushSellFiltered = showSellPrices && isCardrushSellFilterActive(cardrushSellFilter);
 
   const isSeriesFiltered = seriesFilter !== "all";
 
   const isPriceFiltered = isPriceFilterActive(priceFilter);
 
-  const isListFiltered = isSearching || isMatchFiltered || isSeriesFiltered || isPriceFiltered;
+  const isListFiltered =
+    isSearching || isMatchFiltered || isCardrushSellFiltered || isSeriesFiltered || isPriceFiltered;
 
   const visibleCount = isSearching ? resultCount : filteredItems.length;
 
@@ -225,9 +240,22 @@ function App() {
   const clearFilters = () => {
     setInternalComparisonMode(false);
     setMatchFilter(DEFAULT_MATCH_FILTER);
+    setCardrushSellFilter(DEFAULT_CARDRUSH_SELL_FILTER);
     setSeriesFilter("all");
     setPriceFilter(DEFAULT_PRICE_FILTER);
   };
+
+  const cardrushSellComparisonStats = useMemo(
+    () => countCardrushSellComparison(catalogItems),
+    [catalogItems],
+  );
+
+  const cardrushSellProcessed =
+    cardrushSellStats?.processed ?? cardrushSellComparisonStats.withSellPriceCount;
+  const cardrushSellTotal =
+    cardrushSellStats?.total ?? cardrushSellComparisonStats.targetCount;
+  const cardrushSellWithPrice =
+    cardrushSellStats?.withPrice ?? cardrushSellComparisonStats.withSellPriceCount;
 
 
 
@@ -275,7 +303,10 @@ function App() {
         onOpenAdmin={() => setView("admin")}
 
         internalComparisonMode={internalComparisonMode}
-
+        showCardrushSellStats={showSellPrices}
+        cardrushSellProcessed={cardrushSellProcessed}
+        cardrushSellTotal={cardrushSellTotal}
+        cardrushSellWithPrice={cardrushSellWithPrice}
       />
 
 
@@ -401,6 +432,9 @@ function App() {
               onPriceFilterChange={setPriceFilter}
               onClear={clearFilters}
               filteredCount={filteredItems.length}
+              showCardrushSellFilter={showSellPrices}
+              cardrushSellFilter={cardrushSellFilter}
+              onCardrushSellFilterChange={setCardrushSellFilter}
             />
 
           </>
@@ -460,6 +494,7 @@ function App() {
             onPageChange={handlePageChange}
             extraSortKeys={showHareruyaSourceOrderSort ? ["hareruyaOrder"] : []}
             showSellPrices={showSellPrices}
+            linkPriceSources={canUseTradeFeatures}
           />
 
         )}
@@ -476,11 +511,15 @@ function App() {
 
 
 
-      <PopModal
-        item={selectedItem}
-        onClose={() => setSelectedItem(null)}
-        onPlacePop={showPopPlacementNav ? handlePlacePop : undefined}
-      />
+      {canUseTradeFeatures ? (
+        <TradeCardModal item={selectedItem} onClose={() => setSelectedItem(null)} />
+      ) : (
+        <PopModal
+          item={selectedItem}
+          onClose={() => setSelectedItem(null)}
+          onPlacePop={showPopPlacementNav ? handlePlacePop : undefined}
+        />
+      )}
 
     </div>
 

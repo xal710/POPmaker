@@ -36,6 +36,8 @@ export interface CardIdentity {
   packCode: string | null;
   variant: CardVariant;
   rarity: string | null;
+  /** 晴れる屋2の `:SA` / カードラッシュの `(SA)`・extra=SA */
+  specialArt: boolean;
 }
 
 export interface CardRushMatchEntry {
@@ -63,7 +65,71 @@ function normalizeRarity(value: string | null | undefined): string | null {
 }
 
 export function normalizeBaseNameForMatch(name: string): string {
-  return name.replace(/＿/g, "_").replace(/\s+/g, "");
+  return name
+    .replace(/＿/g, "_")
+    .replace(/[＆&]/g, "＆")
+    .replace(/\s+/g, "");
+}
+
+/** TAG TEAM（＆/& + GX）: 型番一致をパックより優先する */
+export function isTagTeamGxName(name: string): boolean {
+  return /[＆&]/.test(name) && /GX/i.test(name);
+}
+
+/**
+ * CR側で (SA)/extra=SA を無視する TAG TEAM。
+ * 当該型番は CR が SA 行しか持たない一方、H2 は :SA 無しで並ぶため。
+ */
+const CARDRUSH_IGNORE_SPECIAL_ART_NAMES = new Set(
+  [
+    "ソルガレオ＆ルナアーラGX",
+    "レシラム＆ゼクロムGX",
+    "イーブイ＆カビゴンGX",
+  ].map((name) => normalizeBaseNameForMatch(name)),
+);
+
+export function shouldIgnoreCardRushSpecialArt(baseName: string): boolean {
+  return CARDRUSH_IGNORE_SPECIAL_ART_NAMES.has(normalizeBaseNameForMatch(baseName));
+}
+
+/** `:SA` / `：SA`（`:SAR` 等にはマッチさせない） */
+const HARERUYA_SA_SUFFIX_GLOBAL = /[：:]SA(?![A-Za-zァ-ヶー])/g;
+const CARDRUSH_SA_PAREN_GLOBAL = /[（(]\s*SA\s*[）)]/gi;
+
+export function extractSpecialArtMarker(
+  name: string,
+  extraDifference?: string | null,
+  options?: { ignoreListedTagTeamSpecialArt?: boolean },
+): { baseName: string; specialArt: boolean } {
+  let specialArt = false;
+  let baseName = name;
+
+  if (HARERUYA_SA_SUFFIX_GLOBAL.test(baseName)) {
+    specialArt = true;
+    HARERUYA_SA_SUFFIX_GLOBAL.lastIndex = 0;
+    baseName = baseName.replace(HARERUYA_SA_SUFFIX_GLOBAL, "");
+  }
+  HARERUYA_SA_SUFFIX_GLOBAL.lastIndex = 0;
+
+  if (CARDRUSH_SA_PAREN_GLOBAL.test(baseName)) {
+    specialArt = true;
+    CARDRUSH_SA_PAREN_GLOBAL.lastIndex = 0;
+    baseName = baseName.replace(CARDRUSH_SA_PAREN_GLOBAL, "");
+  }
+  CARDRUSH_SA_PAREN_GLOBAL.lastIndex = 0;
+
+  const extra = extraDifference?.trim() ?? "";
+  if (extra === "SA" || extra === "ＳＡ") {
+    specialArt = true;
+  }
+
+  baseName = baseName.replace(/\s+/g, " ").trim();
+
+  if (options?.ignoreListedTagTeamSpecialArt && shouldIgnoreCardRushSpecialArt(baseName)) {
+    specialArt = false;
+  }
+
+  return { baseName, specialArt };
 }
 
 export function normalizePackForMatch(packCode: string | null | undefined): string | null {
@@ -146,7 +212,8 @@ export function parseHareruyaIdentity(title: string): CardIdentity | null {
   const [, rawPrefix, modelNumber, packBracket] = match;
   const variant = resolveHareruyaVariant(prepared, rawPrefix);
   const { rarity, rest } = extractHareruyaRarity(rawPrefix);
-  const baseName = stripMirrorMarkers(rest);
+  const stripped = stripMirrorMarkers(rest);
+  const { baseName, specialArt } = extractSpecialArtMarker(stripped);
 
   if (!baseName) return null;
 
@@ -156,6 +223,7 @@ export function parseHareruyaIdentity(title: string): CardIdentity | null {
     packCode: packBracket?.trim() ?? null,
     variant,
     rarity,
+    specialArt,
   };
 }
 
@@ -197,7 +265,12 @@ export function parseCardRushIdentity(row: CardRushRawRow): CardIdentity | null 
   const modelNumber = (row.modelNumber ?? "").trim();
   if (!modelNumber) return null;
 
-  const baseName = row.name.trim();
+  const rawName = row.name.trim();
+  if (!rawName) return null;
+
+  const { baseName, specialArt } = extractSpecialArtMarker(rawName, row.extraDifference, {
+    ignoreListedTagTeamSpecialArt: true,
+  });
   if (!baseName) return null;
 
   const pack = row.pack?.trim() ?? null;
@@ -208,6 +281,7 @@ export function parseCardRushIdentity(row: CardRushRawRow): CardIdentity | null 
     packCode: pack && pack !== "その他" ? pack : null,
     variant: resolveCardRushVariantLabel(row),
     rarity: normalizeRarity(row.rarity),
+    specialArt,
   };
 }
 
@@ -238,10 +312,14 @@ function identityCoreMatch(
   right: CardIdentity,
   options: { requireRarity: boolean },
 ): boolean {
+  // TAG TEAM GX は型番を主キーにする（名称は正規化後に一致必須）
+  if (left.modelNumber !== right.modelNumber) return false;
   if (normalizeBaseNameForMatch(left.baseName) !== normalizeBaseNameForMatch(right.baseName)) {
     return false;
   }
-  if (left.modelNumber !== right.modelNumber) return false;
+  if (Boolean(left.specialArt) !== Boolean(right.specialArt)) {
+    return false;
+  }
   if (!variantsCompatible(left.variant, right.variant, left.packCode)) return false;
 
   if (options.requireRarity) {
@@ -265,10 +343,17 @@ function entryScore(
   let score = 0;
   const hareruyaPack = normalizePackForMatch(hareruya.packCode);
   const cardrushPack = normalizePackForMatch(entry.identity.packCode);
+  const tagTeamGx = isTagTeamGxName(hareruya.baseName);
 
   if (hareruyaPack && cardrushPack) {
-    if (hareruyaPack === cardrushPack) score += 100;
-    else return -1;
+    if (hareruyaPack === cardrushPack) {
+      score += 100;
+    } else if (tagTeamGx) {
+      // ＆+GX は型番一致を優先し、パック不一致でも候補に残す（SM-P ↔ sm9 等）
+      score += 50;
+    } else {
+      return -1;
+    }
   } else if (hareruyaPack && !cardrushPack) {
     score += 40;
   } else if (!hareruyaPack && cardrushPack) {

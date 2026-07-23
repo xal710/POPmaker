@@ -1,7 +1,11 @@
 import * as XLSX from "xlsx";
 
 import type { ComparisonItem } from "../types";
-import { getComparisonListCardName } from "./format";
+import {
+  computeHareruyaSellMinusCardrushBuy,
+  computeHareruyaSellMinusCardrushSell,
+  getComparisonListCardName,
+} from "./format";
 
 function buildExportFilename(date = new Date()): string {
   const year = date.getFullYear();
@@ -12,15 +16,38 @@ function buildExportFilename(date = new Date()): string {
   return `買取価格比較_${year}${month}${day}_${hour}${minute}.xlsx`;
 }
 
+function emptyIfNull(value: number | null | undefined): number | "" {
+  return value == null ? "" : value;
+}
+
 export function exportComparisonExcel(items: ComparisonItem[]): string {
   const rows: unknown[][] = [
-    ["カード名(晴れる屋2準拠)", "晴れる屋２の価格", "カードラッシュの価格", "差額"],
-    ...items.map((item) => [
-      getComparisonListCardName(item),
-      item.hareruya2,
-      item.cardrush ?? "",
-      item.cardrush !== null ? item.hareruya2 - item.cardrush : "",
-    ]),
+    [
+      "カード名(晴れる屋2準拠)",
+      "カードラッシュ買取",
+      "晴れる屋2買取",
+      "買取差額",
+      "カードラッシュ販売",
+      "晴れる屋2販売",
+      "販売差",
+      "仕入差",
+    ],
+    ...items.map((item) => {
+      const buyDiff = item.cardrush != null ? item.hareruya2 - item.cardrush : null;
+      const sellDiff = computeHareruyaSellMinusCardrushSell(item);
+      const stockDiff = computeHareruyaSellMinusCardrushBuy(item);
+
+      return [
+        getComparisonListCardName(item),
+        emptyIfNull(item.cardrush),
+        item.hareruya2,
+        emptyIfNull(buyDiff),
+        emptyIfNull(item.cardrushSellPrice),
+        emptyIfNull(item.hareruyaSellPrice),
+        emptyIfNull(sellDiff),
+        emptyIfNull(stockDiff),
+      ];
+    }),
   ];
 
   const worksheet = XLSX.utils.aoa_to_sheet(rows);

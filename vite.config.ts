@@ -9,6 +9,12 @@ import { createCardImageMiddleware } from "./server/cardImageApi";
 import { createComparisonMiddleware } from "./server/comparisonApi";
 import { createPopPlacementMiddleware } from "./server/popPlacementApi";
 import { createTweetHistoryMiddleware } from "./server/tweetHistoryApi";
+import { startComparisonSourceWatch } from "./server/comparisonSourceWatch";
+import { startDailyRefreshSchedule } from "./server/dailyRefreshSchedule";
+import { ensureAccountStoreFile } from "./server/accountStore";
+import { ensureAdminSettingsFile } from "./server/adminStore";
+import { ensureComparisonDataFile } from "./server/config";
+import { ensurePopPlacementDataFile } from "./server/popPlacementBackup";
 
 const isProductionBuild = process.env.NODE_ENV === "production";
 const appBuildId = isProductionBuild
@@ -31,6 +37,11 @@ export default defineConfig({
     {
       name: "pop-tool-api",
       configureServer(server) {
+        ensureComparisonDataFile();
+        ensurePopPlacementDataFile();
+        ensureAdminSettingsFile();
+        ensureAccountStoreFile();
+
         server.middlewares.use(createAccountRegistrationMiddleware());
         server.middlewares.use(createAuthMiddleware());
         server.middlewares.use(createComparisonMiddleware());
@@ -38,6 +49,13 @@ export default defineConfig({
         server.middlewares.use(createAdminMiddleware());
         server.middlewares.use(createTweetHistoryMiddleware());
         server.middlewares.use(createPopPlacementMiddleware());
+
+        const stopComparisonWatch = startComparisonSourceWatch();
+        const stopDailyRefresh = startDailyRefreshSchedule();
+        server.httpServer?.once("close", () => {
+          stopComparisonWatch();
+          stopDailyRefresh();
+        });
       },
       configurePreviewServer(server) {
         server.middlewares.use(createAccountRegistrationMiddleware());

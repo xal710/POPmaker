@@ -33,6 +33,8 @@ export interface ComparisonItem {
   cardrushOchaProductId?: number;
   /** カードラッシュ通販の販売価格（未取得・在庫なしは null） */
   cardrushSellPrice?: number | null;
+  /** 晴れる屋2 販売商品ページ ID */
+  hareruyaProductId?: number | null;
 }
 
 export interface HareruyaOnlyItem {
@@ -46,6 +48,7 @@ export interface HareruyaOnlyItem {
   hareruyaSeriesName?: string;
   officialBuyListVisible?: boolean;
   hareruyaSourceOrder?: number;
+  hareruyaProductId?: number | null;
 }
 
 export interface ComparisonPayload {

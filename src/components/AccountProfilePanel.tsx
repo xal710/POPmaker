@@ -127,41 +127,49 @@ export function AccountProfilePanel({ account, saving, onSave }: AccountProfileP
 
         <section className="admin-profile__section">
           <h4 className="admin-profile__section-title">ツイートテンプレート</h4>
-          <label className="admin-profile__field">
-            <span className="admin-profile__label">テンプレート</span>
-            <select
-              className="admin-profile__select"
-              value={tweetTemplateMode}
-              disabled={saving}
-              onChange={(event) => setTweetTemplateMode(event.target.value as TweetTemplateMode)}
-            >
-              {TWEET_TEMPLATE_MODE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          {canUseTradeFeatures ? (
+            <p className="admin-tools__hint">
+              トレード機能ではツイートテンプレートは利用しません。
+            </p>
+          ) : (
+            <>
+              <label className="admin-profile__field">
+                <span className="admin-profile__label">テンプレート</span>
+                <select
+                  className="admin-profile__select"
+                  value={tweetTemplateMode}
+                  disabled={saving}
+                  onChange={(event) => setTweetTemplateMode(event.target.value as TweetTemplateMode)}
+                >
+                  {TWEET_TEMPLATE_MODE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-          {tweetTemplateMode === "custom" && (
-            <label className="admin-profile__field">
-              <span className="admin-profile__label">カスタム文面</span>
-              <textarea
-                className="admin-tools__textarea"
-                rows={10}
-                value={tweetTemplateCustom}
-                disabled={saving}
-                placeholder={TWEET_TEMPLATE_CUSTOM_EXAMPLE}
-                onChange={(event) => setTweetTemplateCustom(event.target.value)}
-              />
-              <span className="admin-tools__hint">{TWEET_TEMPLATE_PLACEHOLDER_HINT}</span>
-            </label>
+              {tweetTemplateMode === "custom" && (
+                <label className="admin-profile__field">
+                  <span className="admin-profile__label">カスタム文面</span>
+                  <textarea
+                    className="admin-tools__textarea"
+                    rows={10}
+                    value={tweetTemplateCustom}
+                    disabled={saving}
+                    placeholder={TWEET_TEMPLATE_CUSTOM_EXAMPLE}
+                    onChange={(event) => setTweetTemplateCustom(event.target.value)}
+                  />
+                  <span className="admin-tools__hint">{TWEET_TEMPLATE_PLACEHOLDER_HINT}</span>
+                </label>
+              )}
+
+              <div className="admin-profile__preview">
+                <p className="admin-profile__label">プレビュー</p>
+                <pre className="admin-profile__preview-text">{previewText}</pre>
+              </div>
+            </>
           )}
-
-          <div className="admin-profile__preview">
-            <p className="admin-profile__label">プレビュー</p>
-            <pre className="admin-profile__preview-text">{previewText}</pre>
-          </div>
         </section>
       </div>
     </section>

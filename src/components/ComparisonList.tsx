@@ -21,6 +21,7 @@ interface ComparisonListProps {
   onPageChange: (page: number) => void;
   extraSortKeys?: ComparisonSortKey[];
   showSellPrices?: boolean;
+  linkPriceSources?: boolean;
 }
 
 export const ComparisonList = memo(function ComparisonList({
@@ -34,6 +35,7 @@ export const ComparisonList = memo(function ComparisonList({
   onPageChange,
   extraSortKeys = [],
   showSellPrices = false,
+  linkPriceSources = false,
 }: ComparisonListProps) {
   const sortKeys = [...BASE_SORT_KEYS, ...extraSortKeys];
   if (totalCount === 0) {
@@ -93,6 +95,7 @@ export const ComparisonList = memo(function ComparisonList({
             rank={rankOffset + index + 1}
             onSelect={onSelect}
             showSellPrices={showSellPrices}
+            linkPriceSources={linkPriceSources}
           />
         ))}
       </div>

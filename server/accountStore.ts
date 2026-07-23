@@ -100,11 +100,28 @@ function normalizeStoredAccount(account: StoredSiteAccount): StoredSiteAccount {
   };
 }
 
+function seedsByUsername(): Map<string, StoredSiteAccount> {
+  return new Map(getLegacySeedAccounts().map((seed) => [seed.username, seed]));
+}
+
+function applySeedFeatureDefaults(account: StoredSiteAccount): StoredSiteAccount {
+  const seed = seedsByUsername().get(account.username);
+  return {
+    ...account,
+    canUseTradeFeatures:
+      account.canUseTradeFeatures ?? seed?.canUseTradeFeatures ?? false,
+    canUsePopPlacement:
+      account.canUsePopPlacement ?? seed?.canUsePopPlacement ?? false,
+  };
+}
+
 function loadStore(): AccountStoreData {
   if (!memoryCache) {
     const data = readStoreFromDisk();
     memoryCache = {
-      accounts: data.accounts.map(normalizeStoredAccount),
+      accounts: data.accounts.map((account) =>
+        normalizeStoredAccount(applySeedFeatureDefaults(account)),
+      ),
       applications: data.applications,
     };
   }
@@ -119,33 +136,24 @@ function saveStore(data: AccountStoreData): void {
 }
 
 function mergeMissingSeedAccounts(): void {
+  const raw = readStoreFromDisk();
   const store = loadStore();
   const existing = new Set(store.accounts.map((account) => account.username));
-  const seedsByUsername = new Map(
-    getLegacySeedAccounts().map((seed) => [seed.username, seed]),
-  );
+  const seedMap = seedsByUsername();
   let changed = false;
 
-  for (const seed of seedsByUsername.values()) {
+  for (const seed of seedMap.values()) {
     if (existing.has(seed.username)) continue;
     store.accounts.push(seed);
     changed = true;
   }
 
-  store.accounts = store.accounts.map((account) => {
-    const seed = seedsByUsername.get(account.username);
-    let next = account;
-
-    if (account.canUseTradeFeatures === undefined) {
-      next = {
-        ...next,
-        canUseTradeFeatures: seed?.canUseTradeFeatures ?? false,
-      };
-      changed = true;
-    }
-
-    return next;
-  });
+  for (const rawAccount of raw.accounts) {
+    const seed = seedMap.get(rawAccount.username);
+    if (!seed) continue;
+    if (rawAccount.canUseTradeFeatures === undefined) changed = true;
+    if (rawAccount.canUsePopPlacement === undefined) changed = true;
+  }
 
   if (changed) {
     saveStore(store);

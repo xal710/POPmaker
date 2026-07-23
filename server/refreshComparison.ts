@@ -4,9 +4,11 @@ import { persistComparisonPayload } from "./comparisonBackup";
 import { enrichComparisonWithCardRushSellPrices } from "./enrichCardRushSell";
 import type { ComparisonPayload } from "./excel";
 import { fetchCardRushBuyPrices } from "./fetch/cardrush";
-import { clearCardRushSellPriceCache } from "./fetch/cardrushSell";
+import { clearCardRushSellPriceMemoryCache } from "./fetch/cardrushSell";
 import { fetchHareruyaBuyPrices } from "./fetch/hareruya";
 import { normalizeHareruyaRows } from "./normalize";
+
+import type { CardrushSellFetchStats } from "./fetch/cardrushSell";
 
 export interface RefreshProgress {
   status: "idle" | "running" | "done" | "error";
@@ -14,6 +16,7 @@ export interface RefreshProgress {
   startedAt: string | null;
   finishedAt: string | null;
   error: string | null;
+  cardrushSellStats?: CardrushSellFetchStats | null;
 }
 
 let progress: RefreshProgress = {
@@ -72,11 +75,43 @@ export async function refreshComparisonFromWeb(): Promise<ComparisonPayload> {
         cardrushResult.rows,
       );
 
-      clearCardRushSellPriceCache();
-      updateProgress({ message: "カードラッシュの販売価格を取得しています..." });
-      const items = await enrichComparisonWithCardRushSellPrices(comparedItems, (message) => {
-        updateProgress({ message });
+      clearCardRushSellPriceMemoryCache();
+      updateProgress({
+        message: "カードラッシュの販売価格を取得しています...",
+        cardrushSellStats: null,
       });
+
+      const partialPayloadBase = {
+        updatedAt: new Date().toISOString(),
+        source: "web" as const,
+        excelPath: null,
+        excelModifiedAt: null,
+        dataDate: new Date().toISOString().slice(0, 10).replace(/-/g, ""),
+        hareruyaBuyListUpdatedAt: hareruyaResult.pageUpdatedAt,
+        cardRushSourceUpdatedAt: cardrushResult.updatedAt,
+        cardRushLastPage: cardrushResult.lastPage,
+        unmatchedHareruya,
+        warning: undefined,
+      };
+
+      const items = await enrichComparisonWithCardRushSellPrices(
+        comparedItems,
+        (message) => {
+          updateProgress({ message });
+        },
+        {
+          buyListUpdatedAt: cardrushResult.updatedAt,
+          onStats: (cardrushSellStats) => {
+            updateProgress({ cardrushSellStats });
+          },
+          onPartial: (partialItems) => {
+            saveComparisonPayload({
+              ...partialPayloadBase,
+              items: partialItems,
+            });
+          },
+        },
+      );
 
       if (items.length === 0 && unmatchedHareruya.length === 0) {
         throw new Error("比較できるカードが見つかりませんでした。名称マッチングを確認してください。");
@@ -85,17 +120,9 @@ export async function refreshComparisonFromWeb(): Promise<ComparisonPayload> {
       const hareruyaSourceUpdatedAt = hareruyaResult.pageUpdatedAt["buying-list"] ?? null;
 
       const payload: ComparisonPayload = {
+        ...partialPayloadBase,
         updatedAt: new Date().toISOString(),
-        source: "web",
-        excelPath: null,
-        excelModifiedAt: null,
-        dataDate: new Date().toISOString().slice(0, 10).replace(/-/g, ""),
-        hareruyaBuyListUpdatedAt: hareruyaResult.pageUpdatedAt,
-        cardRushSourceUpdatedAt: cardrushResult.updatedAt,
-        cardRushLastPage: cardrushResult.lastPage,
         items,
-        unmatchedHareruya,
-        warning: undefined,
       };
 
       saveComparisonPayload(payload);
@@ -112,6 +139,7 @@ export async function refreshComparisonFromWeb(): Promise<ComparisonPayload> {
         status: "done",
         message: `更新完了（比較 ${items.length.toLocaleString("ja-JP")}件 / 未比較 ${unmatchedHareruya.length.toLocaleString("ja-JP")}件）`,
         finishedAt: new Date().toISOString(),
+        cardrushSellStats: null,
       });
 
       return payload;

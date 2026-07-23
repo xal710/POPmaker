@@ -14,10 +14,18 @@ function sleep(ms: number): Promise<void> {
   });
 }
 
+export interface CardrushSellFetchStats {
+  processed: number;
+  total: number;
+  withPrice: number;
+  pending?: number;
+}
+
 interface RefreshProgress {
   status: "idle" | "running" | "done" | "error";
   message: string;
   error?: string | null;
+  cardrushSellStats?: CardrushSellFetchStats | null;
 }
 
 export function useComparisonData() {
@@ -27,6 +35,7 @@ export function useComparisonData() {
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [progressMessage, setProgressMessage] = useState<string | null>(null);
+  const [cardrushSellStats, setCardrushSellStats] = useState<CardrushSellFetchStats | null>(null);
   const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
   const intervalRef = useRef<number | null>(null);
   const pollRef = useRef<number | null>(null);
@@ -60,20 +69,36 @@ export function useComparisonData() {
     return (await response.json()) as RefreshProgress;
   }, []);
 
+  const applyRefreshStatus = useCallback(
+    async (status: RefreshProgress | null) => {
+      if (!status) return;
+
+      if (status.message) {
+        setProgressMessage(status.message);
+      }
+
+      if (status.cardrushSellStats) {
+        setCardrushSellStats(status.cardrushSellStats);
+        await loadCachedData();
+      } else if (status.status !== "running") {
+        setCardrushSellStats(null);
+      }
+    },
+    [loadCachedData],
+  );
+
   const refresh = useCallback(async () => {
     setRefreshing(true);
     setError(null);
     setProgressMessage("最新価格を取得しています...");
+    setCardrushSellStats(null);
 
     if (pollRef.current !== null) {
       window.clearInterval(pollRef.current);
     }
 
     pollRef.current = window.setInterval(async () => {
-      const status = await pollRefreshStatus();
-      if (status?.message) {
-        setProgressMessage(status.message);
-      }
+      await applyRefreshStatus(await pollRefreshStatus());
     }, POLL_MS);
 
     try {
@@ -87,9 +112,7 @@ export function useComparisonData() {
         while (true) {
           await sleep(POLL_MS);
           const status = await pollRefreshStatus();
-          if (status?.message) {
-            setProgressMessage(status.message);
-          }
+          await applyRefreshStatus(status);
           if (status?.status === "done") {
             break;
           }
@@ -119,9 +142,10 @@ export function useComparisonData() {
         pollRef.current = null;
       }
       setRefreshing(false);
+      setCardrushSellStats(null);
       window.setTimeout(() => setProgressMessage(null), 3000);
     }
-  }, [loadCachedData, pollRefreshStatus]);
+  }, [applyRefreshStatus, loadCachedData, pollRefreshStatus]);
 
   useEffect(() => {
     refreshingRef.current = refreshing;
@@ -166,6 +190,7 @@ export function useComparisonData() {
     error,
     warning,
     progressMessage,
+    cardrushSellStats,
     lastFetchedAt,
     refresh,
   };

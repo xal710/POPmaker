@@ -242,6 +242,8 @@ export interface HareruyaPriceEntry {
   seriesName: string;
   /** 晴れる屋2 API取得配列での初出順（0始まり） */
   sourceOrder: number;
+  /** 晴れる屋2 販売商品ページ ID */
+  productId: number | null;
 }
 
 export function normalizeHareruyaRows(
@@ -261,6 +263,7 @@ export function normalizeHareruyaRows(
         rawName: row.name,
         sellPrice: row.sellPrice ?? 0,
         seriesName: row.seriesName ?? "",
+        productId: row.productId ?? existing.productId ?? null,
       });
       continue;
     }
@@ -272,6 +275,7 @@ export function normalizeHareruyaRows(
       sellPrice: row.sellPrice ?? 0,
       seriesName: row.seriesName ?? "",
       sourceOrder: sourceOrder++,
+      productId: row.productId ?? null,
     });
   }
 

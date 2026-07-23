@@ -69,6 +69,7 @@ export function buildComparisonResult(
         rarity: identity.rarity ?? undefined,
         hareruya2: entry.price,
         hareruyaSourceOrder: entry.sourceOrder,
+        hareruyaProductId: entry.productId ?? undefined,
         series: resolveItemSeries(displayName, entry.series) ?? undefined,
         ...buyListMeta,
       });
@@ -87,6 +88,7 @@ export function buildComparisonResult(
       series: resolveItemSeries(displayName, entry.series),
       matched: true,
       cardrushOchaProductId: match.ochaProductId ?? undefined,
+      hareruyaProductId: entry.productId ?? undefined,
       ...buyListMeta,
     });
   }
