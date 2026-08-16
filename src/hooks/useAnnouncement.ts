@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import type { AdminAnnouncementResponse, AnnouncementLevel } from "../../shared/admin";
 import { DEFAULT_ANNOUNCEMENT_LEVEL, normalizeAnnouncementLevel } from "../../shared/admin";
+import { readApiJson } from "../utils/apiJson";
 
 export function useAnnouncement() {
   const [globalAnnouncement, setGlobalAnnouncement] = useState("");
@@ -28,7 +29,7 @@ export function useAnnouncement() {
         return;
       }
 
-      const data = (await response.json()) as AdminAnnouncementResponse;
+      const data = await readApiJson<AdminAnnouncementResponse>(response);
       setGlobalAnnouncement(
         typeof data.globalAnnouncement === "string" ? data.globalAnnouncement : "",
       );

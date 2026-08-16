@@ -9,6 +9,7 @@ import {
   accountCanUseTradeFeatures,
   ensureAccountStoreFile,
   findApplicationByUsername,
+  findAccountByUsername,
   isAccountSuspended,
   listStoredAccounts,
   verifyAccountCredentials,
@@ -82,7 +83,11 @@ function parseCookies(req: IncomingMessage): Record<string, string> {
   for (const part of header.split(";")) {
     const [rawKey, ...rest] = part.trim().split("=");
     if (!rawKey) continue;
-    result[rawKey] = decodeURIComponent(rest.join("="));
+    try {
+      result[rawKey] = decodeURIComponent(rest.join("="));
+    } catch {
+      result[rawKey] = rest.join("=");
+    }
   }
 
   return result;
@@ -198,6 +203,28 @@ export function createAuthMiddleware(): Connect.NextHandleFunction {
     const pathname = url.pathname;
     const method = req.method ?? "GET";
 
+    try {
+      await handleAuthRequest(req, res, next, pathname, method);
+    } catch (error) {
+      if (res.headersSent) return;
+      if (pathname.startsWith("/api/")) {
+        const message = error instanceof Error ? error.message : "認証処理に失敗しました";
+        sendJson(res, 500, { error: message });
+        return;
+      }
+      next(error);
+    }
+  };
+}
+
+async function handleAuthRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  next: Connect.NextFunction,
+  pathname: string,
+  method: string,
+): Promise<void> {
+
     if (pathname === "/register" && method === "GET") {
       sendRegisterPage(res);
       return;
@@ -275,7 +302,6 @@ export function createAuthMiddleware(): Connect.NextHandleFunction {
     res.statusCode = 401;
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
     res.end("Unauthorized");
-  };
 }
 
 export { accountCanUsePopPlacement };

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ComparisonData } from "../types";
 import { startAppVersionWatcher } from "../utils/appVersion";
+import { readApiJson } from "../utils/apiJson";
 
 const DATA_URL = "/api/comparison";
 const REFRESH_URL = "/api/comparison/refresh";
@@ -47,7 +48,7 @@ export function useComparisonData() {
 
     try {
       const response = await fetch(`${DATA_URL}?t=${Date.now()}`);
-      const json = (await response.json()) as ComparisonData & { error?: string };
+      const json = await readApiJson<ComparisonData & { error?: string }>(response);
 
       if (!response.ok) {
         throw new Error(json.error ?? `データの取得に失敗しました (${response.status})`);
@@ -66,7 +67,7 @@ export function useComparisonData() {
   const pollRefreshStatus = useCallback(async () => {
     const response = await fetch(`${STATUS_URL}?t=${Date.now()}`);
     if (!response.ok) return null;
-    return (await response.json()) as RefreshProgress;
+    return await readApiJson<RefreshProgress>(response);
   }, []);
 
   const applyRefreshStatus = useCallback(
@@ -103,10 +104,13 @@ export function useComparisonData() {
 
     try {
       const response = await fetch(REFRESH_URL, { method: "POST" });
-      const json = (await response.json().catch(() => ({}))) as ComparisonData & {
+      const json = await readApiJson<ComparisonData & {
         error?: string;
         progress?: RefreshProgress;
-      };
+      }>(response).catch(() => ({} as ComparisonData & {
+        error?: string;
+        progress?: RefreshProgress;
+      }));
 
       if (response.status === 202) {
         while (true) {
