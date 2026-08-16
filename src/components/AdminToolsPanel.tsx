@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 
 import {
+  ANNOUNCEMENT_LEVEL_OPTIONS,
+  DEFAULT_ANNOUNCEMENT_LEVEL,
   countActiveUserAnnouncements,
   getGlobalAnnouncement,
   hasGlobalAnnouncement,
   hasUserAnnouncement,
+  normalizeAnnouncementLevel,
   normalizeAnnouncementTargets,
   resolveAnnouncementTargetSelection,
   type AdminAccountSummary,
   type AdminSettings,
+  type AnnouncementLevel,
 } from "../../shared/admin";
 import type { AccountApplication } from "../../shared/accountRegistration";
 import { AccountApplicationsPanel } from "./AccountApplicationsPanel";
@@ -29,9 +33,17 @@ interface AdminToolsPanelProps {
   loading: boolean;
   saving: boolean;
   error: string | null;
-  onSaveGlobalAnnouncement: (text: string, targets: string[] | null) => Promise<boolean>;
+  onSaveGlobalAnnouncement: (
+    text: string,
+    targets: string[] | null,
+    level: AnnouncementLevel,
+  ) => Promise<boolean>;
   onDeleteGlobalAnnouncement: () => Promise<boolean>;
-  onSaveUserAnnouncement: (username: string, text: string) => Promise<boolean>;
+  onSaveUserAnnouncement: (
+    username: string,
+    text: string,
+    level: AnnouncementLevel,
+  ) => Promise<boolean>;
   onDeleteUserAnnouncement: (username: string) => Promise<boolean>;
   onSaveDebugMemo: (value: string) => Promise<boolean>;
   onApproveApplication: (
@@ -60,6 +72,43 @@ const ADMIN_TAB_LABELS: Record<AdminToolsTab, string> = {
   applications: "アカウント申請",
 };
 
+function AnnouncementLevelPicker({
+  value,
+  disabled,
+  name,
+  onChange,
+}: {
+  value: AnnouncementLevel;
+  disabled: boolean;
+  name: string;
+  onChange: (level: AnnouncementLevel) => void;
+}) {
+  return (
+    <fieldset className="announcement-level-picker" disabled={disabled}>
+      <legend className="announcement-level-picker__legend">重要度</legend>
+      <div className="announcement-level-picker__options">
+        {ANNOUNCEMENT_LEVEL_OPTIONS.map((option) => (
+          <label
+            key={option.value}
+            className={`announcement-level-picker__option announcement-level-picker__option--${option.value}${
+              value === option.value ? " announcement-level-picker__option--selected" : ""
+            }`}
+          >
+            <input
+              type="radio"
+              name={name}
+              value={option.value}
+              checked={value === option.value}
+              onChange={() => onChange(option.value)}
+            />
+            <span>{option.label}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
 export function AdminToolsPanel({
   accounts,
   applications,
@@ -81,10 +130,14 @@ export function AdminToolsPanel({
   const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
   const [selectedProfileUsername, setSelectedProfileUsername] = useState<string | null>(null);
   const [globalAnnouncementDraft, setGlobalAnnouncementDraft] = useState("");
+  const [globalAnnouncementLevelDraft, setGlobalAnnouncementLevelDraft] =
+    useState<AnnouncementLevel>(DEFAULT_ANNOUNCEMENT_LEVEL);
   const [globalAnnouncementTargetsDraft, setGlobalAnnouncementTargetsDraft] = useState<Set<string>>(
     new Set(),
   );
   const [announcementDraft, setAnnouncementDraft] = useState("");
+  const [announcementLevelDraft, setAnnouncementLevelDraft] =
+    useState<AnnouncementLevel>(DEFAULT_ANNOUNCEMENT_LEVEL);
   const [debugMemoDraft, setDebugMemoDraft] = useState("");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
@@ -131,17 +184,29 @@ export function AdminToolsPanel({
 
   useEffect(() => {
     setGlobalAnnouncementDraft(settings?.globalAnnouncement?.text ?? "");
+    setGlobalAnnouncementLevelDraft(
+      normalizeAnnouncementLevel(settings?.globalAnnouncement?.level),
+    );
     setGlobalAnnouncementTargetsDraft(
       resolveAnnouncementTargetSelection(settings?.globalAnnouncementTargets, accountUsernames),
     );
-  }, [settings?.globalAnnouncement?.text, settings?.globalAnnouncementTargets, accountUsernames]);
+  }, [
+    settings?.globalAnnouncement?.text,
+    settings?.globalAnnouncement?.level,
+    settings?.globalAnnouncementTargets,
+    accountUsernames,
+  ]);
 
   useEffect(() => {
     if (!selectedUsername) {
       setAnnouncementDraft("");
+      setAnnouncementLevelDraft(DEFAULT_ANNOUNCEMENT_LEVEL);
       return;
     }
     setAnnouncementDraft(settings?.announcementsByUser[selectedUsername]?.text ?? "");
+    setAnnouncementLevelDraft(
+      normalizeAnnouncementLevel(settings?.announcementsByUser[selectedUsername]?.level),
+    );
   }, [settings, selectedUsername]);
 
   const savedGlobalAnnouncement = settings ? getGlobalAnnouncement(settings) : null;
@@ -175,7 +240,11 @@ export function AdminToolsPanel({
       [...globalAnnouncementTargetsDraft],
       accountUsernames,
     );
-    const ok = await onSaveGlobalAnnouncement(globalAnnouncementDraft, targets);
+    const ok = await onSaveGlobalAnnouncement(
+      globalAnnouncementDraft,
+      targets,
+      globalAnnouncementLevelDraft,
+    );
     if (ok) {
       setSaveMessage("全体アナウンスを保存しました");
       onAnnouncementSaved?.();
@@ -195,6 +264,7 @@ export function AdminToolsPanel({
     const ok = await onDeleteGlobalAnnouncement();
     if (ok) {
       setGlobalAnnouncementDraft("");
+      setGlobalAnnouncementLevelDraft(DEFAULT_ANNOUNCEMENT_LEVEL);
       setSaveMessage("全体アナウンスを削除しました");
       onAnnouncementSaved?.();
     }
@@ -208,7 +278,11 @@ export function AdminToolsPanel({
     if (!selectedUsername) return;
 
     setSaveMessage(null);
-    const ok = await onSaveUserAnnouncement(selectedUsername, announcementDraft);
+    const ok = await onSaveUserAnnouncement(
+      selectedUsername,
+      announcementDraft,
+      announcementLevelDraft,
+    );
     if (ok) {
       setSaveMessage(`${selectedUsername} 向けの個別アナウンスを保存しました`);
       onAnnouncementSaved?.();
@@ -233,6 +307,7 @@ export function AdminToolsPanel({
     const ok = await onDeleteUserAnnouncement(selectedUsername);
     if (ok) {
       setAnnouncementDraft("");
+      setAnnouncementLevelDraft(DEFAULT_ANNOUNCEMENT_LEVEL);
       setSaveMessage(`${selectedUsername} 向けの個別アナウンスを削除しました`);
       onAnnouncementSaved?.();
     }
@@ -427,6 +502,13 @@ export function AdminToolsPanel({
               </p>
             )}
 
+            <AnnouncementLevelPicker
+              name="global-announcement-level"
+              value={globalAnnouncementLevelDraft}
+              disabled={loading || saving}
+              onChange={setGlobalAnnouncementLevelDraft}
+            />
+
             <textarea
               className="admin-tools__textarea"
               value={globalAnnouncementDraft}
@@ -516,6 +598,13 @@ export function AdminToolsPanel({
                 件のアカウントに個別アナウンスを設定中
               </p>
             </div>
+
+            <AnnouncementLevelPicker
+              name="user-announcement-level"
+              value={announcementLevelDraft}
+              disabled={loading || saving || !selectedUsername}
+              onChange={setAnnouncementLevelDraft}
+            />
 
             <textarea
               className="admin-tools__textarea"

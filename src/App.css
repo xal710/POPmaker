@@ -159,6 +159,17 @@
   background: var(--bg);
 }
 
+.btn--logout {
+  background: var(--surface);
+  color: var(--danger);
+  border: 1px solid #fecaca;
+}
+
+.btn--logout:hover:not(:disabled) {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
 .alert {
   padding: 14px 16px;
   border-radius: var(--radius-md);
@@ -2198,6 +2209,29 @@
   border: 1px solid #bfdbfe;
 }
 
+.announcement-banner--blue {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.announcement-banner--yellow {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.announcement-banner--red {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.announcement-banner--yellow .announcement-banner__label {
+  background: #d97706;
+}
+
+.announcement-banner--red .announcement-banner__label {
+  background: var(--danger);
+}
+
 .announcement-stack {
   display: flex;
   flex-direction: column;
@@ -2227,6 +2261,10 @@
   font-size: 14px;
   line-height: 1.6;
   white-space: pre-wrap;
+}
+
+.announcement-banner__text + .announcement-banner__text {
+  margin-top: 8px;
 }
 
 .announcement-banner__meta {
@@ -2643,6 +2681,66 @@
 .admin-tools__delete-btn:not(:disabled):hover {
   background: var(--danger-soft);
   border-color: #fca5a5;
+}
+
+.announcement-level-picker {
+  margin: 0 0 8px;
+  padding: 0;
+  border: none;
+}
+
+.announcement-level-picker__legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.announcement-level-picker__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.announcement-level-picker__option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.announcement-level-picker__option input {
+  margin: 0;
+}
+
+.announcement-level-picker__option--blue.announcement-level-picker__option--selected {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.announcement-level-picker__option--yellow.announcement-level-picker__option--selected {
+  background: #fffbeb;
+  border-color: #fcd34d;
+  color: #b45309;
+}
+
+.announcement-level-picker__option--red.announcement-level-picker__option--selected {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: var(--danger);
+}
+
+.announcement-level-picker:disabled .announcement-level-picker__option {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .admin-target-picker {

@@ -4,10 +4,32 @@ export function isAdministrator(username: string | null | undefined): boolean {
   return username === ADMIN_USERNAME;
 }
 
+export const ANNOUNCEMENT_LEVELS = ["blue", "yellow", "red"] as const;
+export type AnnouncementLevel = (typeof ANNOUNCEMENT_LEVELS)[number];
+export const DEFAULT_ANNOUNCEMENT_LEVEL: AnnouncementLevel = "blue";
+
+export const ANNOUNCEMENT_LEVEL_OPTIONS: Array<{
+  value: AnnouncementLevel;
+  label: string;
+}> = [
+  { value: "blue", label: "青（通常）" },
+  { value: "yellow", label: "黄（注意）" },
+  { value: "red", label: "赤（重要）" },
+];
+
+export function isAnnouncementLevel(value: unknown): value is AnnouncementLevel {
+  return value === "blue" || value === "yellow" || value === "red";
+}
+
+export function normalizeAnnouncementLevel(value: unknown): AnnouncementLevel {
+  return isAnnouncementLevel(value) ? value : DEFAULT_ANNOUNCEMENT_LEVEL;
+}
+
 export interface AccountAnnouncement {
   text: string;
   updatedAt: string;
   updatedBy: string | null;
+  level: AnnouncementLevel;
 }
 
 export interface AdminSettings {
@@ -43,8 +65,10 @@ export interface AdminSettingsResponse {
 export interface AdminAnnouncementResponse {
   globalAnnouncement: string;
   globalUpdatedAt: string | null;
+  globalAnnouncementLevel: AnnouncementLevel;
   userAnnouncement: string;
   userUpdatedAt: string | null;
+  userAnnouncementLevel: AnnouncementLevel;
 }
 
 export function getGlobalAnnouncement(settings: AdminSettings): AccountAnnouncement | null {
@@ -140,8 +164,28 @@ function isAccountAnnouncement(value: unknown): value is AccountAnnouncement {
   return (
     typeof record.text === "string" &&
     typeof record.updatedAt === "string" &&
-    (record.updatedBy === null || typeof record.updatedBy === "string")
+    (record.updatedBy === null || typeof record.updatedBy === "string") &&
+    (record.level === undefined || isAnnouncementLevel(record.level))
   );
+}
+
+function normalizeAccountAnnouncement(value: AccountAnnouncement): AccountAnnouncement {
+  return {
+    text: value.text,
+    updatedAt: value.updatedAt,
+    updatedBy: value.updatedBy,
+    level: normalizeAnnouncementLevel(value.level),
+  };
+}
+
+function normalizeAnnouncementsByUser(
+  value: Record<string, AccountAnnouncement>,
+): Record<string, AccountAnnouncement> {
+  const next: Record<string, AccountAnnouncement> = {};
+  for (const [username, entry] of Object.entries(value)) {
+    next[username] = normalizeAccountAnnouncement(entry);
+  }
+  return next;
 }
 
 function isAnnouncementsByUser(value: unknown): value is Record<string, AccountAnnouncement> {
@@ -152,7 +196,7 @@ function isAnnouncementsByUser(value: unknown): value is Record<string, AccountA
 function normalizeGlobalAnnouncement(value: unknown): AccountAnnouncement | null {
   if (value === null || value === undefined) return null;
   if (!isAccountAnnouncement(value)) return null;
-  return value.text.trim() ? value : null;
+  return value.text.trim() ? normalizeAccountAnnouncement(value) : null;
 }
 
 function isValidAnnouncementTargets(value: unknown): boolean {
@@ -209,6 +253,7 @@ function promoteDuplicateGlobalAnnouncements(
       text: firstText,
       updatedAt: activeEntries[0].updatedAt,
       updatedBy: activeEntries[0].updatedBy,
+      level: normalizeAnnouncementLevel(activeEntries[0].level),
     },
     globalAnnouncementTargets: null,
     announcementsByUser: {},
@@ -224,7 +269,7 @@ export function normalizeAdminSettings(
     const normalized: AdminSettings = {
       globalAnnouncement: normalizeGlobalAnnouncement(record.globalAnnouncement),
       globalAnnouncementTargets: normalizeGlobalAnnouncementTargets(record.globalAnnouncementTargets),
-      announcementsByUser: record.announcementsByUser,
+      announcementsByUser: normalizeAnnouncementsByUser(record.announcementsByUser),
       debugMemo: record.debugMemo,
       updatedAt: record.updatedAt,
       updatedBy: record.updatedBy,
@@ -249,11 +294,21 @@ export function normalizeAdminSettings(
   if (text) {
     const targets = legacy.announcementTargets;
     if (targets === null || targets === undefined) {
-      globalAnnouncement = { text, updatedAt, updatedBy };
+      globalAnnouncement = {
+        text,
+        updatedAt,
+        updatedBy,
+        level: DEFAULT_ANNOUNCEMENT_LEVEL,
+      };
     } else {
       const usernames = targets.filter((username) => accountUsernames.includes(username));
       for (const username of usernames) {
-        announcementsByUser[username] = { text, updatedAt, updatedBy };
+        announcementsByUser[username] = {
+          text,
+          updatedAt,
+          updatedBy,
+          level: DEFAULT_ANNOUNCEMENT_LEVEL,
+        };
       }
     }
   }

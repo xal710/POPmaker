@@ -52,6 +52,7 @@ const migratedAll = normalizeAdminSettings(
   accounts,
 );
 assert.equal(migratedAll.globalAnnouncement?.text, "全員向け");
+assert.equal(migratedAll.globalAnnouncement?.level, "blue");
 assert.equal(migratedAll.globalAnnouncementTargets, null);
 assert.equal(Object.keys(migratedAll.announcementsByUser).length, 0);
 
@@ -76,7 +77,7 @@ saveAdminSettings(
 );
 saveAdminSettings(
   {
-    userAnnouncement: { username: "h.mizuno", text: "4F向け" },
+    userAnnouncement: { username: "h.mizuno", text: "4F向け", level: "yellow" },
   },
   accounts,
   "administrator",
@@ -84,10 +85,12 @@ saveAdminSettings(
 
 const settings = readAdminSettings(accounts);
 assert.equal(getGlobalAnnouncement(settings)?.text, "メンテナンスのお知らせ");
+assert.equal(getGlobalAnnouncement(settings)?.level, "blue");
 assert.equal(isGlobalAnnouncementVisibleToUser(settings, "akito00"), true);
 assert.equal(getGlobalAnnouncementForUser(settings, "akito00")?.text, "メンテナンスのお知らせ");
 assert.equal(getUserAnnouncement(settings, "Yousei710")?.text, "馬場店向け");
 assert.equal(getUserAnnouncement(settings, "h.mizuno")?.text, "4F向け");
+assert.equal(getUserAnnouncement(settings, "h.mizuno")?.level, "yellow");
 assert.equal(getUserAnnouncement(settings, "akito00"), null);
 assert.equal(hasGlobalAnnouncement(settings), true);
 assert.equal(hasUserAnnouncement(settings, "Yousei710"), true);
@@ -97,11 +100,13 @@ saveAdminSettings(
   {
     globalAnnouncement: "一部向け",
     globalAnnouncementTargets: ["Yousei710", "h.mizuno"],
+    globalAnnouncementLevel: "red",
   },
   accounts,
   "administrator",
 );
 const partial = readAdminSettings(accounts);
+assert.equal(getGlobalAnnouncement(partial)?.level, "red");
 assert.equal(isGlobalAnnouncementVisibleToUser(partial, "Yousei710"), true);
 assert.equal(isGlobalAnnouncementVisibleToUser(partial, "akito00"), false);
 assert.equal(getGlobalAnnouncementForUser(partial, "akito00"), null);

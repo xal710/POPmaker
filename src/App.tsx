@@ -88,8 +88,10 @@ function App() {
   const {
     globalAnnouncement,
     globalUpdatedAt,
+    globalAnnouncementLevel,
     userAnnouncement,
     userUpdatedAt,
+    userAnnouncementLevel,
     reload: reloadAnnouncement,
   } = useAnnouncement();
   const [view, setView] = useState<AppView>("tool");
@@ -216,6 +218,15 @@ function App() {
     }
   }, [listSource]);
 
+  const handleLogout = useCallback(async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // Cookie 削除に失敗してもログイン画面へ戻す
+    }
+    window.location.assign("/");
+  }, []);
+
   const handlePageChange = useCallback((page: number) => {
     setListPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -301,6 +312,7 @@ function App() {
         isAdministrator={isAdminUser}
 
         onOpenAdmin={() => setView("admin")}
+        onLogout={username ? handleLogout : undefined}
 
         internalComparisonMode={internalComparisonMode}
         showCardrushSellStats={showSellPrices}
@@ -334,18 +346,20 @@ function App() {
         ) : (
           <>
 
-        <div className="announcement-stack">
-          <AnnouncementBanner
-            label="全体のお知らせ"
-            announcement={globalAnnouncement}
-            updatedAt={globalUpdatedAt}
-          />
-          <AnnouncementBanner
-            label="お知らせ"
-            announcement={userAnnouncement}
-            updatedAt={userUpdatedAt}
-          />
-        </div>
+        <AnnouncementBanner
+          announcements={[
+            {
+              text: globalAnnouncement,
+              updatedAt: globalUpdatedAt,
+              level: globalAnnouncementLevel,
+            },
+            {
+              text: userAnnouncement,
+              updatedAt: userUpdatedAt,
+              level: userAnnouncementLevel,
+            },
+          ]}
+        />
 
         {view === "tweetHistory" ? (
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
 
 import type { AccountApplication } from "../../shared/accountRegistration";
-import type { AdminAccountSummary, AdminSettings, AdminSettingsResponse } from "../../shared/admin";
+import type { AdminAccountSummary, AdminSettings, AdminSettingsResponse, AnnouncementLevel } from "../../shared/admin";
 
 interface UseAdminPanelResult {
   accounts: AdminAccountSummary[];
@@ -11,9 +11,13 @@ interface UseAdminPanelResult {
   saving: boolean;
   error: string | null;
   reload: () => Promise<void>;
-  saveUserAnnouncement: (username: string, text: string) => Promise<boolean>;
+  saveUserAnnouncement: (username: string, text: string, level: AnnouncementLevel) => Promise<boolean>;
   deleteUserAnnouncement: (username: string) => Promise<boolean>;
-  saveGlobalAnnouncement: (text: string, targets: string[] | null) => Promise<boolean>;
+  saveGlobalAnnouncement: (
+    text: string,
+    targets: string[] | null,
+    level: AnnouncementLevel,
+  ) => Promise<boolean>;
   deleteGlobalAnnouncement: () => Promise<boolean>;
   saveDebugMemo: (value: string) => Promise<boolean>;
   approveApplication: (applicationId: string, canUsePopPlacement: boolean, canUseTradeFeatures: boolean) => Promise<boolean>;
@@ -90,9 +94,10 @@ export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
   const patchSettings = useCallback(
     async (patch: {
       globalAnnouncement?: string;
+      globalAnnouncementLevel?: AnnouncementLevel;
       globalAnnouncementTargets?: string[] | null;
       deleteGlobalAnnouncement?: boolean;
-      userAnnouncement?: { username: string; text: string };
+      userAnnouncement?: { username: string; text: string; level?: AnnouncementLevel };
       deleteUserAnnouncement?: string;
       debugMemo?: string;
     }) => {
@@ -271,8 +276,12 @@ export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
   );
 
   const saveGlobalAnnouncement = useCallback(
-    async (text: string, targets: string[] | null) =>
-      patchSettings({ globalAnnouncement: text, globalAnnouncementTargets: targets }),
+    async (text: string, targets: string[] | null, level: AnnouncementLevel) =>
+      patchSettings({
+        globalAnnouncement: text,
+        globalAnnouncementTargets: targets,
+        globalAnnouncementLevel: level,
+      }),
     [patchSettings],
   );
 
@@ -282,8 +291,8 @@ export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
   );
 
   const saveUserAnnouncement = useCallback(
-    async (username: string, text: string) =>
-      patchSettings({ userAnnouncement: { username, text } }),
+    async (username: string, text: string, level: AnnouncementLevel) =>
+      patchSettings({ userAnnouncement: { username, text, level } }),
     [patchSettings],
   );
 

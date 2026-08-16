@@ -23,12 +23,14 @@ const AUTH_VERSION = process.env.AUTH_VERSION ?? "2";
 
 const PUBLIC_API_PATHS = new Set([
   "/api/auth/login",
+  "/api/auth/logout",
   "/api/auth/register",
   "/api/auth/register/check",
 ]);
 
 function isPublicApiPath(pathname: string, method: string): boolean {
   if (pathname === "/api/auth/login" && method === "POST") return true;
+  if (pathname === "/api/auth/logout" && method === "POST") return true;
   if (pathname === "/api/auth/register" && method === "POST") return true;
   if (pathname === "/api/auth/register/check" && method === "GET") return true;
   return PUBLIC_API_PATHS.has(pathname);
@@ -95,6 +97,14 @@ function setAuthCookie(res: ServerResponse, req: IncomingMessage, username: stri
   res.setHeader(
     "Set-Cookie",
     `${AUTH_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${COOKIE_MAX_AGE_SEC}${secure}`,
+  );
+}
+
+function clearAuthCookie(res: ServerResponse, req: IncomingMessage): void {
+  const secure = isSecureRequest(req) ? "; Secure" : "";
+  res.setHeader(
+    "Set-Cookie",
+    `${AUTH_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure}`,
   );
 }
 
@@ -204,6 +214,12 @@ export function createAuthMiddleware(): Connect.NextHandleFunction {
         } catch {
           sendJson(res, 400, { error: "リクエストが不正です" });
         }
+        return;
+      }
+
+      if (pathname === "/api/auth/logout" && method === "POST") {
+        clearAuthCookie(res, req);
+        sendJson(res, 200, { ok: true });
         return;
       }
 

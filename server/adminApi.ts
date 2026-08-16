@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Connect } from "vite";
 
-import { isAdministrator, getGlobalAnnouncementForUser, getUserAnnouncement, normalizeAnnouncementTargets } from "../shared/admin";
+import { isAdministrator, getGlobalAnnouncementForUser, getUserAnnouncement, isAnnouncementLevel, normalizeAnnouncementTargets, type AnnouncementLevel } from "../shared/admin";
 import { isTweetTemplateMode, type TweetTemplateMode } from "../shared/accountProfile";
 import {
   approveAccountApplication,
@@ -75,8 +75,10 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
       sendJson(res, 200, {
         globalAnnouncement: globalEntry?.text ?? "",
         globalUpdatedAt: globalEntry?.updatedAt ?? null,
+        globalAnnouncementLevel: globalEntry?.level ?? "blue",
         userAnnouncement: userEntry?.text ?? "",
         userUpdatedAt: userEntry?.updatedAt ?? null,
+        userAnnouncementLevel: userEntry?.level ?? "blue",
       });
       return;
     }
@@ -100,6 +102,7 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
         try {
           const body = (await readJsonBody(req)) as {
             globalAnnouncement?: unknown;
+            globalAnnouncementLevel?: unknown;
             globalAnnouncementTargets?: unknown;
             deleteGlobalAnnouncement?: unknown;
             userAnnouncement?: unknown;
@@ -111,9 +114,14 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
           const patch: {
             debugMemo?: string;
             globalAnnouncement?: string;
+            globalAnnouncementLevel?: AnnouncementLevel;
             globalAnnouncementTargets?: string[] | null;
             deleteGlobalAnnouncement?: boolean;
-            userAnnouncement?: { username: string; text: string };
+            userAnnouncement?: {
+              username: string;
+              text: string;
+              level?: AnnouncementLevel;
+            };
             deleteUserAnnouncement?: string;
           } = {};
 
@@ -123,6 +131,14 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
               return;
             }
             patch.globalAnnouncement = body.globalAnnouncement;
+          }
+
+          if (body && "globalAnnouncementLevel" in body) {
+            if (!isAnnouncementLevel(body.globalAnnouncementLevel)) {
+              sendJson(res, 400, { error: "globalAnnouncementLevel は blue / yellow / red で指定してください" });
+              return;
+            }
+            patch.globalAnnouncementLevel = body.globalAnnouncementLevel;
           }
 
           if (body && "globalAnnouncementTargets" in body) {
@@ -170,7 +186,16 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
               return;
             }
 
-            patch.userAnnouncement = { username, text: record.text };
+            if (record.level !== undefined && !isAnnouncementLevel(record.level)) {
+              sendJson(res, 400, { error: "userAnnouncement.level は blue / yellow / red で指定してください" });
+              return;
+            }
+
+            patch.userAnnouncement = {
+              username,
+              text: record.text,
+              ...(record.level !== undefined ? { level: record.level } : {}),
+            };
           }
 
           if (body && "deleteUserAnnouncement" in body) {
@@ -198,6 +223,7 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
 
           if (
             !("globalAnnouncement" in patch) &&
+            !("globalAnnouncementLevel" in patch) &&
             !("globalAnnouncementTargets" in patch) &&
             !("deleteGlobalAnnouncement" in patch) &&
             !("userAnnouncement" in patch) &&

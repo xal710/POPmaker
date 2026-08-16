@@ -5,8 +5,10 @@ import {
   createEmptyAdminSettings,
   isAdminSettings,
   normalizeAdminSettings,
+  normalizeAnnouncementLevel,
   type AccountAnnouncement,
   type AdminSettings,
+  type AnnouncementLevel,
 } from "../shared/admin";
 import { getDataDir } from "./config";
 
@@ -73,11 +75,13 @@ function getGlobalAnnouncementFromRaw(raw: unknown): AccountAnnouncement | null 
 export interface SaveAdminSettingsPatch {
   debugMemo?: string;
   globalAnnouncement?: string;
+  globalAnnouncementLevel?: AnnouncementLevel;
   globalAnnouncementTargets?: string[] | null;
   deleteGlobalAnnouncement?: boolean;
   userAnnouncement?: {
     username: string;
     text: string;
+    level?: AnnouncementLevel;
   };
   deleteUserAnnouncement?: string;
 }
@@ -107,11 +111,21 @@ export function saveAdminSettings(
           text,
           updatedAt: now,
           updatedBy,
+          level: normalizeAnnouncementLevel(
+            patch.globalAnnouncementLevel ?? current.globalAnnouncement?.level,
+          ),
         }
       : null;
     if (!text) {
       next.globalAnnouncementTargets = null;
     }
+  } else if (patch.globalAnnouncementLevel !== undefined && next.globalAnnouncement) {
+    next.globalAnnouncement = {
+      ...next.globalAnnouncement,
+      level: normalizeAnnouncementLevel(patch.globalAnnouncementLevel),
+      updatedAt: now,
+      updatedBy,
+    };
   }
 
   if (patch.globalAnnouncementTargets !== undefined) {
@@ -136,6 +150,9 @@ export function saveAdminSettings(
         text,
         updatedAt: now,
         updatedBy,
+        level: normalizeAnnouncementLevel(
+          patch.userAnnouncement.level ?? current.announcementsByUser[username]?.level,
+        ),
       };
     } else {
       delete next.announcementsByUser[username];

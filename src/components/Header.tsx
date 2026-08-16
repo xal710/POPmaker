@@ -28,6 +28,7 @@ interface HeaderProps {
   exportingExcel?: boolean;
   isAdministrator?: boolean;
   onOpenAdmin?: () => void;
+  onLogout?: () => void;
   internalComparisonMode?: boolean;
   showCardrushSellStats?: boolean;
   cardrushSellProcessed?: number;
@@ -50,10 +51,7 @@ function formatServerUpdatedDate(
   if (updatedAt) {
     const date = new Date(updatedAt);
     if (!Number.isNaN(date.getTime())) {
-      const y = date.getFullYear();
-      const m = String(date.getMonth() + 1).padStart(2, "0");
-      const d = String(date.getDate()).padStart(2, "0");
-      return `${y}/${m}/${d}`;
+      return formatDateTime(date);
     }
   }
 
@@ -64,7 +62,7 @@ function updatedDateHint(source: HeaderProps["dataSource"]): string {
   if (source === "excel") {
     return "Excelの価格シート名に含まれる日付（例: 20260616_晴れる屋）";
   }
-  return "サーバー上の比較データが最後に更新された日（「最新価格を取得」成功時）";
+  return "サーバー上の比較データが最後に更新された日時（「最新価格を取得」成功時）";
 }
 
 function getHeaderTitle(view: AppView): string {
@@ -96,6 +94,7 @@ export function Header({
   exportingExcel = false,
   isAdministrator = false,
   onOpenAdmin,
+  onLogout,
   internalComparisonMode = false,
   showCardrushSellStats = false,
   cardrushSellProcessed = 0,
@@ -134,6 +133,11 @@ export function Header({
                   disabled={busy}
                 >
                   POP配置
+                </button>
+              )}
+              {onLogout && (
+                <button type="button" className="btn btn--logout" onClick={onLogout}>
+                  ログアウト
                 </button>
               )}
               {showTweetHistoryNav && (
