@@ -63,6 +63,9 @@ function getLegacySeedAccounts(): Array<Omit<StoredSiteAccount, "applicationId" 
     tweetTemplateCustom: DEFAULT_ACCOUNT_TWEET_PROFILE.tweetTemplateCustom,
     applicationId: null,
     createdAt: now,
+    suspended: false,
+    suspendedAt: null,
+    suspendedBy: null,
   }));
 }
 
@@ -97,6 +100,9 @@ function normalizeStoredAccount(account: StoredSiteAccount): StoredSiteAccount {
     canUseTradeFeatures: account.canUseTradeFeatures ?? false,
     tweetTemplateMode: tweetProfile.tweetTemplateMode,
     tweetTemplateCustom: tweetProfile.tweetTemplateCustom,
+    suspended: account.suspended === true,
+    suspendedAt: account.suspendedAt ?? null,
+    suspendedBy: account.suspendedBy ?? null,
   };
 }
 
@@ -216,6 +222,34 @@ export function accountCanUseTradeFeatures(username: string): boolean {
   return account?.canUseTradeFeatures === true;
 }
 
+export function isAccountSuspended(username: string): boolean {
+  return findAccountByUsername(username)?.suspended === true;
+}
+
+export function setAccountSuspended(
+  username: string,
+  suspended: boolean,
+  updatedBy: string,
+): StoredSiteAccount | null {
+  if (username === ADMIN_USERNAME) {
+    return null;
+  }
+
+  const store = loadStore();
+  const index = store.accounts.findIndex((account) => account.username === username);
+  if (index < 0) return null;
+
+  const now = new Date().toISOString();
+  store.accounts[index] = {
+    ...store.accounts[index],
+    suspended,
+    suspendedAt: suspended ? now : null,
+    suspendedBy: suspended ? updatedBy : null,
+  };
+  saveStore(store);
+  return store.accounts[index];
+}
+
 export function submitAccountApplication(input: AccountRegistrationInput): AccountApplication {
   if (isDesiredUsernameTaken(input.desiredUsername)) {
     throw new Error("USERNAME_TAKEN");
@@ -294,6 +328,9 @@ export function approveAccountApplication(
     tweetTemplateCustom: DEFAULT_ACCOUNT_TWEET_PROFILE.tweetTemplateCustom,
     applicationId: application.id,
     createdAt: now,
+    suspended: false,
+    suspendedAt: null,
+    suspendedBy: null,
   };
 
   store.accounts.push(account);

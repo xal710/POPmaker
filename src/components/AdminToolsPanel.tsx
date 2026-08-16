@@ -61,6 +61,7 @@ interface AdminToolsPanelProps {
       tweetTemplateCustom: string | null;
     },
   ) => Promise<boolean>;
+  onSetAccountSuspended: (username: string, suspended: boolean) => Promise<boolean>;
   onAnnouncementSaved?: () => void;
 }
 
@@ -124,6 +125,7 @@ export function AdminToolsPanel({
   onApproveApplication,
   onRejectApplication,
   onSaveAccountProfile,
+  onSetAccountSuspended,
   onAnnouncementSaved,
 }: AdminToolsPanelProps) {
   const [activeTab, setActiveTab] = useState<AdminToolsTab>("accounts");
@@ -386,7 +388,7 @@ export function AdminToolsPanel({
             <section className="admin-tools__card">
               <h3 className="admin-tools__card-title">ログインアカウント一覧</h3>
               <p className="admin-tools__hint">
-                アカウントを選択して、POP配置・トレード機能・ツイートテンプレートを編集します。
+                アカウントを選択して、停止・POP配置・トレード機能・ツイートテンプレートを編集します。
               </p>
               {loading ? (
                 <p className="admin-tools__muted">読み込み中...</p>
@@ -400,7 +402,7 @@ export function AdminToolsPanel({
                           type="button"
                           className={`admin-account-list__item admin-account-list__select${
                             isSelected ? " admin-account-list__select--active" : ""
-                          }`}
+                          }${account.suspended ? " admin-account-list__select--suspended" : ""}`}
                           onClick={() => setSelectedProfileUsername(account.username)}
                           aria-pressed={isSelected}
                         >
@@ -408,6 +410,9 @@ export function AdminToolsPanel({
                           <span className="admin-account-list__badges">
                             {account.isAdministrator && (
                               <span className="admin-badge admin-badge--admin">管理者</span>
+                            )}
+                            {account.suspended && (
+                              <span className="admin-badge admin-badge--suspended">停止中</span>
                             )}
                             {account.canUsePopPlacementOnline && (
                               <span className="admin-badge admin-badge--sync">POP配置</span>
@@ -431,6 +436,7 @@ export function AdminToolsPanel({
               account={selectedProfileAccount}
               saving={saving}
               onSave={onSaveAccountProfile}
+              onSetSuspended={onSetAccountSuspended}
             />
           </div>
         </div>

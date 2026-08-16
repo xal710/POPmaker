@@ -24,6 +24,7 @@ interface UseAdminPanelResult {
   rejectApplication: (applicationId: string) => Promise<boolean>;
   setPopPlacementAccess: (username: string, enabled: boolean) => Promise<boolean>;
   setTradeFeaturesAccess: (username: string, enabled: boolean) => Promise<boolean>;
+  setAccountSuspended: (username: string, suspended: boolean) => Promise<boolean>;
   saveAccountProfile: (
     username: string,
     patch: {
@@ -234,6 +235,36 @@ export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
     }
   }, []);
 
+  const setAccountSuspended = useCallback(async (username: string, suspended: boolean) => {
+    setSaving(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `/api/admin/accounts/${encodeURIComponent(username)}/suspended`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ suspended }),
+        },
+      );
+
+      if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error || "更新に失敗しました");
+      }
+
+      const data = (await response.json()) as AdminSettingsResponse;
+      applyAdminResponse(data, setAccounts, setApplications, setSettings);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "更新に失敗しました");
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }, []);
+
   const saveAccountProfile = useCallback(
     async (
       username: string,
@@ -323,6 +354,7 @@ export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
     rejectApplication,
     setPopPlacementAccess,
     setTradeFeaturesAccess,
+    setAccountSuspended,
     saveAccountProfile,
   };
 }

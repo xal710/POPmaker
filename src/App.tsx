@@ -341,6 +341,7 @@ function App() {
             onApproveApplication={adminPanel.approveApplication}
             onRejectApplication={adminPanel.rejectApplication}
             onSaveAccountProfile={adminPanel.saveAccountProfile}
+            onSetAccountSuspended={adminPanel.setAccountSuspended}
             onAnnouncementSaved={() => void reloadAnnouncement()}
           />
         ) : (

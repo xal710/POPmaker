@@ -61,17 +61,14 @@ function buildPageUpdatedAt(updatedAt: string): Partial<Record<string, string>> 
 
 export async function fetchHareruyaBuyPrices(
   onProgress?: (message: string) => void,
+  options?: { force?: boolean },
 ): Promise<HareruyaBuyListFetchResult> {
   onProgress?.("晴れる屋2: 買取リストを取得中...");
 
-  const [products, updatedAtFromHead] = await Promise.all([
-    loadHareruyaCatalog({ onProgress }),
-    fetchBuyListUpdatedAtFromPage(),
-  ]);
-
+  const products = await loadHareruyaCatalog({ onProgress, force: options?.force });
   const rows = products.map(catalogProductToRow);
   const resolvedUpdatedAt =
-    getHareruyaCatalogUpdatedAt() ?? updatedAtFromHead ?? getBuyListDisplayDate();
+    getHareruyaCatalogUpdatedAt() ?? (await fetchBuyListUpdatedAtFromPage()) ?? getBuyListDisplayDate();
 
   onProgress?.(`晴れる屋2: ${rows.length.toLocaleString("ja-JP")}件を取得しました`);
 

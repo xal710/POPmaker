@@ -11,11 +11,14 @@ import {
 import {
   accountCanUseTradeFeatures,
   approveAccountApplication,
+  isAccountSuspended,
   isDesiredUsernameTaken,
   rejectAccountApplication,
+  setAccountSuspended,
   submitAccountApplication,
   verifyAccountCredentials,
 } from "../server/accountStore";
+import { ADMIN_USERNAME } from "../shared/admin";
 
 const dataDir = mkdtempSync(join(tmpdir(), "pop-accounts-test-"));
 process.env.DATA_DIR = dataDir;
@@ -75,6 +78,19 @@ assert.ok(approved);
 assert.equal(approved?.status, "approved");
 assert.ok(verifyAccountCredentials("yamada01", "pw1234"));
 assert.equal(accountCanUseTradeFeatures("yamada01"), false);
+
+assert.equal(isAccountSuspended("yamada01"), false);
+const suspended = setAccountSuspended("yamada01", true, "administrator");
+assert.ok(suspended);
+assert.equal(suspended?.suspended, true);
+assert.equal(isAccountSuspended("yamada01"), true);
+assert.equal(setAccountSuspended(ADMIN_USERNAME, true, "administrator"), null);
+assert.equal(isAccountSuspended(ADMIN_USERNAME), false);
+
+const resumed = setAccountSuspended("yamada01", false, "administrator");
+assert.ok(resumed);
+assert.equal(resumed?.suspended, false);
+assert.equal(isAccountSuspended("yamada01"), false);
 
 rmSync(dataDir, { recursive: true, force: true });
 

@@ -9,6 +9,7 @@ import {
   listStoredAccounts,
   rejectAccountApplication,
   setAccountPopPlacementAccess,
+  setAccountSuspended,
   setAccountTradeFeaturesAccess,
   updateAccountProfile,
 } from "./accountStore";
@@ -365,6 +366,41 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
 
         const username = decodeURIComponent(tradeFeaturesMatch[1]);
         const account = setAccountTradeFeaturesAccess(username, body.canUseTradeFeatures);
+        if (!account) {
+          sendJson(res, 404, { error: "アカウントが見つからないか、変更できません" });
+          return;
+        }
+
+        sendJson(res, 200, {
+          accounts: listSiteAccountSummaries(),
+          settings: readAdminSettings(getKnownUsernames()),
+          applications: listAccountApplications(),
+        });
+      } catch {
+        sendJson(res, 400, { error: "更新に失敗しました" });
+      }
+      return;
+    }
+
+    const suspendedMatch = pathname.match(/^\/api\/admin\/accounts\/([^/]+)\/suspended$/);
+    if (suspendedMatch && req.method === "PATCH") {
+      const adminUsername = requireAdministrator(req, res);
+      if (!adminUsername) return;
+
+      try {
+        const body = (await readJsonBody(req)) as { suspended?: unknown } | null;
+        if (typeof body?.suspended !== "boolean") {
+          sendJson(res, 400, { error: "suspended は boolean で指定してください" });
+          return;
+        }
+
+        const username = decodeURIComponent(suspendedMatch[1]);
+        if (isAdministrator(username)) {
+          sendJson(res, 400, { error: "管理者アカウントは停止できません" });
+          return;
+        }
+
+        const account = setAccountSuspended(username, body.suspended, adminUsername);
         if (!account) {
           sendJson(res, 404, { error: "アカウントが見つからないか、変更できません" });
           return;

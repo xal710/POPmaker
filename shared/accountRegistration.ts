@@ -34,6 +34,10 @@ export interface StoredSiteAccount {
   tweetTemplateCustom: string | null;
   applicationId: string | null;
   createdAt: string;
+  /** 停止中はログイン不可 */
+  suspended: boolean;
+  suspendedAt: string | null;
+  suspendedBy: string | null;
 }
 
 export interface AccountRegistrationInput {

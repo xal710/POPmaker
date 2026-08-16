@@ -2525,6 +2525,11 @@
   color: #5b21b6;
 }
 
+.admin-badge--suspended {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
 .admin-account-list__feature-toggles {
   display: flex;
   flex-wrap: wrap;
@@ -2554,6 +2559,22 @@
   border-color: var(--primary);
   background: #eff6ff;
   box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.15);
+}
+
+.admin-account-list__select--suspended {
+  border-color: #fecaca;
+  background: var(--danger-soft);
+}
+
+.admin-account-list__select--suspended.admin-account-list__select--active {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.15);
+}
+
+.admin-profile__section--status {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
 }
 
 .admin-profile__header {

@@ -9,7 +9,7 @@ import {
   accountCanUseTradeFeatures,
   ensureAccountStoreFile,
   findApplicationByUsername,
-  findAccountByUsername,
+  isAccountSuspended,
   listStoredAccounts,
   verifyAccountCredentials,
 } from "./accountStore";
@@ -45,6 +45,7 @@ export function listSiteAccountSummaries(): AdminAccountSummary[] {
       isAdministrator: account.username === ADMIN_USERNAME,
       canUsePopPlacementOnline: account.canUsePopPlacement,
       canUseTradeFeatures: account.canUseTradeFeatures,
+      suspended: account.suspended === true,
       tweetTemplateMode: tweetProfile.tweetTemplateMode,
       tweetTemplateCustom: tweetProfile.tweetTemplateCustom,
     };
@@ -115,7 +116,10 @@ export function getAuthenticatedUsername(req: IncomingMessage): string | null {
   for (const account of listStoredAccounts()) {
     const expected = createAuthToken(account.username);
     if (token.length !== expected.length) continue;
-    if (safeEqual(token, expected)) return account.username;
+    if (safeEqual(token, expected)) {
+      if (account.suspended) return null;
+      return account.username;
+    }
   }
 
   return null;
@@ -124,6 +128,9 @@ export function getAuthenticatedUsername(req: IncomingMessage): string | null {
 function resolveLoginError(username: string, password: string): string {
   const trimmedUsername = username.trim();
   const account = verifyAccountCredentials(trimmedUsername, password);
+  if (account?.suspended) {
+    return "このアカウントは停止されています。管理者にお問い合わせください。";
+  }
   if (account) return "";
 
   const application = findApplicationByUsername(trimmedUsername);
@@ -206,6 +213,13 @@ export function createAuthMiddleware(): Connect.NextHandleFunction {
 
           if (!authenticatedUsername) {
             sendJson(res, 401, { error: resolveLoginError(username, password) });
+            return;
+          }
+
+          if (isAccountSuspended(authenticatedUsername)) {
+            sendJson(res, 403, {
+              error: "このアカウントは停止されています。管理者にお問い合わせください。",
+            });
             return;
           }
 

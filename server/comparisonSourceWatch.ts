@@ -8,6 +8,7 @@ import { fetchBuyListUpdatedAtFromPage } from "./fetch/hareruyaCatalog";
 import {
   getRefreshProgress,
   refreshComparisonFromWeb,
+  refreshHareruyaPricesKeepingCardRush,
 } from "./refreshComparison";
 
 const WATCH_STATE_FILENAME = "comparison_source_watch.json";
@@ -44,7 +45,7 @@ function getWatchStatePath(): string {
   return resolve(getDataDir(), WATCH_STATE_FILENAME);
 }
 
-export function hasComparisonSourceChange(
+export function hasCardRushSourceChange(
   stored: ComparisonSourceVersions,
   live: ComparisonSourceVersions,
 ): boolean {
@@ -52,7 +53,7 @@ export function hasComparisonSourceChange(
     return false;
   }
 
-  if (!stored.cardRushUpdatedAt && !stored.hareruyaUpdatedAt) {
+  if (!stored.cardRushUpdatedAt) {
     return false;
   }
 
@@ -66,6 +67,25 @@ export function hasComparisonSourceChange(
     stored.cardRushLastPage !== live.cardRushLastPage
   ) {
     return true;
+  }
+
+  return false;
+}
+
+export function hasComparisonSourceChange(
+  stored: ComparisonSourceVersions,
+  live: ComparisonSourceVersions,
+): boolean {
+  if (hasCardRushSourceChange(stored, live)) {
+    return true;
+  }
+
+  if (!live.cardRushUpdatedAt) {
+    return false;
+  }
+
+  if (!stored.cardRushUpdatedAt && !stored.hareruyaUpdatedAt) {
+    return false;
   }
 
   if (live.hareruyaUpdatedAt && stored.hareruyaUpdatedAt !== live.hareruyaUpdatedAt) {
@@ -169,15 +189,16 @@ export async function runComparisonSourceWatchCycle(options?: {
         await refreshComparisonFromWeb();
         return "refreshed";
       }
-      return "baseline";
+      await refreshHareruyaPricesKeepingCardRush();
+      return "refreshed";
     }
 
-    if (!options?.forceRefresh && !hasComparisonSourceChange(stored, live)) {
-      saveComparisonSourceWatchState(live);
-      return "unchanged";
+    if (options?.forceRefresh || hasCardRushSourceChange(stored, live)) {
+      await refreshComparisonFromWeb();
+      return "refreshed";
     }
 
-    await refreshComparisonFromWeb();
+    await refreshHareruyaPricesKeepingCardRush();
     return "refreshed";
   })().finally(() => {
     watchCyclePromise = null;
@@ -190,7 +211,7 @@ async function runWatchCycleSafe(): Promise<void> {
   try {
     const result = await runComparisonSourceWatchCycle();
     if (result === "refreshed") {
-      console.log("[comparison-watch] ソース更新を検知し、比較データを更新しました");
+      console.log("[comparison-watch] ソース確認後、比較データを更新しました");
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -210,7 +231,7 @@ export function startComparisonSourceWatch(): () => void {
 
   const intervalMs = getComparisonWatchIntervalMs();
   console.log(
-    `[comparison-watch] 開始（${Math.round(intervalMs / 60_000)}分ごとに CR / 晴れる屋の更新を確認）`,
+    `[comparison-watch] 開始（${Math.round(intervalMs / 60_000)}分ごとに晴れる屋2を取得、CRは更新検知時のみ全件）`,
   );
 
   const startupTimer = setTimeout(() => {

@@ -21,9 +21,15 @@ interface AccountProfilePanelProps {
     tweetTemplateMode: TweetTemplateMode;
     tweetTemplateCustom: string | null;
   }) => Promise<boolean>;
+  onSetSuspended: (username: string, suspended: boolean) => Promise<boolean>;
 }
 
-export function AccountProfilePanel({ account, saving, onSave }: AccountProfilePanelProps) {
+export function AccountProfilePanel({
+  account,
+  saving,
+  onSave,
+  onSetSuspended,
+}: AccountProfilePanelProps) {
   const [canUsePopPlacement, setCanUsePopPlacement] = useState(false);
   const [canUseTradeFeatures, setCanUseTradeFeatures] = useState(false);
   const [tweetTemplateMode, setTweetTemplateMode] = useState<TweetTemplateMode>("auto");
@@ -69,6 +75,19 @@ export function AccountProfilePanel({ account, saving, onSave }: AccountProfileP
     });
   };
 
+  const handleToggleSuspended = async () => {
+    if (account.isAdministrator) return;
+
+    if (!account.suspended) {
+      const confirmed = window.confirm(
+        `${account.username} を停止しますか？停止中はログインできなくなります。`,
+      );
+      if (!confirmed) return;
+    }
+
+    await onSetSuspended(account.username, !account.suspended);
+  };
+
   return (
     <section className="admin-tools__card admin-profile">
       <div className="admin-profile__header">
@@ -88,6 +107,33 @@ export function AccountProfilePanel({ account, saving, onSave }: AccountProfileP
           {saving ? "保存中..." : "設定を保存"}
         </button>
       </div>
+
+      <section className="admin-profile__section admin-profile__section--status">
+        <h4 className="admin-profile__section-title">利用状態</h4>
+        {account.isAdministrator ? (
+          <p className="admin-tools__hint">管理者アカウントは停止できません。</p>
+        ) : (
+          <>
+            <p className="admin-tools__hint">
+              {account.suspended
+                ? "このアカウントは停止中です。ログインできません。"
+                : "停止すると、このアカウントはログインできなくなります。"}
+            </p>
+            <button
+              type="button"
+              className={`btn ${account.suspended ? "btn--secondary" : "btn--logout"}`}
+              disabled={saving}
+              onClick={() => void handleToggleSuspended()}
+            >
+              {saving
+                ? "処理中..."
+                : account.suspended
+                  ? "停止を解除"
+                  : "アカウントを停止"}
+            </button>
+          </>
+        )}
+      </section>
 
       <div className="admin-profile__grid">
         <section className="admin-profile__section">

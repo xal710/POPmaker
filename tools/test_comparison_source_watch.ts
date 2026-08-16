@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import {
+  hasCardRushSourceChange,
   hasComparisonSourceChange,
   type ComparisonSourceVersions,
 } from "../server/comparisonSourceWatch";
@@ -56,6 +57,15 @@ assert.equal(
   hasComparisonSourceChange(versions(), versions({ cardRushUpdatedAt: null })),
   false,
   "CR updatedAt が取れない場合は更新しない",
+);
+
+assert.equal(
+  hasCardRushSourceChange(
+    versions(),
+    versions({ hareruyaUpdatedAt: "2026-07-04" }),
+  ),
+  false,
+  "晴れる屋だけの変化では CR 全件更新しない",
 );
 
 console.log("test_comparison_source_watch: OK");

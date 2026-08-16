@@ -50,6 +50,7 @@ export interface AdminAccountSummary {
   isAdministrator: boolean;
   canUsePopPlacementOnline: boolean;
   canUseTradeFeatures: boolean;
+  suspended: boolean;
   tweetTemplateMode: TweetTemplateMode;
   tweetTemplateCustom: string | null;
 }
