@@ -78,6 +78,36 @@ export function hasPopPriceMismatch(
   return placedPriceYen !== currentPriceYen;
 }
 
+/** 配置時価格に対する最新買取価格の比率（current / placed） */
+export function getPopPriceChangeRatio(
+  placedPriceYen: number | undefined,
+  currentPriceYen: number | null,
+): number | null {
+  if (
+    placedPriceYen === undefined ||
+    currentPriceYen === null ||
+    !Number.isFinite(placedPriceYen) ||
+    !Number.isFinite(currentPriceYen) ||
+    placedPriceYen <= 0
+  ) {
+    return null;
+  }
+  return currentPriceYen / placedPriceYen;
+}
+
+/** 最新買取が配置時の 150%以上 または 70%以下 */
+export const POP_PRICE_EXTREME_HIGH_RATIO = 1.5;
+export const POP_PRICE_EXTREME_LOW_RATIO = 0.7;
+
+export function hasPopPriceExtremeChange(
+  placedPriceYen: number | undefined,
+  currentPriceYen: number | null,
+): boolean {
+  const ratio = getPopPriceChangeRatio(placedPriceYen, currentPriceYen);
+  if (ratio === null) return false;
+  return ratio >= POP_PRICE_EXTREME_HIGH_RATIO || ratio <= POP_PRICE_EXTREME_LOW_RATIO;
+}
+
 export function createStoredWallSlotPop(pending: {
   cardName: string;
   sourceName: string;
@@ -108,7 +138,9 @@ export function getWallSlotIndicatorClassNames(
   }
 
   const placedPriceYen = assignment.placedPriceYen ?? assignment.priceYen;
-  if (hasPopPriceMismatch(placedPriceYen, currentPriceYen)) {
+  if (hasPopPriceExtremeChange(placedPriceYen, currentPriceYen)) {
+    classes.push("wall-face__slot--price-extreme");
+  } else if (hasPopPriceMismatch(placedPriceYen, currentPriceYen)) {
     classes.push("wall-face__slot--price-mismatch");
   }
 
@@ -120,17 +152,22 @@ export interface PopPlacementStatusSummary {
   stale5Days: number;
   stale7Days: number;
   priceMismatch: number;
+  priceExtreme: number;
 }
 
 function countAssignmentStatus(
   assignment: StoredWallSlotPop,
   comparisonItems: ComparisonItem[],
-): Pick<PopPlacementStatusSummary, "stale3Days" | "stale5Days" | "stale7Days" | "priceMismatch"> {
+): Pick<
+  PopPlacementStatusSummary,
+  "stale3Days" | "stale5Days" | "stale7Days" | "priceMismatch" | "priceExtreme"
+> {
   const result = {
     stale3Days: 0,
     stale5Days: 0,
     stale7Days: 0,
     priceMismatch: 0,
+    priceExtreme: 0,
   };
 
   if (assignment.placedAt) {
@@ -145,6 +182,9 @@ function countAssignmentStatus(
   if (hasPopPriceMismatch(placedPriceYen, currentPriceYen)) {
     result.priceMismatch = 1;
   }
+  if (hasPopPriceExtremeChange(placedPriceYen, currentPriceYen)) {
+    result.priceExtreme = 1;
+  }
 
   return result;
 }
@@ -158,6 +198,7 @@ export function summarizePopPlacementStatus(
     stale5Days: 0,
     stale7Days: 0,
     priceMismatch: 0,
+    priceExtreme: 0,
   };
 
   for (const wall of Object.values(store)) {
@@ -171,6 +212,7 @@ export function summarizePopPlacementStatus(
       summary.stale5Days += counts.stale5Days;
       summary.stale7Days += counts.stale7Days;
       summary.priceMismatch += counts.priceMismatch;
+      summary.priceExtreme += counts.priceExtreme;
     }
   }
 
@@ -182,6 +224,7 @@ export interface PopPlacementWallStatus {
   stale5Days: number;
   stale7Days: number;
   priceMismatch: number;
+  priceExtreme: number;
 }
 
 export function summarizeWallPlacementStatuses(
@@ -198,6 +241,7 @@ export function summarizeWallPlacementStatuses(
       stale5Days: 0,
       stale7Days: 0,
       priceMismatch: 0,
+      priceExtreme: 0,
     };
 
     for (const assignment of Object.values(wall)) {
@@ -207,13 +251,15 @@ export function summarizeWallPlacementStatuses(
       summary.stale5Days += counts.stale5Days;
       summary.stale7Days += counts.stale7Days;
       summary.priceMismatch += counts.priceMismatch;
+      summary.priceExtreme += counts.priceExtreme;
     }
 
     if (
       summary.stale3Days > 0 ||
       summary.stale5Days > 0 ||
       summary.stale7Days > 0 ||
-      summary.priceMismatch > 0
+      summary.priceMismatch > 0 ||
+      summary.priceExtreme > 0
     ) {
       statuses[wallId] = summary;
     }
@@ -226,11 +272,16 @@ export function wallHasPriceMismatch(status: PopPlacementWallStatus | undefined)
   return (status?.priceMismatch ?? 0) > 0;
 }
 
+export function wallHasPriceExtremeChange(status: PopPlacementWallStatus | undefined): boolean {
+  return (status?.priceExtreme ?? 0) > 0;
+}
+
 export function hasPopPlacementIssues(summary: PopPlacementStatusSummary): boolean {
   return (
     summary.stale3Days > 0 ||
     summary.stale5Days > 0 ||
     summary.stale7Days > 0 ||
-    summary.priceMismatch > 0
+    summary.priceMismatch > 0 ||
+    summary.priceExtreme > 0
   );
 }

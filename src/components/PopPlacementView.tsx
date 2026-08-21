@@ -11,6 +11,7 @@ import {
   hasPopPlacementIssues,
   summarizePopPlacementStatus,
   summarizeWallPlacementStatuses,
+  wallHasPriceExtremeChange,
   wallHasPriceMismatch,
 } from "../utils/popPlacementIndicators";
 import {
@@ -32,6 +33,12 @@ const ZONE_HIGHLIGHT_PURPLE = {
   fill: "rgba(168, 85, 247, 0.38)",
   stroke: "rgba(168, 85, 247, 0.95)",
   fillIdle: "rgba(168, 85, 247, 0.24)",
+} as const;
+
+const ZONE_HIGHLIGHT_BLUE = {
+  fill: "rgba(37, 99, 235, 0.38)",
+  stroke: "rgba(37, 99, 235, 0.95)",
+  fillIdle: "rgba(37, 99, 235, 0.24)",
 } as const;
 
 function drawZoneHighlight(
@@ -163,7 +170,18 @@ export function PopPlacementView({
     );
 
     for (const zone of zonesRef.current) {
-      if (!wallHasPriceMismatch(wallStatuses[zone.id])) continue;
+      const status = wallStatuses[zone.id];
+      if (wallHasPriceExtremeChange(status)) {
+        drawZoneHighlight(
+          context,
+          zone,
+          canvas,
+          ZONE_HIGHLIGHT_BLUE,
+          highlight?.id === zone.id,
+        );
+        continue;
+      }
+      if (!wallHasPriceMismatch(status)) continue;
       drawZoneHighlight(
         context,
         zone,
@@ -173,7 +191,11 @@ export function PopPlacementView({
       );
     }
 
-    if (highlight && !wallHasPriceMismatch(wallStatuses[highlight.id])) {
+    if (
+      highlight &&
+      !wallHasPriceMismatch(wallStatuses[highlight.id]) &&
+      !wallHasPriceExtremeChange(wallStatuses[highlight.id])
+    ) {
       drawZoneHighlight(context, highlight, canvas, ZONE_HIGHLIGHT_ORANGE, true);
     }
   };
@@ -239,6 +261,12 @@ export function PopPlacementView({
                 ⚠最新価格と異なるPOPがあります！：{placementStatus.priceMismatch}枚
               </li>
             ) : null}
+            {placementStatus.priceExtreme > 0 ? (
+              <li className="pop-placement__status-warning pop-placement__status-warning--extreme">
+                ⚠買取価格の差が大きいPOPがあります（70%以下 / 150%以上）：
+                {placementStatus.priceExtreme}枚
+              </li>
+            ) : null}
           </ul>
         ) : (
           <p className="pop-placement__status-ok">更新すべきPOPはありません。</p>
@@ -280,7 +308,7 @@ export function PopPlacementView({
           onPointerMove={handlePointer}
           onPointerLeave={() => setHoveredZone(null)}
           onClick={handleClick}
-          aria-label="店舗フロア図。壁面をクリックすると展示配置画面を開きます。価格変更がある壁は紫色で表示されます。"
+          aria-label="店舗フロア図。壁面をクリックすると展示配置画面を開きます。価格変更がある壁は紫色、価格差が大きい壁は青色で表示されます。"
         />
       </div>
 
@@ -296,9 +324,9 @@ export function PopPlacementView({
       ) : (
         <p className="pop-placement__hint">
           {pendingPlacement
-            ? "まず配置する壁面をクリックしてください。価格変更がある壁は紫色です。"
+            ? "まず配置する壁面をクリックしてください。価格変更がある壁は紫色、価格差が大きい壁は青色です。"
             : zones.length > 0
-              ? `${zones.length}箇所の壁面にカーソルを合わせるとハイライトされます。価格変更がある壁は常に紫色で表示されます。`
+              ? `${zones.length}箇所の壁面にカーソルを合わせるとハイライトされます。価格変更がある壁は紫色、買取価格差が大きい壁（70%以下 / 150%以上）は青色で表示されます。`
               : "クリック可能な壁面が見つかりませんでした。"}
         </p>
       )}

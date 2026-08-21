@@ -1835,6 +1835,10 @@
   color: #7e22ce;
 }
 
+.pop-placement__status-warning--extreme {
+  color: #1d4ed8;
+}
+
 .pop-placement__map-wrap {
   overflow-x: auto;
 }
@@ -2011,6 +2015,11 @@
   box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.55);
 }
 
+.wall-face__slot--filled.wall-face__slot--price-extreme {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.6);
+}
+
 .wall-face__slot--filled.wall-face__slot--price-mismatch.wall-face__slot--age-yellow {
   box-shadow:
     0 0 0 2px rgba(234, 179, 8, 0.55),
@@ -2027,6 +2036,24 @@
   box-shadow:
     0 0 0 2px rgba(239, 68, 68, 0.55),
     0 0 0 5px rgba(168, 85, 247, 0.55);
+}
+
+.wall-face__slot--filled.wall-face__slot--price-extreme.wall-face__slot--age-yellow {
+  box-shadow:
+    0 0 0 2px rgba(234, 179, 8, 0.55),
+    0 0 0 5px rgba(37, 99, 235, 0.6);
+}
+
+.wall-face__slot--filled.wall-face__slot--price-extreme.wall-face__slot--age-orange {
+  box-shadow:
+    0 0 0 2px rgba(249, 115, 22, 0.55),
+    0 0 0 5px rgba(37, 99, 235, 0.6);
+}
+
+.wall-face__slot--filled.wall-face__slot--price-extreme.wall-face__slot--age-red {
+  box-shadow:
+    0 0 0 2px rgba(239, 68, 68, 0.55),
+    0 0 0 5px rgba(37, 99, 235, 0.6);
 }
 
 .wall-face__indicator-legend {
@@ -2071,6 +2098,11 @@
 .wall-face__indicator-swatch--purple {
   border-color: #a855f7;
   box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.45);
+}
+
+.wall-face__indicator-swatch--blue {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.45);
 }
 
 .wall-face__slot--drag-source {

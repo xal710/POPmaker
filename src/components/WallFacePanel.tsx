@@ -556,6 +556,10 @@ export function WallFacePanel({
           <span className="wall-face__indicator-swatch wall-face__indicator-swatch--purple" aria-hidden="true" />
           価格変更あり
         </li>
+        <li className="wall-face__indicator-legend-item">
+          <span className="wall-face__indicator-swatch wall-face__indicator-swatch--blue" aria-hidden="true" />
+          価格差が大きい（70%以下 / 150%以上）
+        </li>
       </ul>
 
       {error && !saving && (
