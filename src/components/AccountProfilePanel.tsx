@@ -15,6 +15,8 @@ const PREVIEW_PRICE = 1200;
 interface AccountProfilePanelProps {
   account: AdminAccountSummary | null;
   saving: boolean;
+  /** ツイート履歴タブに登録済みの店舗名 */
+  storeOptions: string[];
   onSave: (username: string, patch: {
     canUsePopPlacement: boolean;
     canUseTradeFeatures: boolean;
@@ -28,6 +30,7 @@ interface AccountProfilePanelProps {
 export function AccountProfilePanel({
   account,
   saving,
+  storeOptions,
   onSave,
   onSetSuspended,
 }: AccountProfilePanelProps) {
@@ -45,6 +48,16 @@ export function AccountProfilePanel({
     setTweetTemplateCustom(account.tweetTemplateCustom ?? "");
     setStore(account.store?.trim() ?? "");
   }, [account]);
+
+  const selectableStores = useMemo(() => {
+    const names = new Set(storeOptions.map((name) => name.trim()).filter(Boolean));
+    const current = store.trim();
+    if (current) names.add(current);
+    return [...names].sort((a, b) => a.localeCompare(b, "ja"));
+  }, [store, storeOptions]);
+
+  const storeNotInTweetHistory =
+    Boolean(store.trim()) && !storeOptions.some((name) => name.trim() === store.trim());
 
   const previewText = useMemo(() => {
     if (!account) return "";
@@ -143,19 +156,37 @@ export function AccountProfilePanel({
       <section className="admin-profile__section">
         <h4 className="admin-profile__section-title">所属店舗</h4>
         <p className="admin-tools__hint">
-          ツイート履歴の参照先など、店舗別の設定に使います。空欄で未設定になります。
+          「ツイート履歴」タブに登録した店舗から選択します。未選択の場合は既定アカウントを参照します。
         </p>
+        {storeOptions.length === 0 ? (
+          <p className="admin-tools__muted">
+            先に「ツイート履歴」タブで店舗と X プロフィールを登録してください。
+          </p>
+        ) : null}
         <label className="admin-profile__field">
           <span className="admin-profile__label">店舗名</span>
-          <input
-            className="admin-tools__input"
-            type="text"
+          <select
+            className="admin-profile__select"
             value={store}
-            disabled={saving}
-            placeholder="例: 郡山店"
+            disabled={saving || (storeOptions.length === 0 && !store)}
             onChange={(event) => setStore(event.target.value)}
-          />
+          >
+            <option value="">未設定</option>
+            {selectableStores.map((name) => (
+              <option key={name} value={name}>
+                {name}
+                {storeOptions.some((option) => option.trim() === name)
+                  ? ""
+                  : "（ツイート履歴未登録）"}
+              </option>
+            ))}
+          </select>
         </label>
+        {storeNotInTweetHistory ? (
+          <p className="admin-tools__hint">
+            現在の所属店舗はツイート履歴に未登録です。別の店舗を選ぶか、ツイート履歴タブで登録してください。
+          </p>
+        ) : null}
       </section>
 
       <div className="admin-profile__grid">

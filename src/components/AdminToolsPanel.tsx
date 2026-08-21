@@ -179,6 +179,15 @@ export function AdminToolsPanel({
     [accounts],
   );
 
+  const tweetHistoryStoreOptions = useMemo(
+    () =>
+      Object.keys(settings?.tweetHistoryByStore ?? {})
+        .map((store) => store.trim())
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, "ja")),
+    [settings?.tweetHistoryByStore],
+  );
+
   const allGlobalTargetsSelected =
     accountUsernames.length > 0 &&
     globalAnnouncementTargetsDraft.size === accountUsernames.length;
@@ -515,6 +524,7 @@ export function AdminToolsPanel({
             <AccountProfilePanel
               account={selectedProfileAccount}
               saving={saving}
+              storeOptions={tweetHistoryStoreOptions}
               onSave={onSaveAccountProfile}
               onSetSuspended={onSetAccountSuspended}
             />
