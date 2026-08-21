@@ -109,6 +109,7 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
             userAnnouncement?: unknown;
             deleteUserAnnouncement?: unknown;
             debugMemo?: unknown;
+            tweetHistoryByStore?: unknown;
           } | null;
 
           const knownUsernames = getKnownUsernames();
@@ -124,6 +125,7 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
               level?: AnnouncementLevel;
             };
             deleteUserAnnouncement?: string;
+            tweetHistoryByStore?: Record<string, string>;
           } = {};
 
           if (body && "globalAnnouncement" in body) {
@@ -222,6 +224,22 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
             patch.debugMemo = body.debugMemo;
           }
 
+          if (body && "tweetHistoryByStore" in body) {
+            const value = body.tweetHistoryByStore;
+            if (!value || typeof value !== "object" || Array.isArray(value)) {
+              sendJson(res, 400, { error: "tweetHistoryByStore の形式が不正です" });
+              return;
+            }
+
+            const record = value as Record<string, unknown>;
+            if (!Object.values(record).every((entry) => typeof entry === "string")) {
+              sendJson(res, 400, { error: "tweetHistoryByStore は店舗名→URL（または @名）の文字列マップで指定してください" });
+              return;
+            }
+
+            patch.tweetHistoryByStore = record as Record<string, string>;
+          }
+
           if (
             !("globalAnnouncement" in patch) &&
             !("globalAnnouncementLevel" in patch) &&
@@ -229,7 +247,8 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
             !("deleteGlobalAnnouncement" in patch) &&
             !("userAnnouncement" in patch) &&
             !("deleteUserAnnouncement" in patch) &&
-            !("debugMemo" in patch)
+            !("debugMemo" in patch) &&
+            !("tweetHistoryByStore" in patch)
           ) {
             sendJson(res, 400, { error: "更新する項目を指定してください" });
             return;

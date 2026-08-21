@@ -43,6 +43,7 @@ export function listSiteAccountSummaries(): AdminAccountSummary[] {
     return {
       username: account.username,
       displayName: account.displayName,
+      store: account.store ?? null,
       isAdministrator: account.username === ADMIN_USERNAME,
       canUsePopPlacementOnline: account.canUsePopPlacement,
       canUseTradeFeatures: account.canUseTradeFeatures,

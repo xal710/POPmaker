@@ -1,5 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Connect } from "vite";
+import { findAccountByUsername } from "./accountStore";
+import { readAdminSettings } from "./adminStore";
 import { getAuthenticatedUsername } from "./auth";
 import { sendJson } from "./http";
 import { fetchBuyInfoTweetHistory } from "./tweetHistory";
@@ -25,7 +27,15 @@ export function createTweetHistoryMiddleware(): Connect.NextHandleFunction {
     }
 
     try {
-      const entries = await fetchBuyInfoTweetHistory(username);
+      const account = findAccountByUsername(username);
+      const settings = readAdminSettings(
+        account ? [account.username] : [],
+      );
+      const entries = await fetchBuyInfoTweetHistory({
+        username,
+        store: account?.store ?? null,
+        byStore: settings.tweetHistoryByStore,
+      });
       sendJson(res, 200, {
         source: "live",
         entries,

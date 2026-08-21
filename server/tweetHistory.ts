@@ -1,4 +1,7 @@
-import { resolveTweetHistoryScreenName } from "../shared/tweetHistoryAccounts";
+import {
+  resolveTweetHistoryScreenName,
+  type ResolveTweetHistoryScreenOptions,
+} from "../shared/tweetHistoryAccounts";
 import {
   annotateDailyPostOrder,
   buildTweetUrl,
@@ -82,8 +85,10 @@ async function fetchRecentStatuses(screenName: string): Promise<FxStatus[]> {
   return statuses;
 }
 
-export async function fetchBuyInfoTweetHistory(username: string | null): Promise<TweetHistoryEntry[]> {
-  const screenName = resolveTweetHistoryScreenName(username);
+export async function fetchBuyInfoTweetHistory(
+  usernameOrOptions: string | null | ResolveTweetHistoryScreenOptions,
+): Promise<TweetHistoryEntry[]> {
+  const screenName = resolveTweetHistoryScreenName(usernameOrOptions);
   const statuses = await fetchRecentStatuses(screenName);
   const allTimeline: { id: string; postedAt: string }[] = [];
   const rawTweets: RawTweetInput[] = [];

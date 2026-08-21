@@ -10,6 +10,7 @@ import {
   type AdminSettings,
   type AnnouncementLevel,
 } from "../shared/admin";
+import { normalizeTweetHistoryByStore } from "../shared/tweetHistoryAccounts";
 import { getDataDir } from "./config";
 
 const ADMIN_SETTINGS_FILENAME = "admin-settings.json";
@@ -84,6 +85,7 @@ export interface SaveAdminSettingsPatch {
     level?: AnnouncementLevel;
   };
   deleteUserAnnouncement?: string;
+  tweetHistoryByStore?: Record<string, string>;
 }
 
 export function saveAdminSettings(
@@ -96,6 +98,7 @@ export function saveAdminSettings(
   const next: AdminSettings = {
     ...current,
     announcementsByUser: { ...current.announcementsByUser },
+    tweetHistoryByStore: { ...current.tweetHistoryByStore },
     updatedAt: now,
     updatedBy,
   };
@@ -165,6 +168,10 @@ export function saveAdminSettings(
       throw new Error("INVALID_ANNOUNCEMENT_USER");
     }
     delete next.announcementsByUser[username];
+  }
+
+  if (patch.tweetHistoryByStore !== undefined) {
+    next.tweetHistoryByStore = normalizeTweetHistoryByStore(patch.tweetHistoryByStore);
   }
 
   return writeAdminSettings(next);

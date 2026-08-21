@@ -338,6 +338,7 @@ function App() {
             onSaveGlobalAnnouncement={adminPanel.saveGlobalAnnouncement}
             onDeleteGlobalAnnouncement={adminPanel.deleteGlobalAnnouncement}
             onSaveDebugMemo={adminPanel.saveDebugMemo}
+            onSaveTweetHistoryByStore={adminPanel.saveTweetHistoryByStore}
             onApproveApplication={adminPanel.approveApplication}
             onRejectApplication={adminPanel.rejectApplication}
             onSaveAccountProfile={adminPanel.saveAccountProfile}

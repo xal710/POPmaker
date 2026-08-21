@@ -37,16 +37,21 @@ export interface AdminSettings {
   /** null のときは全アカウント向け */
   globalAnnouncementTargets: string[] | null;
   announcementsByUser: Record<string, AccountAnnouncement>;
+  /** 所属店舗名 → X スクリーンネーム */
+  tweetHistoryByStore: Record<string, string>;
   debugMemo: string;
   updatedAt: string;
   updatedBy: string | null;
 }
 
 import type { TweetTemplateMode } from "./accountProfile";
+import type { AccountApplication } from "./accountRegistration";
+import { normalizeTweetHistoryByStore } from "./tweetHistoryAccounts";
 
 export interface AdminAccountSummary {
   username: string;
   displayName?: string;
+  store?: string | null;
   isAdministrator: boolean;
   canUsePopPlacementOnline: boolean;
   canUseTradeFeatures: boolean;
@@ -54,8 +59,6 @@ export interface AdminAccountSummary {
   tweetTemplateMode: TweetTemplateMode;
   tweetTemplateCustom: string | null;
 }
-
-import type { AccountApplication } from "./accountRegistration";
 
 export interface AdminSettingsResponse {
   accounts: AdminAccountSummary[];
@@ -215,12 +218,22 @@ function normalizeGlobalAnnouncementTargets(value: unknown): string[] | null {
 export function isAdminSettings(value: unknown): value is AdminSettings {
   if (!value || typeof value !== "object") return false;
   const record = value as Record<string, unknown>;
+  const tweetHistoryOk =
+    record.tweetHistoryByStore === undefined ||
+    (record.tweetHistoryByStore !== null &&
+      typeof record.tweetHistoryByStore === "object" &&
+      !Array.isArray(record.tweetHistoryByStore) &&
+      Object.values(record.tweetHistoryByStore as Record<string, unknown>).every(
+        (entry) => typeof entry === "string",
+      ));
+
   return (
     isAnnouncementsByUser(record.announcementsByUser) &&
     (record.globalAnnouncement === null ||
       record.globalAnnouncement === undefined ||
       isAccountAnnouncement(record.globalAnnouncement)) &&
     isValidAnnouncementTargets(record.globalAnnouncementTargets) &&
+    tweetHistoryOk &&
     typeof record.debugMemo === "string" &&
     typeof record.updatedAt === "string" &&
     (record.updatedBy === null || typeof record.updatedBy === "string")
@@ -271,6 +284,10 @@ export function normalizeAdminSettings(
       globalAnnouncement: normalizeGlobalAnnouncement(record.globalAnnouncement),
       globalAnnouncementTargets: normalizeGlobalAnnouncementTargets(record.globalAnnouncementTargets),
       announcementsByUser: normalizeAnnouncementsByUser(record.announcementsByUser),
+      tweetHistoryByStore: normalizeTweetHistoryByStore(
+        (raw as unknown as Record<string, unknown>).tweetHistoryByStore ??
+          record.tweetHistoryByStore,
+      ),
       debugMemo: record.debugMemo,
       updatedAt: record.updatedAt,
       updatedBy: record.updatedBy,
@@ -318,6 +335,9 @@ export function normalizeAdminSettings(
     globalAnnouncement,
     globalAnnouncementTargets,
     announcementsByUser,
+    tweetHistoryByStore: normalizeTweetHistoryByStore(
+      (raw as Record<string, unknown>).tweetHistoryByStore,
+    ),
     debugMemo: typeof legacy.debugMemo === "string" ? legacy.debugMemo : "",
     updatedAt,
     updatedBy,
@@ -329,6 +349,7 @@ export function createEmptyAdminSettings(): AdminSettings {
     globalAnnouncement: null,
     globalAnnouncementTargets: null,
     announcementsByUser: {},
+    tweetHistoryByStore: {},
     debugMemo: "",
     updatedAt: new Date(0).toISOString(),
     updatedBy: null,

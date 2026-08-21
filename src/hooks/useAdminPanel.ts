@@ -20,6 +20,7 @@ interface UseAdminPanelResult {
   ) => Promise<boolean>;
   deleteGlobalAnnouncement: () => Promise<boolean>;
   saveDebugMemo: (value: string) => Promise<boolean>;
+  saveTweetHistoryByStore: (byStore: Record<string, string>) => Promise<boolean>;
   approveApplication: (applicationId: string, canUsePopPlacement: boolean, canUseTradeFeatures: boolean) => Promise<boolean>;
   rejectApplication: (applicationId: string) => Promise<boolean>;
   setPopPlacementAccess: (username: string, enabled: boolean) => Promise<boolean>;
@@ -101,6 +102,7 @@ export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
       userAnnouncement?: { username: string; text: string; level?: AnnouncementLevel };
       deleteUserAnnouncement?: string;
       debugMemo?: string;
+      tweetHistoryByStore?: Record<string, string>;
     }) => {
       setSaving(true);
       setError(null);
@@ -337,6 +339,12 @@ export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
     [patchSettings],
   );
 
+  const saveTweetHistoryByStore = useCallback(
+    async (tweetHistoryByStore: Record<string, string>) =>
+      patchSettings({ tweetHistoryByStore }),
+    [patchSettings],
+  );
+
   return {
     accounts,
     applications,
@@ -350,6 +358,7 @@ export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
     saveGlobalAnnouncement,
     deleteGlobalAnnouncement,
     saveDebugMemo,
+    saveTweetHistoryByStore,
     approveApplication,
     rejectApplication,
     setPopPlacementAccess,

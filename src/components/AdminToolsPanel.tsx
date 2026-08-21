@@ -15,6 +15,12 @@ import {
   type AnnouncementLevel,
 } from "../../shared/admin";
 import type { AccountApplication } from "../../shared/accountRegistration";
+import {
+  collectAccountStoreNames,
+  formatTweetHistoryProfileUrl,
+  parseTweetHistoryProfileInput,
+} from "../../shared/tweetHistoryAccounts";
+import { HARERUYA_ANNEX_SCREEN_NAME } from "../../shared/tweetHistoryParse";
 import { AccountApplicationsPanel } from "./AccountApplicationsPanel";
 import { AccountProfilePanel } from "./AccountProfilePanel";
 import { formatDateTime } from "../utils/format";
@@ -23,6 +29,7 @@ export type AdminToolsTab =
   | "accounts"
   | "globalAnnouncement"
   | "userAnnouncements"
+  | "tweetHistory"
   | "debugMemo"
   | "applications";
 
@@ -46,6 +53,7 @@ interface AdminToolsPanelProps {
   ) => Promise<boolean>;
   onDeleteUserAnnouncement: (username: string) => Promise<boolean>;
   onSaveDebugMemo: (value: string) => Promise<boolean>;
+  onSaveTweetHistoryByStore: (byStore: Record<string, string>) => Promise<boolean>;
   onApproveApplication: (
     applicationId: string,
     canUsePopPlacement: boolean,
@@ -69,9 +77,15 @@ const ADMIN_TAB_LABELS: Record<AdminToolsTab, string> = {
   accounts: "アカウント",
   globalAnnouncement: "全体アナウンス",
   userAnnouncements: "個別アナウンス",
+  tweetHistory: "ツイート履歴",
   debugMemo: "デバッグメモ",
   applications: "アカウント申請",
 };
+
+function accountHolderLabel(account: AdminAccountSummary): string {
+  const displayName = account.displayName?.trim();
+  return displayName || account.username;
+}
 
 function AnnouncementLevelPicker({
   value,
@@ -122,6 +136,7 @@ export function AdminToolsPanel({
   onSaveUserAnnouncement,
   onDeleteUserAnnouncement,
   onSaveDebugMemo,
+  onSaveTweetHistoryByStore,
   onApproveApplication,
   onRejectApplication,
   onSaveAccountProfile,
@@ -141,6 +156,9 @@ export function AdminToolsPanel({
   const [announcementLevelDraft, setAnnouncementLevelDraft] =
     useState<AnnouncementLevel>(DEFAULT_ANNOUNCEMENT_LEVEL);
   const [debugMemoDraft, setDebugMemoDraft] = useState("");
+  const [tweetHistoryDraft, setTweetHistoryDraft] = useState<Record<string, string>>({});
+  const [tweetHistoryStoreOrder, setTweetHistoryStoreOrder] = useState<string[]>([]);
+  const [newTweetHistoryStore, setNewTweetHistoryStore] = useState("");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   const pendingApplicationCount = useMemo(
@@ -183,6 +201,25 @@ export function AdminToolsPanel({
   useEffect(() => {
     setDebugMemoDraft(settings?.debugMemo ?? "");
   }, [settings?.debugMemo]);
+
+  useEffect(() => {
+    const fromAccounts = collectAccountStoreNames(accounts);
+    const fromSettings = Object.keys(settings?.tweetHistoryByStore ?? {})
+      .map((store) => store.trim())
+      .filter(Boolean);
+    const merged = [...new Set([...fromAccounts, ...fromSettings])].sort((a, b) =>
+      a.localeCompare(b, "ja"),
+    );
+    setTweetHistoryStoreOrder(merged);
+
+    const next: Record<string, string> = {};
+    const byStore = settings?.tweetHistoryByStore ?? {};
+    for (const store of merged) {
+      const screen = byStore[store];
+      next[store] = screen ? formatTweetHistoryProfileUrl(screen) : "";
+    }
+    setTweetHistoryDraft(next);
+  }, [accounts, settings?.tweetHistoryByStore]);
 
   useEffect(() => {
     setGlobalAnnouncementDraft(settings?.globalAnnouncement?.text ?? "");
@@ -325,6 +362,33 @@ export function AdminToolsPanel({
     if (ok) setSaveMessage("デバッグメモを保存しました");
   };
 
+  const handleSaveTweetHistory = async () => {
+    setSaveMessage(null);
+    const next: Record<string, string> = {};
+    for (const store of tweetHistoryStoreOrder) {
+      const raw = tweetHistoryDraft[store]?.trim() ?? "";
+      if (!raw) continue;
+      const screen = parseTweetHistoryProfileInput(raw);
+      if (!screen) {
+        setSaveMessage(`「${store}」のURLまたは @名が不正です`);
+        return;
+      }
+      next[store] = screen;
+    }
+    const ok = await onSaveTweetHistoryByStore(next);
+    if (ok) setSaveMessage("店舗別ツイート履歴URLを保存しました");
+  };
+
+  const handleAddTweetHistoryStore = () => {
+    const store = newTweetHistoryStore.trim();
+    if (!store) return;
+    setTweetHistoryStoreOrder((prev) =>
+      prev.includes(store) ? prev : [...prev, store].sort((a, b) => a.localeCompare(b, "ja")),
+    );
+    setTweetHistoryDraft((prev) => ({ ...prev, [store]: prev[store] ?? "" }));
+    setNewTweetHistoryStore("");
+  };
+
   const getTabBadge = (tab: AdminToolsTab): number | null => {
     if (tab === "applications" && pendingApplicationCount > 0) return pendingApplicationCount;
     if (tab === "userAnnouncements" && activeUserAnnouncementCount > 0) {
@@ -406,7 +470,17 @@ export function AdminToolsPanel({
                           onClick={() => setSelectedProfileUsername(account.username)}
                           aria-pressed={isSelected}
                         >
-                          <span className="admin-account-list__name">{account.username}</span>
+                          <span className="admin-account-list__identity">
+                            <span className="admin-account-list__name">
+                              {accountHolderLabel(account)}
+                            </span>
+                            {account.displayName?.trim() &&
+                              account.displayName.trim() !== account.username && (
+                                <span className="admin-account-list__username">
+                                  {account.username}
+                                </span>
+                              )}
+                          </span>
                           <span className="admin-account-list__badges">
                             {account.isAdministrator && (
                               <span className="admin-badge admin-badge--admin">管理者</span>
@@ -489,7 +563,16 @@ export function AdminToolsPanel({
                           onChange={() => toggleGlobalAnnouncementTarget(account.username)}
                           disabled={loading || saving}
                         />
-                        <span className="admin-target-picker__name">{account.username}</span>
+                        <span className="admin-target-picker__name">
+                          {accountHolderLabel(account)}
+                          {account.displayName?.trim() &&
+                            account.displayName.trim() !== account.username && (
+                              <span className="admin-target-picker__username">
+                                {" "}
+                                ({account.username})
+                              </span>
+                            )}
+                        </span>
                       </label>
                     </li>
                   );
@@ -590,7 +673,16 @@ export function AdminToolsPanel({
                         disabled={loading || saving}
                         aria-pressed={isSelected}
                       >
-                        <span className="admin-target-picker__name">{account.username}</span>
+                        <span className="admin-target-picker__name">
+                          {accountHolderLabel(account)}
+                          {account.displayName?.trim() &&
+                            account.displayName.trim() !== account.username && (
+                              <span className="admin-target-picker__username">
+                                {" "}
+                                ({account.username})
+                              </span>
+                            )}
+                        </span>
                         {isActive && (
                           <span className="admin-badge admin-badge--announcement">配信中</span>
                         )}
@@ -649,6 +741,98 @@ export function AdminToolsPanel({
               >
                 {saving ? "処理中..." : "このアカウント向けを削除"}
               </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {activeTab === "tweetHistory" && (
+        <div
+          id="admin-panel-tweetHistory"
+          role="tabpanel"
+          aria-labelledby="admin-tab-tweetHistory"
+          className="admin-tools__tab-panel"
+        >
+          <section className="admin-tools__card admin-tools__card--single">
+            <h3 className="admin-tools__card-title">店舗別ツイート履歴（X）</h3>
+            <p className="admin-tools__hint">
+              アカウントの所属店舗ごとに、買取情報ツイート履歴の参照先 X プロフィールを設定します。
+              未設定・店舗不明の場合は既定の {HARERUYA_ANNEX_SCREEN_NAME} を使います。
+              URL（例: https://x.com/hareruya2annex）または @screen_name で入力できます。
+            </p>
+
+            {loading ? (
+              <p className="admin-tools__muted">読み込み中...</p>
+            ) : tweetHistoryStoreOrder.length === 0 ? (
+              <p className="admin-tools__muted">
+                登録アカウントに所属店舗がありません。下の入力から店舗名を追加できます。
+              </p>
+            ) : (
+              <ul className="admin-tweet-history-list">
+                {tweetHistoryStoreOrder.map((store) => (
+                  <li key={store} className="admin-tweet-history-list__row">
+                    <label className="admin-tweet-history-list__store" htmlFor={`tweet-history-${store}`}>
+                      {store}
+                    </label>
+                    <input
+                      id={`tweet-history-${store}`}
+                      className="admin-tools__input"
+                      type="text"
+                      value={tweetHistoryDraft[store] ?? ""}
+                      onChange={(event) =>
+                        setTweetHistoryDraft((prev) => ({
+                          ...prev,
+                          [store]: event.target.value,
+                        }))
+                      }
+                      placeholder={`未設定 → @${HARERUYA_ANNEX_SCREEN_NAME}`}
+                      disabled={loading || saving}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="admin-tweet-history-add">
+              <input
+                className="admin-tools__input"
+                type="text"
+                value={newTweetHistoryStore}
+                onChange={(event) => setNewTweetHistoryStore(event.target.value)}
+                placeholder="店舗名を追加（例: 郡山店）"
+                disabled={loading || saving}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    handleAddTweetHistoryStore();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={handleAddTweetHistoryStore}
+                disabled={loading || saving || !newTweetHistoryStore.trim()}
+              >
+                店舗を追加
+              </button>
+            </div>
+
+            <div className="admin-tools__actions">
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={() => void handleSaveTweetHistory()}
+                disabled={loading || saving}
+              >
+                {saving ? "保存中..." : "ツイート履歴URLを保存"}
+              </button>
+              {settings?.updatedAt && (
+                <span className="admin-tools__updated">
+                  最終更新: {formatDateTime(new Date(settings.updatedAt))}
+                  {settings.updatedBy ? `（${settings.updatedBy}）` : ""}
+                </span>
+              )}
             </div>
           </section>
         </div>
