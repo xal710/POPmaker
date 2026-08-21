@@ -397,6 +397,7 @@ export interface AccountProfilePatch {
   canUseTradeFeatures?: boolean;
   tweetTemplateMode?: TweetTemplateMode;
   tweetTemplateCustom?: string | null;
+  store?: string | null;
 }
 
 export function updateAccountProfile(
@@ -433,6 +434,11 @@ export function updateAccountProfile(
 
   if (patch.tweetTemplateCustom !== undefined) {
     next.tweetTemplateCustom = patch.tweetTemplateCustom;
+  }
+
+  if (patch.store !== undefined) {
+    const trimmed = typeof patch.store === "string" ? patch.store.trim() : "";
+    next.store = trimmed || null;
   }
 
   next = normalizeStoredAccount(next);

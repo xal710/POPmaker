@@ -20,6 +20,7 @@ interface AccountProfilePanelProps {
     canUseTradeFeatures: boolean;
     tweetTemplateMode: TweetTemplateMode;
     tweetTemplateCustom: string | null;
+    store: string | null;
   }) => Promise<boolean>;
   onSetSuspended: (username: string, suspended: boolean) => Promise<boolean>;
 }
@@ -34,6 +35,7 @@ export function AccountProfilePanel({
   const [canUseTradeFeatures, setCanUseTradeFeatures] = useState(false);
   const [tweetTemplateMode, setTweetTemplateMode] = useState<TweetTemplateMode>("auto");
   const [tweetTemplateCustom, setTweetTemplateCustom] = useState("");
+  const [store, setStore] = useState("");
 
   useEffect(() => {
     if (!account) return;
@@ -41,6 +43,7 @@ export function AccountProfilePanel({
     setCanUseTradeFeatures(account.canUseTradeFeatures);
     setTweetTemplateMode(account.tweetTemplateMode);
     setTweetTemplateCustom(account.tweetTemplateCustom ?? "");
+    setStore(account.store?.trim() ?? "");
   }, [account]);
 
   const previewText = useMemo(() => {
@@ -67,11 +70,13 @@ export function AccountProfilePanel({
   }
 
   const handleSave = async () => {
+    const trimmedStore = store.trim();
     await onSave(account.username, {
       canUsePopPlacement,
       canUseTradeFeatures,
       tweetTemplateMode,
       tweetTemplateCustom: tweetTemplateMode === "custom" ? tweetTemplateCustom : null,
+      store: trimmedStore || null,
     });
   };
 
@@ -133,6 +138,24 @@ export function AccountProfilePanel({
             </button>
           </>
         )}
+      </section>
+
+      <section className="admin-profile__section">
+        <h4 className="admin-profile__section-title">所属店舗</h4>
+        <p className="admin-tools__hint">
+          ツイート履歴の参照先など、店舗別の設定に使います。空欄で未設定になります。
+        </p>
+        <label className="admin-profile__field">
+          <span className="admin-profile__label">店舗名</span>
+          <input
+            className="admin-tools__input"
+            type="text"
+            value={store}
+            disabled={saving}
+            placeholder="例: 郡山店"
+            onChange={(event) => setStore(event.target.value)}
+          />
+        </label>
       </section>
 
       <div className="admin-profile__grid">

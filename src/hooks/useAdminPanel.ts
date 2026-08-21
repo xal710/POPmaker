@@ -33,6 +33,7 @@ interface UseAdminPanelResult {
       canUseTradeFeatures: boolean;
       tweetTemplateMode: import("../../shared/accountProfile").TweetTemplateMode;
       tweetTemplateCustom: string | null;
+      store: string | null;
     },
   ) => Promise<boolean>;
 }
@@ -275,6 +276,7 @@ export function useAdminPanel(enabled: boolean): UseAdminPanelResult {
         canUseTradeFeatures: boolean;
         tweetTemplateMode: import("../../shared/accountProfile").TweetTemplateMode;
         tweetTemplateCustom: string | null;
+        store: string | null;
       },
     ) => {
       setSaving(true);

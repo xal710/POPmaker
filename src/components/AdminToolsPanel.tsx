@@ -67,6 +67,7 @@ interface AdminToolsPanelProps {
       canUseTradeFeatures: boolean;
       tweetTemplateMode: import("../../shared/accountProfile").TweetTemplateMode;
       tweetTemplateCustom: string | null;
+      store: string | null;
     },
   ) => Promise<boolean>;
   onSetAccountSuspended: (username: string, suspended: boolean) => Promise<boolean>;
@@ -480,6 +481,11 @@ export function AdminToolsPanel({
                                   {account.username}
                                 </span>
                               )}
+                            {account.store?.trim() ? (
+                              <span className="admin-account-list__username">
+                                所属: {account.store.trim()}
+                              </span>
+                            ) : null}
                           </span>
                           <span className="admin-account-list__badges">
                             {account.isAdministrator && (

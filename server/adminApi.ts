@@ -446,6 +446,7 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
           canUseTradeFeatures?: unknown;
           tweetTemplateMode?: unknown;
           tweetTemplateCustom?: unknown;
+          store?: unknown;
         } | null;
 
         const username = decodeURIComponent(profileMatch[1]);
@@ -454,6 +455,7 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
           canUseTradeFeatures?: boolean;
           tweetTemplateMode?: TweetTemplateMode;
           tweetTemplateCustom?: string | null;
+          store?: string | null;
         } = {};
 
         if (body && "canUsePopPlacement" in body) {
@@ -490,6 +492,14 @@ export function createAdminMiddleware(): Connect.NextHandleFunction {
             return;
           }
           patch.tweetTemplateCustom = body.tweetTemplateCustom;
+        }
+
+        if (body && "store" in body) {
+          if (body.store !== null && typeof body.store !== "string") {
+            sendJson(res, 400, { error: "store は文字列または null で指定してください" });
+            return;
+          }
+          patch.store = body.store;
         }
 
         if (Object.keys(patch).length === 0) {
